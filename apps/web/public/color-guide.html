@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FC Online Color Guide</title>
+  <style>
+    :root {
+      --bg-app: #f4f5f6;
+      --bg-surface: #ffffff;
+      --text-strong: #1e2124;
+      --text-default: #464c53;
+      --text-muted: #8a949e;
+      --line-soft: #e6e8ea;
+      --line-strong: #58616a;
+      --brand: #256ef4;
+      --brand-hover: #0b50d0;
+      --nav-active: #000000;
+      --icon-inactive: #d9d9d9;
+      --placeholder: #cbd2d9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-app);
+      color: var(--text-strong);
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .lead {
+      margin: 0 0 28px;
+      color: var(--text-default);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .section {
+      margin-top: 28px;
+      padding: 24px;
+      border: 1px solid var(--line-soft);
+      border-radius: 20px;
+      background: var(--bg-surface);
+    }
+
+    .section h2 {
+      margin: 0 0 16px;
+      font-size: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+    }
+
+    .swatch {
+      border: 1px solid var(--line-soft);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .chip {
+      height: 88px;
+    }
+
+    .meta {
+      padding: 12px 14px 14px;
+    }
+
+    .name {
+      margin: 0 0 4px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hex {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .usage {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line-soft);
+      background: #fff;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--text-default);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>FC Online Site Color Guide</h1>
+    <p class="lead">
+      현재 웹 앱에서 실제로 쓰고 있는 핵심 컬러를 정리한 가이드입니다.
+      임시 확인용 파일 대신 이 파일을 기준으로 컬러를 확인하면 됩니다.
+    </p>
+
+    <section class="section">
+      <h2>Core Palette</h2>
+      <div class="grid">
+        <article class="swatch">
+          <div class="chip" style="background:#256ef4"></div>
+          <div class="meta"><p class="name">Brand</p><p class="hex">#256EF4</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#0b50d0"></div>
+          <div class="meta"><p class="name">Brand Hover</p><p class="hex">#0B50D0</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#1e2124"></div>
+          <div class="meta"><p class="name">Text Strong</p><p class="hex">#1E2124</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#464c53"></div>
+          <div class="meta"><p class="name">Text Default</p><p class="hex">#464C53</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#8a949e"></div>
+          <div class="meta"><p class="name">Text Muted</p><p class="hex">#8A949E</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#e6e8ea"></div>
+          <div class="meta"><p class="name">Border Soft</p><p class="hex">#E6E8EA</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#f4f5f6"></div>
+          <div class="meta"><p class="name">App Background</p><p class="hex">#F4F5F6</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#ffffff"></div>
+          <div class="meta"><p class="name">Surface</p><p class="hex">#FFFFFF</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#000000"></div>
+          <div class="meta"><p class="name">Nav Active</p><p class="hex">#000000</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#d9d9d9"></div>
+          <div class="meta"><p class="name">Icon Inactive</p><p class="hex">#D9D9D9</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#58616a"></div>
+          <div class="meta"><p class="name">Input Border</p><p class="hex">#58616A</p></div>
+        </article>
+        <article class="swatch">
+          <div class="chip" style="background:#cbd2d9"></div>
+          <div class="meta"><p class="name">Fallback Fill</p><p class="hex">#CBD2D9</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Usage Guide</h2>
+      <div class="usage">
+        <div class="card">
+          <h3>Primary Action</h3>
+          <p><strong>#256EF4</strong>를 링크, 포커스 포인트, 주요 액션 강조색으로 사용합니다.</p>
+        </div>
+        <div class="card">
+          <h3>Text Hierarchy</h3>
+          <p><strong>#1E2124</strong>는 제목, <strong>#464C53</strong>은 본문, <strong>#8A949E</strong>는 보조 텍스트에 사용합니다.</p>
+        </div>
+        <div class="card">
+          <h3>Surface System</h3>
+          <p><strong>#F4F5F6</strong>는 앱 배경, <strong>#FFFFFF</strong>는 카드와 메인 콘텐츠 배경에 사용합니다.</p>
+        </div>
+        <div class="card">
+          <h3>Separators</h3>
+          <p><strong>#E6E8EA</strong>는 구분선, <strong>#58616A</strong>는 입력 테두리처럼 더 강한 경계에 사용합니다.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

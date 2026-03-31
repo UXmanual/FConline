@@ -1,24 +1,85 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import LoadingDots from '@/components/ui/LoadingDots'
 import PlayerSearchBar from '@/features/player-search/components/PlayerSearchBar'
 import PlayerCard from '@/features/player-search/components/PlayerCard'
 import { Player, Season } from '@/features/player-search/types'
 
+const STORAGE_KEY = 'player-search-state'
+const RESET_KEY = 'player-search-reset'
+const PRESERVE_KEY = 'player-search-preserve'
+
 export default function PlayersPage() {
   const [query, setQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [strongLevel, setStrongLevel] = useState(1)
   const [players, setPlayers] = useState<Player[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
   const handleSearch = () => {
-    setSearchQuery(query)
+    setSearchQuery(query.trim())
   }
 
   useEffect(() => {
+    const shouldReset = sessionStorage.getItem(RESET_KEY) === '1'
+    const shouldPreserve = sessionStorage.getItem(PRESERVE_KEY) === '1'
+
+    sessionStorage.removeItem(RESET_KEY)
+    sessionStorage.removeItem(PRESERVE_KEY)
+
+    if (shouldReset || !shouldPreserve) {
+      sessionStorage.removeItem(STORAGE_KEY)
+      setHydrated(true)
+      return
+    }
+
+    const savedState = sessionStorage.getItem(STORAGE_KEY)
+
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState) as {
+          query: string
+          searchQuery: string
+          strongLevel?: number
+        }
+
+        setQuery(parsed.query ?? '')
+        setSearchQuery(parsed.searchQuery ?? '')
+        setStrongLevel(parsed.strongLevel ?? 1)
+      } catch {
+        sessionStorage.removeItem(STORAGE_KEY)
+      }
+    }
+
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) {
+      return
+    }
+
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        query,
+        searchQuery,
+        strongLevel,
+      })
+    )
+  }, [hydrated, query, searchQuery, strongLevel])
+
+  useEffect(() => {
+    if (!hydrated) {
+      return
+    }
+
     if (!searchQuery.trim()) {
       setPlayers([])
+      setSeasons([])
       return
     }
 
@@ -30,31 +91,41 @@ export default function PlayersPage() {
         setSeasons(data.seasons)
       })
       .finally(() => setLoading(false))
-  }, [searchQuery])
+  }, [hydrated, searchQuery])
 
   return (
     <div>
-      {/* 검색바 */}
       <div className="pt-5">
-        <PlayerSearchBar value={query} onChange={setQuery} onSearch={handleSearch} />
+        <h1 className="text-xl font-bold tracking-[-0.02em] text-[#1e2124]">선수검색</h1>
+        <div className="mt-3">
+          <PlayerSearchBar
+            value={query}
+            onChange={setQuery}
+            onSearch={handleSearch}
+            strongLevel={strongLevel}
+            onStrongLevelChange={setStrongLevel}
+          />
+        </div>
       </div>
 
-      {/* 결과 */}
       <div className="mt-4">
-        {loading && (
-          <p className="text-sm text-[#8a949e] text-center py-8">검색 중...</p>
-        )}
+        {loading && <LoadingDots label="선수를 찾는중이에요" />}
 
         {!loading && query && players.length === 0 && (
-          <p className="text-sm text-[#8a949e] text-center py-8">검색 결과가 없어요</p>
+          <p className="py-8 text-center text-sm text-[#8a949e]">검색 결과가 없어요.</p>
         )}
 
         {!loading && !query && (
-          <p className="text-sm text-[#8a949e] text-center py-8">선수 이름을 검색해보세요</p>
+          <p className="py-8 text-center text-sm text-[#8a949e]">선수 이름을 검색해보세요.</p>
         )}
 
         {players.map((player) => (
-          <PlayerCard key={player.id} player={player} seasons={seasons} />
+          <PlayerCard
+            key={player.id}
+            player={player}
+            seasons={seasons}
+            strongLevel={strongLevel}
+          />
         ))}
       </div>
     </div>
