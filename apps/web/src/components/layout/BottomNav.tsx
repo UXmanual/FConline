@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User, Trophy, ChatCircle, SquaresFour } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
+import { PlayerIcon, MatchIcon, CommunityIcon, MoreIcon } from '@/components/icons/NavIcons'
 
 const navItems = [
-  { href: '/players', icon: User, label: '선수' },
-  { href: '/matches', icon: Trophy, label: '경기' },
-  { href: '/community', icon: ChatCircle, label: '커뮤니티' },
-  { href: '/mypage', icon: SquaresFour, label: '더보기' },
+  { href: '/players', icon: PlayerIcon, label: '선수' },
+  { href: '/matches', icon: MatchIcon, label: '경기' },
+  { href: '/community', icon: CommunityIcon, label: '커뮤니티' },
+  { href: '/mypage', icon: MoreIcon, label: '더보기' },
 ]
 
 export default function BottomNav() {
@@ -32,7 +32,6 @@ export default function BottomNav() {
                 href={href}
                 className="relative flex items-center justify-center h-full flex-1"
               >
-                {/* 리퀴드 슬라이딩 필 배경 */}
                 {isActive && (
                   <motion.div
                     layoutId="active-pill"
@@ -42,11 +41,10 @@ export default function BottomNav() {
                   />
                 )}
 
-                {/* 아이콘 + 텍스트 */}
                 <div className="relative z-10 flex items-center justify-center">
                   <Icon
-                    size={24}
-                    weight={isActive ? 'fill' : 'regular'}
+                    size={26}
+                    filled={isActive}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                   />
                   <motion.span
