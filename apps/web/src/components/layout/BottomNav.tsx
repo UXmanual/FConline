@@ -32,11 +32,11 @@ export default function BottomNav() {
                 key={href}
                 whileTap={{ scale: 1.25 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 18 }}
-                className="flex items-center justify-center flex-1 h-full"
+                className="flex-1 h-full"
               >
                 <Link
                   href={href}
-                  className="flex flex-col items-center justify-center gap-2"
+                  className="flex flex-col items-center justify-center gap-2 w-full h-full"
                 >
                   <Icon
                     size={22}
