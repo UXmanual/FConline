@@ -16,7 +16,8 @@
       "Read(//c/Users/Rich/FConline/apps/web/src/components/icons/**)",
       "Bash(done)",
       "Bash(curl -s \"https://open.api.nexon.com/fconline/v1/metadata/spid\" -H \"x-nxopen-api-key: test_fcf7f632bba006c407d4dc3251da56d9937c72985ba4b8656988ecacac2f175eefe8d04e6d233bd35cf2fabdeb93fb0d\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://open.api.nexon.com/fconline/v1/metadata/spid\" -H \"x-nxopen-api-key: test_fcf7f632bba006c407d4dc3251da56d9937c72985ba4b8656988ecacac2f175eefe8d04e6d233bd35cf2fabdeb93fb0d\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://open.api.nexon.com/fconline/v1/metadata/spid\" -H \"x-nxopen-api-key: test_fcf7f632bba006c407d4dc3251da56d9937c72985ba4b8656988ecacac2f175eefe8d04e6d233bd35cf2fabdeb93fb0d\")",
+      "WebFetch(domain:fconlinemanual.vercel.app)"
     ]
   }
 }

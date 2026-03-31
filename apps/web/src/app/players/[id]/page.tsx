@@ -7,9 +7,10 @@ interface Props {
 }
 
 async function getPlayerData(spid: string) {
+  const headers = { 'x-nxopen-api-key': process.env.NEXON_API_KEY! }
   const [playersRes, seasonsRes] = await Promise.all([
-    fetch('https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/meta/spid.json', { next: { revalidate: 3600 } }),
-    fetch('https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/meta/seasonid.json', { next: { revalidate: 3600 } }),
+    fetch('https://open.api.nexon.com/static/fconline/meta/spid.json', { headers, next: { revalidate: 3600 } }),
+    fetch('https://open.api.nexon.com/static/fconline/meta/seasonid.json', { headers, next: { revalidate: 3600 } }),
   ])
   const players = await playersRes.json()
   const seasons = await seasonsRes.json()
