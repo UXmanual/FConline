@@ -28,30 +28,25 @@ export default function BottomNav() {
           {navItems.map(({ href, icon: Icon, label }) => {
             const isActive = pathname.startsWith(href)
             return (
-              <Link
+              <motion.div
                 key={href}
-                href={href}
-                className="relative flex items-center justify-center flex-1 h-full"
+                whileTap={{ scale: 1.25 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+                className="flex items-center justify-center flex-1 h-full"
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-pill"
-                    className="absolute inset-y-2 rounded-2xl bg-zinc-800"
-                    style={{ left: 4, right: 4 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                  />
-                )}
-
-                <div className="relative z-10 flex flex-col items-center justify-center gap-1">
+                <Link
+                  href={href}
+                  className="flex flex-col items-center justify-center gap-1"
+                >
                   <Icon
                     size={22}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                   />
-                  <span className={`text-[10px] font-medium leading-none ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+                  <span className={`text-[11.5px] font-medium leading-none ${isActive ? 'text-white' : 'text-zinc-500'}`}>
                     {label}
                   </span>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             )
           })}
         </div>
