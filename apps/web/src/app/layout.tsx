@@ -41,9 +41,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${pretendard.variable} h-full antialiased`}>
-      <body className="min-h-full bg-gray-50">
+      <body className="min-h-full bg-zinc-300">
         {/* 모바일 중앙 고정 래퍼 */}
-        <div className="relative mx-auto w-full sm:max-w-[390px] min-h-screen bg-white">
+        <div className="relative mx-auto w-full sm:max-w-[480px] min-h-screen bg-white">
           <main className="pt-14 pb-[60px]">{children}</main>
           <BottomNav />
         </div>
