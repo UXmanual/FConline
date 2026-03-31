@@ -4,6 +4,8 @@ import { getStrongPoint, formatPriceWithKoreanUnits } from '../player-detail'
 import { Player, Season } from '../types'
 import PlayerImage from './PlayerImage'
 
+const EMPHASIS_COLOR = '#f64f5e'
+
 interface Props {
   player: Player
   seasons: Season[]
@@ -16,6 +18,15 @@ function getSeasonId(spid: number) {
   return Math.floor(spid / 1000000)
 }
 
+function normalizeBodyType(bodyType: string | null): string {
+  if (!bodyType) return '-'
+
+  // 괄호 안의 숫자만 있는 경우 (예: "(168)") 제거
+  const cleaned = bodyType.replace(/^\s*\(\d+\)\s*$/, '').trim()
+
+  return cleaned || '-'
+}
+
 export default function PlayerCard({ player, seasons, strongLevel }: Props) {
   const seasonId = getSeasonId(player.id)
   const season = seasons.find((item) => item.seasonId === seasonId)
@@ -25,17 +36,19 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
       ? detail.overall - getStrongPoint(1) + getStrongPoint(strongLevel)
       : null
 
+  const bodyTypeNormalized = detail ? normalizeBodyType(detail.bodyType) : '-'
+
   const detailItems = detail
     ? [
-        `${strongLevel}카`,
-        `포지션 ${detail.position ?? '-'}`,
-        `오버롤 ${currentOverall ?? '-'}`,
-        `급여 ${detail.pay ?? '-'}`,
-        `현재 금액 ${formatPriceWithKoreanUnits(detail.prices[strongLevel])}`,
-        `키 ${detail.height ? `${detail.height}cm` : '-'}`,
-        `몸무게 ${detail.weight ? `${detail.weight}kg` : '-'}`,
-        `체형 ${detail.bodyType ?? '-'}`,
-        `왼발 ${detail.leftFoot ?? '-'} 오른발 ${detail.rightFoot ?? '-'}`,
+        { label: `${strongLevel}카`, emphasize: null },
+        { label: '포지션', value: detail.position ?? '-', emphasize: true },
+        { label: '오버롤', value: currentOverall ?? '-', emphasize: false },
+        { label: '급여', value: detail.pay ?? '-', emphasize: true },
+        { label: '현재 금액', value: formatPriceWithKoreanUnits(detail.prices[strongLevel]), emphasize: true },
+        { label: '키', value: detail.height ? `${detail.height}cm` : '-', emphasize: false },
+        { label: '몸무게', value: detail.weight ? `${detail.weight}kg` : '-', emphasize: false },
+        { label: '체형', value: bodyTypeNormalized, emphasize: false },
+        { label: '왼발', value: detail.leftFoot ?? '-', emphasize: false, right: `오른발 ${detail.rightFoot ?? '-'}` },
       ]
     : []
 
@@ -72,7 +85,17 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
             {detailItems.map((item, index) => (
               <span key={`${player.id}-${index}`} className="flex items-center gap-1.5">
                 {index > 0 && <span className="text-[#c1c7cd]">|</span>}
-                <span className="text-[#464c53]">{item}</span>
+                {item.emphasize === null ? (
+                  <span className="text-[#464c53]">{item.label}</span>
+                ) : (
+                  <span className="text-[#464c53]">
+                    {item.label}{' '}
+                    <span style={{ color: EMPHASIS_COLOR }} className="font-semibold">
+                      {item.value}
+                    </span>
+                  </span>
+                )}
+                {item.right && <span className="text-[#464c53]">{item.right}</span>}
               </span>
             ))}
           </div>
