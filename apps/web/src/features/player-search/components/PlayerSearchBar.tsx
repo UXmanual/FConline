@@ -14,21 +14,21 @@ export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
   }
 
   return (
-    <div className="flex items-center h-14 bg-zinc-100 rounded-xl px-4 gap-2">
+    <div className="flex items-center h-14 bg-white border border-[#58616a] rounded-lg px-4 gap-2 focus-within:border-2 focus-within:border-[#256ef4]">
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="선수 이름 검색"
-        className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-zinc-400"
+        className="flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
       />
       <button
         type="button"
         onClick={onSearch}
-        className="flex items-center justify-center w-10 h-10 rounded-lg active:bg-zinc-200"
+        className="flex items-center justify-center w-10 h-10 rounded-md active:bg-[#f4f5f6]"
       >
-        <MagnifyingGlass size={24} className="text-zinc-500" weight="bold" />
+        <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
       </button>
     </div>
   )

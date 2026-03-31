@@ -22,10 +22,10 @@ export default function PlayerCard({ player, seasons }: Props) {
   return (
     <Link
       href={`/players/${player.id}`}
-      className="flex items-center gap-4 py-3 border-b border-zinc-100 active:bg-zinc-50"
+      className="flex items-center gap-4 py-3 border-b border-[#e6e8ea] active:bg-[#f4f5f6]"
     >
       {/* 선수 이미지 */}
-      <div className="relative w-16 h-16 rounded-xl bg-zinc-100 overflow-hidden flex-shrink-0">
+      <div className="relative w-16 h-16 rounded-lg bg-[#f4f5f6] overflow-hidden flex-shrink-0">
         <Image
           src={getPlayerImgUrl(player.id)}
           alt={player.name}
@@ -51,7 +51,7 @@ export default function PlayerCard({ player, seasons }: Props) {
             />
           </div>
         )}
-        <span className="text-sm font-semibold text-zinc-900">{player.name}</span>
+        <span className="text-sm font-semibold text-[#1e2124]">{player.name}</span>
       </div>
     </Link>
   )

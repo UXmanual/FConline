@@ -42,15 +42,15 @@ export default function PlayersPage() {
       {/* 결과 */}
       <div className="mt-4">
         {loading && (
-          <p className="text-sm text-zinc-400 text-center py-8">검색 중...</p>
+          <p className="text-sm text-[#8a949e] text-center py-8">검색 중...</p>
         )}
 
         {!loading && query && players.length === 0 && (
-          <p className="text-sm text-zinc-400 text-center py-8">검색 결과가 없어요</p>
+          <p className="text-sm text-[#8a949e] text-center py-8">검색 결과가 없어요</p>
         )}
 
         {!loading && !query && (
-          <p className="text-sm text-zinc-400 text-center py-8">선수 이름을 검색해보세요</p>
+          <p className="text-sm text-[#8a949e] text-center py-8">선수 이름을 검색해보세요</p>
         )}
 
         {players.map((player) => (

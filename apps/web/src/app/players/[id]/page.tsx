@@ -27,8 +27,8 @@ export default async function PlayerDetailPage({ params }: Props) {
   if (!player) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-zinc-400 text-sm">선수 정보를 찾을 수 없어요</p>
-        <Link href="/players" className="mt-4 text-sm text-blue-500">← 돌아가기</Link>
+        <p className="text-[#8a949e] text-sm">선수 정보를 찾을 수 없어요</p>
+        <Link href="/players" className="mt-4 text-sm text-[#256ef4]">← 돌아가기</Link>
       </div>
     )
   }
@@ -39,7 +39,7 @@ export default async function PlayerDetailPage({ params }: Props) {
     <div>
       {/* 뒤로가기 */}
       <div className="pt-5 pb-4">
-        <Link href="/players" className="flex items-center gap-1 text-zinc-500">
+        <Link href="/players" className="flex items-center gap-1 text-[#464c53]">
           <CaretLeft size={18} weight="bold" />
           <span className="text-sm">선수정보</span>
         </Link>
@@ -69,9 +69,9 @@ export default async function PlayerDetailPage({ params }: Props) {
             />
           </div>
         )}
-        <h1 className="text-2xl font-bold text-zinc-900">{player.name}</h1>
+        <h1 className="text-2xl font-bold text-[#1e2124]">{player.name}</h1>
         {season && (
-          <span className="text-sm text-zinc-400">{season.className}</span>
+          <span className="text-sm text-[#8a949e]">{season.className}</span>
         )}
       </div>
     </div>
