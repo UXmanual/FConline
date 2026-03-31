@@ -17,47 +17,45 @@ export default function BottomNav() {
 
   return (
     <>
-      <div className="h-[72px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+      <div className="h-[70px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
 
       <nav
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-black z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex items-center justify-around h-[72px] px-3">
+        <div className="flex items-center justify-around h-[70px] px-2">
           {navItems.map(({ href, icon: Icon, label }) => {
             const isActive = pathname.startsWith(href)
             return (
               <Link
                 key={href}
                 href={href}
-                className="relative flex items-center justify-center h-full flex-1"
+                className="relative flex items-center justify-center flex-1 h-full"
               >
+                {/* 리퀴드 슬라이딩 필 */}
                 {isActive && (
                   <motion.div
                     layoutId="active-pill"
-                    className="absolute inset-y-3 rounded-2xl bg-zinc-800"
-                    style={{ left: 4, right: 4 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className="absolute inset-y-2 rounded-2xl bg-zinc-800"
+                    style={{ left: 6, right: 6 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                   />
                 )}
 
-                <div className="relative z-10 flex items-center justify-center">
+                {/* 아이콘 + 텍스트 (세로 배치) */}
+                <div className="relative z-10 flex flex-col items-center justify-center gap-1">
                   <Icon
-                    size={26}
+                    size={24}
                     filled={isActive}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                   />
-                  <motion.span
-                    animate={{
-                      opacity: isActive ? 1 : 0,
-                      maxWidth: isActive ? 56 : 0,
-                      marginLeft: isActive ? 6 : 0,
-                    }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                    className="text-[12px] font-medium text-white overflow-hidden whitespace-nowrap"
+                  <span
+                    className={`text-[10px] font-medium leading-none ${
+                      isActive ? 'text-white' : 'text-zinc-500'
+                    }`}
                   >
                     {label}
-                  </motion.span>
+                  </span>
                 </div>
               </Link>
             )
