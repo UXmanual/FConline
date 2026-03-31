@@ -39,8 +39,10 @@ export default function PlayersPage() {
       })
     } else if (sortBy === 'price') {
       sorted.sort((a, b) => {
-        const priceA = a.detail?.prices[strongLevel] ?? 0
-        const priceB = b.detail?.prices[strongLevel] ?? 0
+        const priceAStr = a.detail?.prices[strongLevel] ?? '0'
+        const priceBStr = b.detail?.prices[strongLevel] ?? '0'
+        const priceA = parseInt(priceAStr.replace(/,/g, ''), 10)
+        const priceB = parseInt(priceBStr.replace(/,/g, ''), 10)
         return priceB - priceA
       })
     } else if (sortBy === 'pay') {
