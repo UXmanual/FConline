@@ -8,7 +8,7 @@
       }
     </style>
   </defs>
-  <circle class="st0" cx="5" cy="15" r="2"/>
-  <circle class="st0" cx="15" cy="15" r="2"/>
-  <circle class="st0" cx="25" cy="15" r="2"/>
+  <circle class="st0" cx="4.5" cy="15" r="2.5"/>
+  <circle class="st0" cx="15" cy="15" r="2.5"/>
+  <circle class="st0" cx="25.5" cy="15" r="2.5"/>
 </svg>
