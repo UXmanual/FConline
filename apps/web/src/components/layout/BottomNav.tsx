@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserRound, Trophy, MessageCircle, LayoutGrid } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 const navItems = [
   { href: '/players', icon: UserRound, label: '선수' },
@@ -47,26 +47,23 @@ export default function BottomNav() {
                 )}
 
                 {/* 아이콘 + 텍스트 */}
-                <div className="relative z-10 flex items-center justify-center gap-1.5">
+                <div className="relative z-10 flex items-center justify-center">
                   <Icon
                     size={22}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                     strokeWidth={1.5}
                   />
-                  <AnimatePresence mode="wait">
-                    {isActive && (
-                      <motion.span
-                        key={href}
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        className="text-[12px] font-medium text-white overflow-hidden whitespace-nowrap"
-                      >
-                        {label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
+                  <motion.span
+                    animate={{
+                      opacity: isActive ? 1 : 0,
+                      maxWidth: isActive ? 56 : 0,
+                      marginLeft: isActive ? 6 : 0,
+                    }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                    className="text-[12px] font-medium text-white overflow-hidden whitespace-nowrap"
+                  >
+                    {label}
+                  </motion.span>
                 </div>
               </Link>
             )
