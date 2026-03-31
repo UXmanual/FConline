@@ -44,7 +44,7 @@ export default function RootLayout({
       <body className="min-h-full bg-zinc-300">
         {/* 모바일 중앙 고정 래퍼 */}
         <div className="relative mx-auto w-full sm:max-w-[480px] min-h-screen bg-white">
-          <main className="pt-14 pb-[60px]">{children}</main>
+          <main className="pb-[60px] px-5">{children}</main>
           <BottomNav />
         </div>
       </body>
