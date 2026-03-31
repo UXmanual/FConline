@@ -7,36 +7,36 @@ import { Player, Season } from '@/features/player-search/types'
 
 export default function PlayersPage() {
   const [query, setQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [players, setPlayers] = useState<Player[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(false)
 
+  const handleSearch = () => {
+    setSearchQuery(query)
+  }
+
   useEffect(() => {
-    if (!query.trim()) {
+    if (!searchQuery.trim()) {
       setPlayers([])
       return
     }
 
-    const timer = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const res = await fetch(`/api/nexon/players?q=${encodeURIComponent(query)}`)
-        const data = await res.json()
+    setLoading(true)
+    fetch(`/api/nexon/players?q=${encodeURIComponent(searchQuery)}`)
+      .then((res) => res.json())
+      .then((data) => {
         setPlayers(data.players)
         setSeasons(data.seasons)
-      } finally {
-        setLoading(false)
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [query])
+      })
+      .finally(() => setLoading(false))
+  }, [searchQuery])
 
   return (
     <div>
       {/* 검색바 */}
       <div className="pt-5">
-        <PlayerSearchBar value={query} onChange={setQuery} />
+        <PlayerSearchBar value={query} onChange={setQuery} onSearch={handleSearch} />
       </div>
 
       {/* 결과 */}
