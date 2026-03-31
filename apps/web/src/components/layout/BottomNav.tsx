@@ -36,13 +36,13 @@ export default function BottomNav() {
               >
                 <Link
                   href={href}
-                  className="flex flex-col items-center justify-center gap-1"
+                  className="flex flex-col items-center justify-center gap-2"
                 >
                   <Icon
                     size={22}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                   />
-                  <span className={`text-[11.5px] font-medium leading-none ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+                  <span className={`text-[11px] font-medium leading-none ${isActive ? 'text-white' : 'text-zinc-500'}`}>
                     {label}
                   </span>
                 </Link>
