@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserRound, Trophy, MessageCircle, LayoutGrid } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const navItems = [
   { href: '/players', icon: UserRound, label: '선수' },
@@ -16,40 +17,57 @@ export default function BottomNav() {
 
   return (
     <>
-      <div className="h-[68px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+      <div className="h-[72px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
 
       <nav
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-black z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex items-center justify-around h-[68px] px-4">
+        <div className="flex items-center justify-around h-[72px] px-3">
           {navItems.map(({ href, icon: Icon, label }) => {
             const isActive = pathname.startsWith(href)
             return (
               <Link
                 key={href}
                 href={href}
-                className="flex flex-col items-center justify-center gap-1 flex-1 h-full"
+                className="relative flex items-center justify-center h-full flex-1"
               >
-                {/* 활성 시 필 배경 */}
-                <div
-                  className={`flex items-center justify-center rounded-2xl transition-all duration-200 ${
-                    isActive ? 'bg-zinc-800 px-5 py-1.5' : 'px-5 py-1.5'
-                  }`}
-                >
+                {/* 리퀴드 슬라이딩 필 배경 */}
+                {isActive && (
+                  <motion.div
+                    layoutId="active-pill"
+                    className="absolute inset-y-3 rounded-2xl bg-zinc-800"
+                    style={{ left: 4, right: 4 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 30,
+                    }}
+                  />
+                )}
+
+                {/* 아이콘 + 텍스트 */}
+                <div className="relative z-10 flex items-center justify-center gap-1.5">
                   <Icon
-                    size={26}
+                    size={22}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                     strokeWidth={1.5}
                   />
+                  <AnimatePresence mode="wait">
+                    {isActive && (
+                      <motion.span
+                        key={href}
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        className="text-[12px] font-medium text-white overflow-hidden whitespace-nowrap"
+                      >
+                        {label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <span
-                  className={`text-[10px] tracking-tight ${
-                    isActive ? 'text-white' : 'text-zinc-600'
-                  }`}
-                >
-                  {label}
-                </span>
               </Link>
             )
           })}
