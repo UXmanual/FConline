@@ -20,5 +20,5 @@ export async function GET(req: NextRequest) {
       )
     : []
 
-  return Response.json({ players: filtered.slice(0, 30), seasons })
+  return Response.json({ players: filtered, seasons })
 }
