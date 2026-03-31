@@ -22,19 +22,19 @@ export default function BottomNav() {
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-black z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex items-center h-[60px]">
+        <div className="flex items-center justify-center gap-10 h-[60px] px-8">
           {navItems.map(({ href, icon: Icon }) => {
             const isActive = pathname.startsWith(href)
             return (
               <Link
                 key={href}
                 href={href}
-                className="flex flex-1 items-center justify-center h-full"
+                className="flex items-center justify-center w-10 h-full"
               >
                 <Icon
                   size={24}
                   className={isActive ? 'text-white' : 'text-zinc-500'}
-                  strokeWidth={isActive ? 2.5 : 1.5}
+                  strokeWidth={1.5}
                 />
               </Link>
             )
