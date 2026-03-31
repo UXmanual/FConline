@@ -9,7 +9,12 @@
       "Bash(yes \"\")",
       "Bash(npx shadcn@latest init)",
       "Bash(npm run:*)",
-      "WebFetch(domain:fconlinekr.vercel.app)"
+      "WebFetch(domain:fconlinekr.vercel.app)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(echo \"=== $f.svg ===\")",
+      "Read(//c/Users/Rich/FConline/apps/web/src/components/icons/**)",
+      "Bash(done)"
     ]
   }
 }
