@@ -42,7 +42,7 @@ export default function BottomNav() {
                     size={22}
                     className={isActive ? 'text-white' : 'text-zinc-500'}
                   />
-                  <span className={`text-[11px] font-medium leading-none ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+                  <span className={`text-[11px] font-semibold leading-none ${isActive ? 'text-white' : 'text-zinc-500'}`}>
                     {label}
                   </span>
                 </Link>
