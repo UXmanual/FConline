@@ -1,0 +1,1 @@
+{"name":"fconline","private":true,"workspaces":["apps/*","packages/*"],"devDependencies":{"turbo":"^2.9.1"}}

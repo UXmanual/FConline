@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-turbo@latest . --package-manager pnpm)",
+      "Bash(npm install:*)",
+      "Bash(npx create-next-app@latest web --typescript --tailwind --eslint --app --src-dir --no-import-alias)",
+      "Bash(npx create-next-app@latest web --typescript --tailwind --eslint --app --src-dir --no-import-alias --no-turbopack)",
+      "Bash(printf \"No\\\\nNo\\\\n\")",
+      "Bash(yes \"\")",
+      "Bash(npx shadcn@latest init)"
+    ]
+  }
+}
