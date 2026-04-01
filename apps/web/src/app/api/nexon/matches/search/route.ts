@@ -3,6 +3,7 @@ import { MatchSearchCandidate } from '@/features/match-analysis/types'
 
 const NEXON_API_KEY = process.env.NEXON_API_KEY!
 const nexonHeaders = { 'x-nxopen-api-key': NEXON_API_KEY }
+const ouidCache = new Map<string, string>()
 
 const SEARCH_MODES = [
   { key: '1vs1', label: '1vs1 랭킹' },
@@ -249,6 +250,7 @@ export async function GET(req: NextRequest) {
   }
 
   const encodedNickname = encodeURIComponent(nickname)
+  const normalizedNickname = normalizeNickname(nickname)
   const [exactData, rankResults, voltaHtml] = await Promise.all([
     fetchJsonWithRetry<{ ouid?: string }>(
       `https://open.api.nexon.com/fconline/v1/id?nickname=${encodedNickname}`,
@@ -287,6 +289,13 @@ export async function GET(req: NextRequest) {
       1
     ),
   ])
+
+  const cachedOuid = ouidCache.get(normalizedNickname) ?? null
+  const resolvedOuid = exactData?.ouid ?? cachedOuid
+
+  if (exactData?.ouid) {
+    ouidCache.set(normalizedNickname, exactData.ouid)
+  }
 
   let exactCandidate: MatchSearchCandidate | null = null
 

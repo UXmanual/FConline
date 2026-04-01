@@ -16,14 +16,16 @@ const RESULT_COLOR: Record<string, string> = {
   무: '#8a949e',
 }
 
+const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
+
 function formatDate(dateStr: string) {
   const normalized = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`
-  const d = new Date(normalized)
-  const month = d.getMonth() + 1
-  const day = d.getDate()
-  const hour = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${month}/${day} ${hour}:${min}`
+  const date = new Date(normalized)
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${month}/${day} ${hour}:${minute}`
 }
 
 function getDisplayScore(player: MatchPlayerInfo | undefined) {
@@ -40,14 +42,18 @@ function buildVoltaTeams(match: MatchData, myOuid: string) {
 
   const myResult = me.matchDetail.matchResult
   const isDraw = myResult === '무'
-  const teammates = players.filter((player) => player.matchDetail.matchResult === myResult)
-  const opponents = players.filter((player) => player.matchDetail.matchResult !== myResult)
+  const teammates = isDraw
+    ? players
+    : players.filter((player) => player.matchDetail.matchResult === myResult)
+  const opponents = isDraw
+    ? []
+    : players.filter((player) => player.matchDetail.matchResult !== myResult)
 
   return {
     me,
     isDraw,
-    teammates: isDraw ? players : teammates.length > 0 ? teammates : [me],
-    opponents: isDraw ? [] : opponents,
+    teammates: teammates.length > 0 ? teammates : [me],
+    opponents,
     myScore: getDisplayScore(me),
     opponentScore: isDraw ? getDisplayScore(me) : getDisplayScore(opponents[0]),
   }
@@ -86,6 +92,34 @@ function statValue(value: string | number | null | undefined) {
   return value
 }
 
+function normalizeNicknameKey(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function readCachedOuid(nickname: string) {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(OUID_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Record<string, string>
+    return parsed[normalizeNicknameKey(nickname)] ?? null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedOuid(nickname: string, ouid: string) {
+  if (typeof window === 'undefined') return
+
+  try {
+    const raw = window.localStorage.getItem(OUID_CACHE_KEY)
+    const parsed = raw ? (JSON.parse(raw) as Record<string, string>) : {}
+    parsed[normalizeNicknameKey(nickname)] = ouid
+    window.localStorage.setItem(OUID_CACHE_KEY, JSON.stringify(parsed))
+  } catch {}
+}
+
 function explainDetailValue(label: string, rawValue: string | number | null | undefined) {
   const value = statValue(rawValue)
   if (typeof value !== 'string') {
@@ -95,23 +129,24 @@ function explainDetailValue(label: string, rawValue: string | number | null | un
   if (label === '주요 포지션') {
     const [position, share] = value.split(/\s+(?=\d)/)
     if (!share) return value
-    return `${position} | FW / MF / DF 비율 ${share}`
+    const [fw = '-', mf = '-', df = '-'] = share.split('|').map((part) => part.trim())
+    return `${position} | FW ${fw} | MF ${mf} | DF ${df}`
   }
 
-  const parts = value.split(/\s+/).filter(Boolean)
-  if (parts.length < 3 || !parts[0].includes('%')) {
+  if (label === '유효슛') {
+    const match = value.match(/^(경기당\s*[^\s]+)\s+(\d+)\s*\|\s*(\d+)$/)
+    if (!match) return value
+    const [, rate, success, attempt] = match
+    return `${rate} | 총 유효슛 ${success} | 경기수 ${attempt}`
+  }
+
+  const match = value.match(/^(.+?%)\s+(\d+)\s*\|\s*(\d+)$/)
+  if (!match) {
     return value
   }
 
-  const rate = parts[0]
-  const success = parts[1]
-  const attempt = parts[2]
-
-  if (label === '유효슛') {
-    return `${rate} | 총 유효슛 ${success} / 경기수 ${attempt}`
-  }
-
-  return `${rate} | 성공 ${success} / 시도 ${attempt}`
+  const [, rate, success, attempt] = match
+  return `${rate} | 성공 ${success} | 시도 ${attempt}`
 }
 
 function InfoCard({ label, value }: { label: string; value: string | number }) {
@@ -165,10 +200,22 @@ export default function MatchesPage() {
   }
 
   const resolveOuid = async (nickname: string) => {
+    const cached = readCachedOuid(nickname)
+    if (cached) {
+      return cached
+    }
+
     const res = await fetch(`/api/nexon/matches/user?nickname=${encodeURIComponent(nickname)}`)
     if (!res.ok) return null
+
     const data = await res.json().catch(() => null)
-    return data?.ouid ?? null
+    const ouid = data?.ouid ?? null
+
+    if (ouid) {
+      writeCachedOuid(nickname, ouid)
+    }
+
+    return ouid
   }
 
   const handleSearch = async () => {
@@ -206,13 +253,14 @@ export default function MatchesPage() {
       setCandidates(rankCandidates)
 
       if (nextExactMatch?.ouid) {
+        writeCachedOuid(trimmed, nextExactMatch.ouid)
         await loadMatches(nextExactMatch.ouid)
       }
 
       setSearchMessage(
         nextExactMatch
           ? nextExactMatch.ouid
-            ? `"${trimmed}"의 볼타 기록을 확인했어요.`
+            ? `"${trimmed}"의 볼타 기록을 찾았어요.`
             : `"${trimmed}"의 랭킹 정보는 찾았지만 최근 경기 기록 식별값을 지금 못 받아오고 있어요.`
           : `"${trimmed}" 검색 결과가 없어요.`
       )
@@ -261,7 +309,7 @@ export default function MatchesPage() {
       </div>
 
       <div className="mt-4">
-        {searchLoading && <LoadingDots label="닉네임 목록을 찾는 중이에요" />}
+        {searchLoading && <LoadingDots label="닉네임 정보를 찾는 중이에요" />}
 
         {!searchLoading && (
           <>
@@ -311,14 +359,14 @@ export default function MatchesPage() {
                         <InfoCard label="득점" value={statValue(exactCandidate.voltaGoals)} />
                         <InfoCard label="도움" value={statValue(exactCandidate.voltaAssists)} />
                         <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
-                        {voltaSummary ? (
-                          <InfoCard
-                            label="최근 20경기"
-                            value={`${voltaSummary.wins}승 ${voltaSummary.draws}무 ${voltaSummary.losses}패`}
-                          />
-                        ) : (
-                          <InfoCard label="최근 20경기" value="-" />
-                        )}
+                        <InfoCard
+                          label="최근 20경기"
+                          value={
+                            voltaSummary
+                              ? `${voltaSummary.wins}승 ${voltaSummary.draws}무 ${voltaSummary.losses}패`
+                              : '-'
+                          }
+                        />
                       </div>
 
                       <div className="mt-4 space-y-2">
@@ -332,7 +380,7 @@ export default function MatchesPage() {
                     </>
                   ) : (
                     <div className="mt-4 rounded-xl bg-[#f4f5f6] px-4 py-3 text-sm text-[#58616a]">
-                      볼타 랭킹 1만위 밖 유저일 수 있어요.
+                      볼타 랭킹 1만위 밖 유저거나 공개 랭킹 정보가 없어요.
                     </div>
                   )}
 
@@ -423,7 +471,7 @@ export default function MatchesPage() {
                                 {!teams.isDraw && (
                                   <div>
                                     <div className="mb-2 font-semibold text-[#1e2124]">
-                                      {teams.opponents.length > 0 ? '상대팀' : '다른 참가자'}
+                                      {teams.opponents.length > 0 ? '상대팀' : '상대 정보'}
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                       {teams.opponents.length > 0 ? (
@@ -437,7 +485,7 @@ export default function MatchesPage() {
                                         ))
                                       ) : (
                                         <span className="text-[#8a949e]">
-                                          팀 구분 데이터가 없어 상대 팀원을 나누지 못했어요.
+                                          팀 구분 데이터가 없어 상대 정보를 나누지 못했어요.
                                         </span>
                                       )}
                                     </div>
@@ -482,7 +530,8 @@ export default function MatchesPage() {
                       <span>볼타 포인트 {statValue(candidate.voltaRankPoint)}</span>
                       <span>승률 {candidate.voltaWinRate !== null ? `${candidate.voltaWinRate}%` : '-'}</span>
                       <span>
-                        전적 {statValue(candidate.voltaWins)} / {statValue(candidate.voltaDraws)} / {statValue(candidate.voltaLosses)}
+                        전적 {statValue(candidate.voltaWins)} / {statValue(candidate.voltaDraws)} /{' '}
+                        {statValue(candidate.voltaLosses)}
                       </span>
                       <span>평균 평점 {statValue(candidate.voltaAverageRating)}</span>
                     </div>
