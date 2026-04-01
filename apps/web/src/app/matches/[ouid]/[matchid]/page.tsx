@@ -17,22 +17,43 @@ interface Props {
 }
 
 async function getMatchDetail(matchid: string): Promise<MatchData | null> {
-  const res = await fetch(
-    `https://open.api.nexon.com/fconline/v1/match-detail?matchid=${matchid}`,
-    { headers: NEXON_HEADERS, next: { revalidate: 300 } }
-  )
-  if (!res.ok) return null
+  const res = await fetch(`https://open.api.nexon.com/fconline/v1/match-detail?matchid=${matchid}`, {
+    headers: NEXON_HEADERS,
+    next: { revalidate: 300 },
+  })
+
+  if (!res.ok) {
+    return null
+  }
+
   return res.json()
 }
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
+  const normalized = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`
+  const d = new Date(normalized)
   const year = d.getFullYear()
   const month = d.getMonth() + 1
   const day = d.getDate()
   const hour = String(d.getHours()).padStart(2, '0')
   const min = String(d.getMinutes()).padStart(2, '0')
   return `${year}.${month}.${day} ${hour}:${min}`
+}
+
+function valueOrDash(value: number | string | null | undefined) {
+  return value ?? '-'
+}
+
+function formatRating(value: number | null | undefined) {
+  return typeof value === 'number' ? value.toFixed(1) : '-'
+}
+
+function goalDisplay(player: MatchPlayerInfo) {
+  return player.shoot.goalTotalDisplay ?? player.shoot.goalTotal ?? 0
+}
+
+function controllerLabel(value: string | null | undefined) {
+  return value === 'gamepad' ? '패드' : '키보드'
 }
 
 function StatRow({ label, left, right }: { label: string; left: string | number; right: string | number }) {
@@ -48,19 +69,15 @@ function StatRow({ label, left, right }: { label: string; left: string | number;
 function PlayerColumn({ player }: { player: MatchPlayerInfo }) {
   const result = player.matchDetail.matchResult
   const color = RESULT_COLOR[result] ?? '#8a949e'
-  const pass = calcPassTotal(player.pass)
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div
-        className="rounded-full px-3 py-1 text-xs font-bold text-white"
-        style={{ backgroundColor: color }}
-      >
-        {result}
+      <div className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: color }}>
+        {result || '-'}
       </div>
       <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{player.nickname}</p>
-      <p className="text-3xl font-bold text-[#1e2124]">{player.shoot.goalTotal}</p>
-      <p className="text-xs text-[#8a949e]">평점 {player.matchDetail.averageRating.toFixed(1)}</p>
+      <p className="text-3xl font-bold text-[#1e2124]">{goalDisplay(player)}</p>
+      <p className="text-xs text-[#8a949e]">평점 {formatRating(player.matchDetail.averageRating)}</p>
     </div>
   )
 }
@@ -79,8 +96,8 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
     )
   }
 
-  const me = match.matchInfo.find((p) => p.ouid === ouid) ?? match.matchInfo[0]
-  const opponent = match.matchInfo.find((p) => p.ouid !== ouid) ?? match.matchInfo[1]
+  const me = match.matchInfo.find((player) => player.ouid === ouid) ?? match.matchInfo[0]
+  const opponent = match.matchInfo.find((player) => player.ouid !== ouid) ?? match.matchInfo[1]
 
   if (!me || !opponent) {
     return (
@@ -108,7 +125,6 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      {/* 스코어 헤더 */}
       <div className="mt-6 rounded-2xl border border-[#e6e8ea] bg-white p-5">
         <div className="grid grid-cols-3 items-center">
           <PlayerColumn player={me} />
@@ -117,28 +133,23 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      {/* 경기 상세 스탯 */}
       <div className="mt-4 rounded-2xl border border-[#e6e8ea] bg-white p-4">
         <h2 className="text-sm font-semibold text-[#1e2124]">경기 통계</h2>
         <div className="mt-3 divide-y divide-[#f4f5f6]">
-          <StatRow label="점유율 (%)" left={me.matchDetail.possession} right={opponent.matchDetail.possession} />
-          <StatRow label="슈팅" left={me.shoot.shootTotal} right={opponent.shoot.shootTotal} />
-          <StatRow label="유효슈팅" left={me.shoot.effectiveShootTotal} right={opponent.shoot.effectiveShootTotal} />
-          <StatRow label="헤딩골" left={me.shoot.goalHeading} right={opponent.shoot.goalHeading} />
-          <StatRow label="프리킥골" left={me.shoot.goalFreekick} right={opponent.shoot.goalFreekick} />
-          <StatRow label="패스 성공률 (%)" left={`${mePass.success}/${mePass.try}`} right={`${opPass.success}/${opPass.try}`} />
-          <StatRow label="스루패스" left={me.pass.throughPassSuccess} right={opponent.pass.throughPassSuccess} />
-          <StatRow label="코너킥" left={me.matchDetail.cornerKick} right={opponent.matchDetail.cornerKick} />
-          <StatRow label="태클 성공" left={me.defence.tackleSuccess} right={opponent.defence.tackleSuccess} />
-          <StatRow label="파울" left={me.matchDetail.foul} right={opponent.matchDetail.foul} />
-          <StatRow label="옐로카드" left={me.matchDetail.yellowCards} right={opponent.matchDetail.yellowCards} />
-          <StatRow label="레드카드" left={me.matchDetail.redCards} right={opponent.matchDetail.redCards} />
-          <StatRow label="드리블 성공" left={me.matchDetail.dribble} right={opponent.matchDetail.dribble} />
-          <StatRow
-            label="컨트롤러"
-            left={me.matchDetail.controller === 'gamepad' ? '패드' : '키보드'}
-            right={opponent.matchDetail.controller === 'gamepad' ? '패드' : '키보드'}
-          />
+          <StatRow label="점유율(%)" left={valueOrDash(me.matchDetail.possession)} right={valueOrDash(opponent.matchDetail.possession)} />
+          <StatRow label="슈팅" left={valueOrDash(me.shoot.shootTotal)} right={valueOrDash(opponent.shoot.shootTotal)} />
+          <StatRow label="유효 슈팅" left={valueOrDash(me.shoot.effectiveShootTotal)} right={valueOrDash(opponent.shoot.effectiveShootTotal)} />
+          <StatRow label="헤더 골" left={valueOrDash(me.shoot.goalHeading)} right={valueOrDash(opponent.shoot.goalHeading)} />
+          <StatRow label="프리킥 골" left={valueOrDash(me.shoot.goalFreekick)} right={valueOrDash(opponent.shoot.goalFreekick)} />
+          <StatRow label="패스 성공" left={`${mePass.success}/${mePass.try}`} right={`${opPass.success}/${opPass.try}`} />
+          <StatRow label="스루패스" left={valueOrDash(me.pass.throughPassSuccess)} right={valueOrDash(opponent.pass.throughPassSuccess)} />
+          <StatRow label="코너킥" left={valueOrDash(me.matchDetail.cornerKick)} right={valueOrDash(opponent.matchDetail.cornerKick)} />
+          <StatRow label="태클 성공" left={valueOrDash(me.defence.tackleSuccess)} right={valueOrDash(opponent.defence.tackleSuccess)} />
+          <StatRow label="파울" left={valueOrDash(me.matchDetail.foul)} right={valueOrDash(opponent.matchDetail.foul)} />
+          <StatRow label="옐로카드" left={valueOrDash(me.matchDetail.yellowCards)} right={valueOrDash(opponent.matchDetail.yellowCards)} />
+          <StatRow label="레드카드" left={valueOrDash(me.matchDetail.redCards)} right={valueOrDash(opponent.matchDetail.redCards)} />
+          <StatRow label="드리블" left={valueOrDash(me.matchDetail.dribble)} right={valueOrDash(opponent.matchDetail.dribble)} />
+          <StatRow label="컨트롤러" left={controllerLabel(me.matchDetail.controller)} right={controllerLabel(opponent.matchDetail.controller)} />
         </div>
       </div>
     </div>
