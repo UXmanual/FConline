@@ -113,12 +113,14 @@ function extractFootStats(html: string) {
 function extractTraits(html: string) {
   const traits: Array<{ name: string }> = []
 
-  // Find the _area_skillmove section which contains traits
-  const skillmoveSection = matchGroup(html, /<div[^>]*_area_skillmove[^>]*>([\s\S]*?)<\/div>/)
+  // Find the _area_skillmove section which contains trait images
+  const skillmoveMatch = html.match(/<div[^>]*class="[^"]*_area_skillmove[^"]*"[^>]*>([\s\S]*?)<\/div>/)
 
-  if (!skillmoveSection) {
+  if (!skillmoveMatch || !skillmoveMatch[1]) {
     return traits
   }
+
+  const skillmoveSection = skillmoveMatch[1]
 
   // Extract trait alt attributes from img elements within the skillmove section
   for (const match of skillmoveSection.matchAll(/<img[^>]*alt="([^"]+)"[^>]*>/g)) {
@@ -134,7 +136,7 @@ function extractTraits(html: string) {
 export function calculateSkillMoveStars(skillMove: number | null, strongLevel: number): number {
   if (skillMove == null) return 0
 
-  let stars = skillMove
+  let stars = skillMove + 1
 
   if (strongLevel >= 8) {
     stars += 2
