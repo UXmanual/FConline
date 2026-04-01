@@ -6,14 +6,14 @@ export const MATCH_TYPE_NAMES: Record<number, string> = {
   60: '공식 친선',
   204: '볼타 친선',
   214: '볼타 공식',
-  224: '볼타 AI대전',
+  224: '볼타 AI 대전',
   234: '볼타 커스텀',
 }
 
 export const VOLTA_MATCH_TYPES = [
   { type: 214, label: '볼타 공식' },
   { type: 204, label: '볼타 친선' },
-  { type: 224, label: 'AI대전' },
+  { type: 224, label: 'AI 대전' },
   { type: 234, label: '커스텀' },
 ]
 
@@ -40,6 +40,23 @@ export interface MatchSearchCandidate {
   price: string | null
   modes: string[]
   source: 'exact' | 'rank'
+  voltaRank: number | null
+  voltaRankPoint: number | null
+  voltaRankIconUrl: string | null
+  voltaWinRate: number | null
+  voltaWins: number | null
+  voltaDraws: number | null
+  voltaLosses: number | null
+  voltaAverageRating: number | null
+  voltaMomCount: number | null
+  voltaGoals: number | null
+  voltaAssists: number | null
+  voltaTackleRate: string | null
+  voltaBlockRate: string | null
+  voltaEffectiveShots: string | null
+  voltaPassRate: string | null
+  voltaDribbleRate: string | null
+  voltaMainPosition: string | null
 }
 
 export interface MatchPlayerInfo {
@@ -108,18 +125,19 @@ export interface MatchData {
 
 export function calcPassTotal(pass: MatchPlayerInfo['pass']) {
   const try_ =
-    pass.shortPassTry +
-    pass.longPassTry +
-    pass.bouncingLobPassTry +
-    pass.drivenGroundPassTry +
-    pass.throughPassTry +
-    pass.lobbedThroughPassTry
+    (pass.shortPassTry ?? 0) +
+    (pass.longPassTry ?? 0) +
+    (pass.bouncingLobPassTry ?? 0) +
+    (pass.drivenGroundPassTry ?? 0) +
+    (pass.throughPassTry ?? 0) +
+    (pass.lobbedThroughPassTry ?? 0)
   const success =
-    pass.shortPassSuccess +
-    pass.longPassSuccess +
-    pass.bouncingLobPassSuccess +
-    pass.drivenGroundPassSuccess +
-    pass.throughPassSuccess +
-    pass.lobbedThroughPassSuccess
+    (pass.shortPassSuccess ?? 0) +
+    (pass.longPassSuccess ?? 0) +
+    (pass.bouncingLobPassSuccess ?? 0) +
+    (pass.drivenGroundPassSuccess ?? 0) +
+    (pass.throughPassSuccess ?? 0) +
+    (pass.lobbedThroughPassSuccess ?? 0)
+
   return { try: try_, success, rate: try_ > 0 ? Math.round((success / try_) * 100) : 0 }
 }

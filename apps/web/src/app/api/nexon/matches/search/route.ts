@@ -40,12 +40,55 @@ function stripTags(value: string) {
 
 function parseNumber(value: string | null) {
   if (!value) return null
-  const cleaned = value.replace(/,/g, '').trim()
+  const cleaned = value.replace(/,/g, '').replace(/%/g, '').trim()
   const parsed = Number(cleaned)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function parseResult(candidateHtml: string, modeLabel: string): MatchSearchCandidate | null {
+function normalizeNickname(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact' | 'rank'): MatchSearchCandidate {
+  return {
+    nickname,
+    nexonSn,
+    ouid: null,
+    level: null,
+    rank: null,
+    elo: null,
+    rankLabel: null,
+    rankIconUrl: null,
+    winRate: null,
+    wins: null,
+    draws: null,
+    losses: null,
+    teamColors: [],
+    formation: null,
+    price: null,
+    modes: [],
+    source,
+    voltaRank: null,
+    voltaRankPoint: null,
+    voltaRankIconUrl: null,
+    voltaWinRate: null,
+    voltaWins: null,
+    voltaDraws: null,
+    voltaLosses: null,
+    voltaAverageRating: null,
+    voltaMomCount: null,
+    voltaGoals: null,
+    voltaAssists: null,
+    voltaTackleRate: null,
+    voltaBlockRate: null,
+    voltaEffectiveShots: null,
+    voltaPassRate: null,
+    voltaDribbleRate: null,
+    voltaMainPosition: null,
+  }
+}
+
+function parseOfficialRankResult(candidateHtml: string, modeLabel: string): MatchSearchCandidate | null {
   const nickname = stripTags(
     candidateHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? ''
   )
@@ -53,63 +96,103 @@ function parseResult(candidateHtml: string, modeLabel: string): MatchSearchCandi
 
   if (!nickname || !nexonSn) return null
 
-  const level = parseNumber(
-    stripTags(
-      candidateHtml.match(
-        /<span class="txt">\d+<\/span><\/span>\s*<span class="name profile_pointer"/
-      )?.[0] ?? ''
-    )
-      .match(/\d+/)?.[0] ?? null
-  )
-  const rank = parseNumber(
-    stripTags(candidateHtml.match(/<span class="td rank_no">[\s\S]*?<\/span>/)?.[0] ?? '')
-  )
-  const elo = parseNumber(
-    stripTags(candidateHtml.match(/<span class="td rank_r_win_point">[\s\S]*?<\/span>/)?.[0] ?? '')
-  )
-  const rankIconUrl = candidateHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null
-  const winRate = parseNumber(
-    stripTags(candidateHtml.match(/<span class="top">[\s\S]*?%[\s\S]*?<\/span>/)?.[0] ?? '').replace('%', '')
-  )
+  const candidate = createEmptyCandidate(nickname, nexonSn, 'rank')
   const winLossText = stripTags(candidateHtml.match(/<span class="bottom">[\s\S]*?<\/span>/)?.[0] ?? '')
   const [wins, draws, losses] = winLossText.split('|').map((part) => parseNumber(part))
-  const teamColors = [...candidateHtml.matchAll(/<span class="inner">([\s\S]*?)<\/span>/g)]
+
+  candidate.level = parseNumber(
+    stripTags(
+      candidateHtml.match(/<span class="txt">\d+<\/span><\/span>\s*<span class="name profile_pointer"/)?.[0] ?? ''
+    ).match(/\d+/)?.[0] ?? null
+  )
+  candidate.rank = parseNumber(
+    stripTags(candidateHtml.match(/<span class="td rank_no">[\s\S]*?<\/span>/)?.[0] ?? '')
+  )
+  candidate.elo = parseNumber(
+    stripTags(candidateHtml.match(/<span class="td rank_r_win_point">[\s\S]*?<\/span>/)?.[0] ?? '')
+  )
+  candidate.rankLabel = candidate.elo !== null ? '공식 랭킹 점수' : null
+  candidate.rankIconUrl = candidateHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null
+  candidate.winRate = parseNumber(
+    stripTags(candidateHtml.match(/<span class="top">[\s\S]*?%[\s\S]*?<\/span>/)?.[0] ?? '')
+  )
+  candidate.wins = wins ?? null
+  candidate.draws = draws ?? null
+  candidate.losses = losses ?? null
+  candidate.teamColors = [...candidateHtml.matchAll(/<span class="inner">([\s\S]*?)<\/span>/g)]
     .map((match) => stripTags(match[1]))
     .filter(Boolean)
-  const formation =
+  candidate.formation =
     stripTags(candidateHtml.match(/<span class="td formation">[\s\S]*?<\/span>/)?.[0] ?? '') || null
-  const price =
+  candidate.price =
     stripTags(candidateHtml.match(/<span class="price"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '') || null
+  candidate.modes = [modeLabel]
 
-  return {
-    nickname,
-    nexonSn,
-    ouid: null,
-    level,
-    rank,
-    elo,
-    rankLabel: elo !== null ? '공식 랭킹 점수' : null,
-    rankIconUrl,
-    winRate,
-    wins: wins ?? null,
-    draws: draws ?? null,
-    losses: losses ?? null,
-    teamColors,
-    formation,
-    price,
-    modes: [modeLabel],
-    source: 'rank',
-  }
+  return candidate
 }
 
-function parseCandidates(html: string, modeLabel: string) {
+function parseOfficialCandidates(html: string, modeLabel: string) {
   return [...html.matchAll(/<div class="tr">([\s\S]*?)<\/div>\s*<\/div>/g)]
-    .map((match) => parseResult(match[0], modeLabel))
+    .map((match) => parseOfficialRankResult(match[0], modeLabel))
     .filter((candidate): candidate is MatchSearchCandidate => candidate !== null)
 }
 
-function normalizeNickname(value: string) {
-  return value.trim().toLowerCase()
+function parseVoltaExactCandidate(html: string, nickname: string): Partial<MatchSearchCandidate> | null {
+  const tbody = html.match(/<div class="tbody">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/)?.[1] ?? html
+  const rows = [...tbody.matchAll(/<div class="tr">([\s\S]*?)<\/div>\s*(?=<div class="tr">|$)/g)]
+  const normalizedTarget = normalizeNickname(nickname)
+
+  for (const row of rows) {
+    const rowHtml = row[0]
+    const rowNickname = stripTags(
+      rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? ''
+    )
+
+    if (!rowNickname || normalizeNickname(rowNickname) !== normalizedTarget) {
+      continue
+    }
+
+    const getCellValue = (cellClass: string) =>
+      stripTags(rowHtml.match(new RegExp(`<div class="td ${cellClass}[^"]*">([\\s\\S]*?)<\\/div>`))?.[0] ?? '') ||
+      null
+
+    return {
+      price:
+        stripTags(rowHtml.match(/<span class="price"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '') || null,
+      voltaRank: parseNumber(getCellValue('no')),
+      voltaRankIconUrl: rowHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null,
+      voltaRankPoint: parseNumber(getCellValue('small s1')),
+      voltaWins: parseNumber(getCellValue('small s2')),
+      voltaDraws: parseNumber(getCellValue('small s3')),
+      voltaLosses: parseNumber(getCellValue('small s4')),
+      voltaWinRate: parseNumber(getCellValue('small s5')),
+      voltaAverageRating: parseNumber(getCellValue('small s6')),
+      voltaMomCount: parseNumber(getCellValue('small s7')),
+      voltaGoals: parseNumber(getCellValue('small s8')),
+      voltaAssists: parseNumber(getCellValue('small s9')),
+      voltaTackleRate: getCellValue('medium m1 usebr'),
+      voltaBlockRate: getCellValue('medium m2 usebr'),
+      voltaEffectiveShots: getCellValue('medium m3 usebr'),
+      voltaPassRate: getCellValue('medium m5 usebr'),
+      voltaDribbleRate: getCellValue('medium m6 usebr'),
+      voltaMainPosition: getCellValue('large usebr'),
+    }
+  }
+
+  return null
+}
+
+function mergeCandidate(base: MatchSearchCandidate, incoming: Partial<MatchSearchCandidate>) {
+  return {
+    ...base,
+    ...incoming,
+    modes:
+      incoming.modes && incoming.modes.length > 0
+        ? Array.from(new Set([...base.modes, ...incoming.modes]))
+        : base.modes,
+    teamColors:
+      incoming.teamColors && incoming.teamColors.length > 0 ? incoming.teamColors : base.teamColors,
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -120,13 +203,10 @@ export async function GET(req: NextRequest) {
   }
 
   const encodedNickname = encodeURIComponent(nickname)
-  const [exactResult, rankResults] = await Promise.allSettled([
+  const [exactResult, rankResults, voltaResult] = await Promise.allSettled([
     fetchWithTimeout(
       `https://open.api.nexon.com/fconline/v1/id?nickname=${encodedNickname}`,
-      {
-        headers: nexonHeaders,
-        next: { revalidate: 300 },
-      },
+      { headers: nexonHeaders, next: { revalidate: 300 } },
       5000
     ),
     Promise.all(
@@ -144,12 +224,22 @@ export async function GET(req: NextRequest) {
             4000
           )
 
-          const html = await res.text()
-          return parseCandidates(html, mode.label)
+          return parseOfficialCandidates(await res.text(), mode.label)
         } catch {
           return []
         }
       })
+    ),
+    fetchWithTimeout(
+      `https://fconline.nexon.com/datacenter/rank_volta?rtype=all&strCharacterName=${encodedNickname}`,
+      {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        },
+        next: { revalidate: 300 },
+      },
+      5000
     ),
   ])
 
@@ -159,23 +249,9 @@ export async function GET(req: NextRequest) {
     const exactData = await exactResult.value.json().catch(() => null)
     if (exactData?.ouid) {
       exactCandidate = {
-        nickname,
-        nexonSn: `exact:${exactData.ouid}`,
+        ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
         ouid: exactData.ouid,
-        level: null,
-        rank: null,
-        elo: null,
-        rankLabel: null,
-        rankIconUrl: null,
-        winRate: null,
-        wins: null,
-        draws: null,
-        losses: null,
-        teamColors: [],
-        formation: null,
-        price: null,
         modes: ['정확일치'],
-        source: 'exact',
       }
     }
   }
@@ -186,31 +262,7 @@ export async function GET(req: NextRequest) {
   for (const candidates of results) {
     for (const candidate of candidates) {
       const key = `${candidate.nexonSn}:${candidate.nickname}`
-      const existing = merged.get(key)
-
-      if (!existing) {
-        merged.set(key, candidate)
-        continue
-      }
-
-      existing.modes = Array.from(new Set([...existing.modes, ...candidate.modes]))
-      existing.rank =
-        existing.rank === null
-          ? candidate.rank
-          : candidate.rank === null
-            ? existing.rank
-            : Math.min(existing.rank, candidate.rank)
-      existing.elo = existing.elo ?? candidate.elo
-      existing.rankLabel = existing.rankLabel ?? candidate.rankLabel
-      existing.rankIconUrl = existing.rankIconUrl ?? candidate.rankIconUrl
-      existing.winRate = existing.winRate ?? candidate.winRate
-      existing.wins = existing.wins ?? candidate.wins
-      existing.draws = existing.draws ?? candidate.draws
-      existing.losses = existing.losses ?? candidate.losses
-      existing.formation = existing.formation ?? candidate.formation
-      existing.price = existing.price ?? candidate.price
-      existing.level = existing.level ?? candidate.level
-      existing.teamColors = existing.teamColors.length > 0 ? existing.teamColors : candidate.teamColors
+      merged.set(key, merged.has(key) ? mergeCandidate(merged.get(key)!, candidate) : candidate)
     }
   }
 
@@ -223,30 +275,24 @@ export async function GET(req: NextRequest) {
     })
     .slice(0, 20)
 
+  const voltaCandidate =
+    exactCandidate && voltaResult.status === 'fulfilled' && voltaResult.value.ok
+      ? parseVoltaExactCandidate(await voltaResult.value.text(), nickname)
+      : null
+
   if (exactCandidate) {
+    const exactNickname = exactCandidate.nickname
     const matchedRankCandidate =
       candidates.find(
-        (candidate) =>
-          normalizeNickname(candidate.nickname) === normalizeNickname(exactCandidate?.nickname ?? '')
+        (candidate) => normalizeNickname(candidate.nickname) === normalizeNickname(exactNickname)
       ) ?? null
 
     if (matchedRankCandidate) {
-      exactCandidate = {
-        ...exactCandidate,
-        level: matchedRankCandidate.level,
-        rank: matchedRankCandidate.rank,
-        elo: matchedRankCandidate.elo,
-        rankLabel: matchedRankCandidate.rankLabel,
-        rankIconUrl: matchedRankCandidate.rankIconUrl,
-        winRate: matchedRankCandidate.winRate,
-        wins: matchedRankCandidate.wins,
-        draws: matchedRankCandidate.draws,
-        losses: matchedRankCandidate.losses,
-        teamColors: matchedRankCandidate.teamColors,
-        formation: matchedRankCandidate.formation,
-        price: matchedRankCandidate.price,
-        modes: Array.from(new Set([...exactCandidate.modes, ...matchedRankCandidate.modes])),
-      }
+      exactCandidate = mergeCandidate(exactCandidate, matchedRankCandidate)
+    }
+
+    if (voltaCandidate) {
+      exactCandidate = mergeCandidate(exactCandidate, voltaCandidate)
     }
   }
 

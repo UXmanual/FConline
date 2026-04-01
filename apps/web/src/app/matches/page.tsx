@@ -88,6 +88,11 @@ function summarizeMatches(matches: MatchData[], ouid: string | null | undefined)
   }
 }
 
+function statValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') return '-'
+  return value
+}
+
 export default function MatchesPage() {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
@@ -129,11 +134,11 @@ export default function MatchesPage() {
     setExactCandidate(null)
     setCandidates([])
     setMatches([])
-    setSearchMessage('검색 중이에요.')
+    setSearchMessage('검색 중입니다.')
 
     try {
       const res = await fetch(`/api/nexon/matches/search?nickname=${encodeURIComponent(trimmed)}`)
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
 
       if (requestId !== requestIdRef.current) return
 
@@ -150,7 +155,7 @@ export default function MatchesPage() {
 
       setSearchMessage(
         nextExactMatch
-          ? `"${trimmed}"의 볼타 공식 경기 기록을 확인할 수 있어요.`
+          ? `"${trimmed}"의 볼타 기록을 확인했어요.`
           : `"${trimmed}" 검색 결과가 없어요.`
       )
     } finally {
@@ -168,6 +173,10 @@ export default function MatchesPage() {
   }
 
   const voltaSummary = summarizeMatches(matches, exactCandidate?.ouid)
+  const hasVoltaRank =
+    exactCandidate?.voltaRank !== null ||
+    exactCandidate?.voltaRankPoint !== null ||
+    !!exactCandidate?.voltaRankIconUrl
 
   return (
     <div className="pt-5">
@@ -202,39 +211,114 @@ export default function MatchesPage() {
 
             {exactCandidate && (
               <section className="mb-6">
-                <div className="border-b border-[#e6e8ea] pb-4">
-                  <h2 className="truncate text-2xl font-bold tracking-[-0.03em] text-[#1e2124]">
-                    {exactCandidate.nickname}
-                  </h2>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#58616a]">
-                    <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
-                      볼타 공식 최근 20경기
-                    </span>
-
-                    {voltaSummary && (
-                      <>
-                        <span className="rounded-full bg-[#eef6ff] px-2.5 py-1 text-[12px] font-semibold text-[#256ef4]">
-                          {voltaSummary.wins}승 {voltaSummary.draws}무 {voltaSummary.losses}패
-                        </span>
-                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
-                          총 득점 {voltaSummary.goalsFor}
-                        </span>
-                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
-                          총 실점 {voltaSummary.goalsAgainst}
-                        </span>
-                      </>
+                <div className="border-b border-[#e6e8ea] pb-5">
+                  <div className="flex items-start gap-4">
+                    {exactCandidate.voltaRankIconUrl ? (
+                      <img
+                        src={exactCandidate.voltaRankIconUrl}
+                        alt="볼타 등급"
+                        className="h-16 w-16 shrink-0 object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#f4f5f6] text-xs font-semibold text-[#58616a]">
+                        볼타
+                      </div>
                     )}
+
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-2xl font-bold tracking-[-0.03em] text-[#1e2124]">
+                        {exactCandidate.nickname}
+                      </h2>
+                      <p className="mt-1 text-sm text-[#58616a]">
+                        {hasVoltaRank ? '볼타 라이브 공식 랭킹' : '볼타 랭킹 정보 없음'}
+                      </p>
+
+                      {hasVoltaRank ? (
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-[#1e2124] sm:grid-cols-3">
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">현재 순위</div>
+                            <div className="mt-1 font-semibold">#{statValue(exactCandidate.voltaRank)}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">랭킹 포인트</div>
+                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaRankPoint)}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">승무패</div>
+                            <div className="mt-1 font-semibold">
+                              {statValue(exactCandidate.voltaWins)}승 {statValue(exactCandidate.voltaDraws)}무 {statValue(exactCandidate.voltaLosses)}패
+                            </div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">승률</div>
+                            <div className="mt-1 font-semibold">
+                              {exactCandidate.voltaWinRate !== null ? `${exactCandidate.voltaWinRate}%` : '-'}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">평균 평점</div>
+                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaAverageRating)}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">MOM 선정</div>
+                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaMomCount)}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">득점</div>
+                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaGoals)}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">도움</div>
+                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaAssists)}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
+                            <div className="text-[11px] text-[#8a949e]">구단가치</div>
+                            <div className="mt-1 font-semibold">{statValue(exactCandidate.price)}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#58616a]">
+                          <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                            볼타 랭킹 1만위 밖 유저일 수 있어요
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {hasVoltaRank && (
+                    <div className="mt-4 grid gap-2 text-xs text-[#58616a] sm:grid-cols-2">
+                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">태클 성공률 {statValue(exactCandidate.voltaTackleRate)}</div>
+                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">차단 성공률 {statValue(exactCandidate.voltaBlockRate)}</div>
+                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">유효슛 {statValue(exactCandidate.voltaEffectiveShots)}</div>
+                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">패스 성공률 {statValue(exactCandidate.voltaPassRate)}</div>
+                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">드리블 성공률 {statValue(exactCandidate.voltaDribbleRate)}</div>
+                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">주요 포지션 {statValue(exactCandidate.voltaMainPosition)}</div>
+                    </div>
+                  )}
+
+                  {voltaSummary && (
+                    <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[#58616a]">
+                      <span className="rounded-full bg-[#eef6ff] px-2.5 py-1 text-[12px] font-semibold text-[#256ef4]">
+                        최근 20경기 {voltaSummary.wins}승 {voltaSummary.draws}무 {voltaSummary.losses}패
+                      </span>
+                      <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                        총 득점 {voltaSummary.goalsFor}
+                      </span>
+                      <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                        총 실점 {voltaSummary.goalsAgainst}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4">
                   <div className="mb-2 text-xs font-semibold text-[#58616a]">볼타 공식 최근 경기</div>
 
-                  {matchLoading && <LoadingDots label="볼타공식 기록을 불러오는 중이에요" />}
+                  {matchLoading && <LoadingDots label="볼타 공식 기록을 불러오는 중이에요" />}
 
                   {!matchLoading && matches.length === 0 && (
-                    <p className="py-4 text-sm text-[#8a949e]">볼타공식 경기 기록이 없어요.</p>
+                    <p className="py-4 text-sm text-[#8a949e]">볼타 공식 경기 기록이 없어요.</p>
                   )}
 
                   {!matchLoading && (
@@ -249,10 +333,7 @@ export default function MatchesPage() {
                         }
 
                         return (
-                          <div
-                            key={match.matchId}
-                            className="rounded-2xl border border-[#e6e8ea] bg-white p-4"
-                          >
+                          <div key={match.matchId} className="rounded-2xl border border-[#e6e8ea] bg-white p-4">
                             <div className="flex items-start gap-3">
                               <div
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
@@ -320,7 +401,7 @@ export default function MatchesPage() {
                                         ))
                                       ) : (
                                         <span className="text-[#8a949e]">
-                                          팀 구분 데이터가 없어 상대 팀원을 분리하지 못했습니다.
+                                          팀 구분 데이터가 없어 상대 팀원을 나누지 못했어요.
                                         </span>
                                       )}
                                     </div>
@@ -350,20 +431,24 @@ export default function MatchesPage() {
                         <div className="truncate text-sm font-bold">{candidate.nickname}</div>
                         <div className="mt-1 text-xs text-[#8a949e]">{candidate.modes.join(' · ')}</div>
                       </div>
-                      {candidate.rank !== null ? (
+                      {candidate.voltaRank !== null ? (
                         <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
-                          랭킹 {candidate.rank}위
+                          볼타 #{candidate.voltaRank}
+                        </span>
+                      ) : candidate.rank !== null ? (
+                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
+                          공식 {candidate.rank}위
                         </span>
                       ) : null}
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#58616a]">
-                      <span>레벨 {candidate.level ?? '-'}</span>
-                      <span>공식 랭킹 점수 {candidate.elo ?? '-'}</span>
-                      <span>공식 랭킹 승률 {candidate.winRate !== null ? `${candidate.winRate}%` : '-'}</span>
+                      <span>볼타 포인트 {statValue(candidate.voltaRankPoint)}</span>
+                      <span>승률 {candidate.voltaWinRate !== null ? `${candidate.voltaWinRate}%` : '-'}</span>
                       <span>
-                        공식 랭킹 전적 {candidate.wins ?? '-'} / {candidate.draws ?? '-'} / {candidate.losses ?? '-'}
+                        전적 {statValue(candidate.voltaWins)} / {statValue(candidate.voltaDraws)} / {statValue(candidate.voltaLosses)}
                       </span>
+                      <span>평균 평점 {statValue(candidate.voltaAverageRating)}</span>
                     </div>
                   </div>
                 ))}
