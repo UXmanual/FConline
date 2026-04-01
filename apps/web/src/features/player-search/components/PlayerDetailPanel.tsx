@@ -77,6 +77,22 @@ export default function PlayerDetailPanel({
 
   const currentPrice = formatPriceWithKoreanUnits(detail.prices[strongLevel])
 
+  const adjustedAbilities = useMemo(() => {
+    if (detail.abilities.length === 0) return []
+
+    const boost = getStrongPoint(strongLevel) - getStrongPoint(1)
+    return detail.abilities.map((ability) => ({
+      ...ability,
+      value: ability.value + boost,
+    }))
+  }, [detail.abilities, strongLevel])
+
+  const adjustedTotalAbility = useMemo(() => {
+    if (detail.totalAbility == null) return null
+    const boost = getStrongPoint(strongLevel) - getStrongPoint(1)
+    return detail.totalAbility + boost * detail.abilities.length
+  }, [detail.totalAbility, detail.abilities.length, strongLevel])
+
   useEffect(() => {
     setStrongLevel(initialStrongLevel)
   }, [initialStrongLevel])
@@ -338,21 +354,21 @@ export default function PlayerDetailPanel({
         )}
       </section>
 
-      {detail.abilities.length > 0 && (
-        <section className="rounded-2xl border border-[#e6e8ea] bg-[#1e2124] p-4">
+      {adjustedAbilities.length > 0 && (
+        <section className="rounded-2xl border border-[#e6e8ea] bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">능력치</h2>
-            {detail.totalAbility != null && (
-              <span className="text-sm font-bold text-white">
-                총 능력치 <span className="text-[#d946ef]">{detail.totalAbility.toLocaleString()}</span>
+            <h2 className="text-base font-semibold text-[#1e2124]">능력치</h2>
+            {adjustedTotalAbility != null && (
+              <span className="text-sm font-bold text-[#1e2124]">
+                총 능력치 <span style={{ color: ABILITY_TIER_COLOR.over120 }}>{adjustedTotalAbility.toLocaleString()}</span>
               </span>
             )}
           </div>
 
           <div className="mt-4 space-y-2">
             {ABILITY_GROUPS.map(([leftName, rightName]) => {
-              const left = detail.abilities.find((a) => a.name === leftName)
-              const right = detail.abilities.find((a) => a.name === rightName)
+              const left = adjustedAbilities.find((a) => a.name === leftName)
+              const right = adjustedAbilities.find((a) => a.name === rightName)
               if (!left && !right) return null
 
               return (
