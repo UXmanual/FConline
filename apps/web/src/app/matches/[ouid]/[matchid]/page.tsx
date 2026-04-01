@@ -56,6 +56,10 @@ function controllerLabel(value: string | null | undefined) {
   return value === 'gamepad' ? '패드' : '키보드'
 }
 
+function textOrDash(value: string | null | undefined) {
+  return typeof value === 'string' && value.trim() ? value : '-'
+}
+
 function StatRow({ label, left, right }: { label: string; left: string | number; right: string | number }) {
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-2">
@@ -67,17 +71,23 @@ function StatRow({ label, left, right }: { label: string; left: string | number;
 }
 
 function PlayerColumn({ player }: { player: MatchPlayerInfo }) {
-  const result = player.matchDetail.matchResult
-  const color = RESULT_COLOR[result] ?? '#8a949e'
+  const result = textOrDash(player.matchDetail.matchResult)
+  const nickname = textOrDash(player.nickname)
+  const score = goalDisplay(player)
+  const rating = formatRating(player.matchDetail.averageRating)
+  const badgeClass =
+    result === '승'
+      ? 'bg-[#256ef4]'
+      : result === '패'
+        ? 'bg-[#f64f5e]'
+        : 'bg-[#8a949e]'
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: color }}>
-        {result || '-'}
-      </div>
-      <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{player.nickname}</p>
-      <p className="text-3xl font-bold text-[#1e2124]">{goalDisplay(player)}</p>
-      <p className="text-xs text-[#8a949e]">평점 {formatRating(player.matchDetail.averageRating)}</p>
+      <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${badgeClass}`}>{result}</div>
+      <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{nickname}</p>
+      <p className="text-3xl font-bold text-[#1e2124]">{String(score)}</p>
+      <p className="text-xs text-[#8a949e]">평점 {rating}</p>
     </div>
   )
 }
