@@ -113,17 +113,9 @@ function extractFootStats(html: string) {
 function extractTraits(html: string) {
   const traits: Array<{ name: string }> = []
 
-  // Find the featureList section which contains trait images
-  const featureListMatch = html.match(/<div[^>]*class="[^"]*featureList[^"]*"[^>]*>([\s\S]*?)<\/div>/)
-
-  if (!featureListMatch || !featureListMatch[1]) {
-    return traits
-  }
-
-  const featureListSection = featureListMatch[1]
-
-  // Extract trait alt attributes from img elements within the featureList section
-  for (const match of featureListSection.matchAll(/<img[^>]*alt="([^"]+)"[^>]*>/g)) {
+  // Extract all trait images from featureList sections
+  // Traits appear as <img src="...trait_icon_*.png" alt="특성명" />
+  for (const match of html.matchAll(/<img[^>]*src="[^"]*trait_icon_[^"]*"[^>]*alt="([^"]*)"[^>]*>/g)) {
     const name = decodeHtml(match[1])
     if (name && !traits.find((t) => t.name === name)) {
       traits.push({ name })
