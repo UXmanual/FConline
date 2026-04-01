@@ -86,6 +86,34 @@ function statValue(value: string | number | null | undefined) {
   return value
 }
 
+function explainDetailValue(label: string, rawValue: string | number | null | undefined) {
+  const value = statValue(rawValue)
+  if (typeof value !== 'string') {
+    return String(value)
+  }
+
+  if (label === '주요 포지션') {
+    const [position, share] = value.split(/\s+(?=\d)/)
+    if (!share) return value
+    return `${position} | FW / MF / DF 비율 ${share}`
+  }
+
+  const parts = value.split(/\s+/).filter(Boolean)
+  if (parts.length < 3 || !parts[0].includes('%')) {
+    return value
+  }
+
+  const rate = parts[0]
+  const success = parts[1]
+  const attempt = parts[2]
+
+  if (label === '유효슛') {
+    return `${rate} | 총 유효슛 ${success} / 경기수 ${attempt}`
+  }
+
+  return `${rate} | 성공 ${success} / 시도 ${attempt}`
+}
+
 function InfoCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl bg-[#f7f8fa] px-4 py-3">
@@ -99,7 +127,9 @@ function DetailRow({ label, value }: { label: string; value: string | number }) 
   return (
     <div className="flex items-start justify-between gap-3 rounded-xl bg-[#fbfbfc] px-4 py-3">
       <span className="text-xs text-[#8a949e]">{label}</span>
-      <span className="text-right text-xs font-medium text-[#464c53]">{value}</span>
+      <span className="text-right text-xs font-medium text-[#464c53]">
+        {explainDetailValue(label, value)}
+      </span>
     </div>
   )
 }
@@ -134,6 +164,13 @@ export default function MatchesPage() {
     }
   }
 
+  const resolveOuid = async (nickname: string) => {
+    const res = await fetch(`/api/nexon/matches/user?nickname=${encodeURIComponent(nickname)}`)
+    if (!res.ok) return null
+    const data = await res.json().catch(() => null)
+    return data?.ouid ?? null
+  }
+
   const handleSearch = async () => {
     const trimmed = query.trim()
     if (!trimmed) return
@@ -153,9 +190,17 @@ export default function MatchesPage() {
 
       if (requestId !== requestIdRef.current) return
 
-      const nextExactMatch = data?.exactMatch ?? null
+      let nextExactMatch = data?.exactMatch ?? null
       const nextCandidates: MatchSearchCandidate[] = Array.isArray(data?.candidates) ? data.candidates : []
       const rankCandidates = nextCandidates.filter((candidate) => candidate.source !== 'exact')
+
+      if (nextExactMatch && !nextExactMatch.ouid) {
+        const resolvedOuid = await resolveOuid(trimmed)
+        if (requestId !== requestIdRef.current) return
+        if (resolvedOuid) {
+          nextExactMatch = { ...nextExactMatch, ouid: resolvedOuid }
+        }
+      }
 
       setExactCandidate(nextExactMatch)
       setCandidates(rankCandidates)
@@ -166,7 +211,9 @@ export default function MatchesPage() {
 
       setSearchMessage(
         nextExactMatch
-          ? `"${trimmed}"의 볼타 기록을 확인했어요.`
+          ? nextExactMatch.ouid
+            ? `"${trimmed}"의 볼타 기록을 확인했어요.`
+            : `"${trimmed}"의 랭킹 정보는 찾았지만 최근 경기 기록 식별값을 지금 못 받아오고 있어요.`
           : `"${trimmed}" 검색 결과가 없어요.`
       )
     } finally {
@@ -275,12 +322,12 @@ export default function MatchesPage() {
                       </div>
 
                       <div className="mt-4 space-y-2">
-                        <DetailRow label="태클 성공률" value={statValue(exactCandidate.voltaTackleRate)} />
-                        <DetailRow label="차단 성공률" value={statValue(exactCandidate.voltaBlockRate)} />
-                        <DetailRow label="유효슛" value={statValue(exactCandidate.voltaEffectiveShots)} />
-                        <DetailRow label="패스 성공률" value={statValue(exactCandidate.voltaPassRate)} />
-                        <DetailRow label="드리블 성공률" value={statValue(exactCandidate.voltaDribbleRate)} />
-                        <DetailRow label="주요 포지션" value={statValue(exactCandidate.voltaMainPosition)} />
+                        <DetailRow label="태클 성공률" value={exactCandidate.voltaTackleRate ?? '-'} />
+                        <DetailRow label="차단 성공률" value={exactCandidate.voltaBlockRate ?? '-'} />
+                        <DetailRow label="유효슛" value={exactCandidate.voltaEffectiveShots ?? '-'} />
+                        <DetailRow label="패스 성공률" value={exactCandidate.voltaPassRate ?? '-'} />
+                        <DetailRow label="드리블 성공률" value={exactCandidate.voltaDribbleRate ?? '-'} />
+                        <DetailRow label="주요 포지션" value={exactCandidate.voltaMainPosition ?? '-'} />
                       </div>
                     </>
                   ) : (
