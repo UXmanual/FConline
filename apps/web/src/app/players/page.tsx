@@ -9,6 +9,7 @@ import { Player, Season } from '@/features/player-search/types'
 import { getStrongPoint } from '@/features/player-search/player-detail'
 
 const STORAGE_KEY = 'player-search-state'
+const RESULTS_KEY = 'player-search-results'
 const RESET_KEY = 'player-search-reset'
 const PRESERVE_KEY = 'player-search-preserve'
 
@@ -70,6 +71,7 @@ export default function PlayersPage() {
     }
 
     const savedState = sessionStorage.getItem(STORAGE_KEY)
+    const savedResults = sessionStorage.getItem(RESULTS_KEY)
 
     if (savedState) {
       try {
@@ -84,6 +86,20 @@ export default function PlayersPage() {
         setSearchQuery(parsed.searchQuery ?? '')
         setStrongLevel(parsed.strongLevel ?? 1)
         setSortBy(parsed.sortBy ?? 'latest')
+
+        // 검색 결과도 즉시 복원 (로딩 없이)
+        if (savedResults) {
+          try {
+            const results = JSON.parse(savedResults) as {
+              players: Player[]
+              seasons: Season[]
+            }
+            setPlayers(results.players)
+            setSeasons(results.seasons)
+          } catch {
+            sessionStorage.removeItem(RESULTS_KEY)
+          }
+        }
       } catch {
         sessionStorage.removeItem(STORAGE_KEY)
       }
@@ -125,6 +141,14 @@ export default function PlayersPage() {
       .then((data) => {
         setPlayers(data.players)
         setSeasons(data.seasons)
+        // 검색 결과 캐싱
+        sessionStorage.setItem(
+          RESULTS_KEY,
+          JSON.stringify({
+            players: data.players,
+            seasons: data.seasons,
+          })
+        )
       })
       .finally(() => setLoading(false))
   }, [hydrated, searchQuery])
