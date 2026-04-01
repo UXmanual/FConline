@@ -22,6 +22,26 @@ export interface MatchUser {
   nickname: string
 }
 
+export interface MatchSearchCandidate {
+  nickname: string
+  nexonSn: string
+  ouid?: string | null
+  level: number | null
+  rank: number | null
+  elo: number | null
+  rankLabel?: string | null
+  rankIconUrl?: string | null
+  winRate: number | null
+  wins: number | null
+  draws: number | null
+  losses: number | null
+  teamColors: string[]
+  formation: string | null
+  price: string | null
+  modes: string[]
+  source: 'exact' | 'rank'
+}
+
 export interface MatchPlayerInfo {
   ouid: string
   nickname: string

@@ -3,7 +3,12 @@
 import { useRef, useState } from 'react'
 import { MagnifyingGlass } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
-import { MatchData, MATCH_TYPE_NAMES, VOLTA_MATCH_TYPES } from '@/features/match-analysis/types'
+import {
+  MatchData,
+  MatchPlayerInfo,
+  MatchSearchCandidate,
+  MATCH_TYPE_NAMES,
+} from '@/features/match-analysis/types'
 
 const RESULT_COLOR: Record<string, string> = {
   승: '#256ef4',
@@ -12,7 +17,8 @@ const RESULT_COLOR: Record<string, string> = {
 }
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
+  const normalized = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`
+  const d = new Date(normalized)
   const month = d.getMonth() + 1
   const day = d.getDate()
   const hour = String(d.getHours()).padStart(2, '0')
@@ -20,65 +26,148 @@ function formatDate(dateStr: string) {
   return `${month}/${day} ${hour}:${min}`
 }
 
+function getDisplayScore(player: MatchPlayerInfo | undefined) {
+  return player?.shoot.goalTotalDisplay ?? player?.shoot.goalTotal ?? 0
+}
+
+function buildVoltaTeams(match: MatchData, myOuid: string) {
+  const players = Array.isArray(match.matchInfo) ? match.matchInfo : []
+  const me = players.find((player) => player.ouid === myOuid)
+
+  if (!me) {
+    return null
+  }
+
+  const myResult = me.matchDetail.matchResult
+  const isDraw = myResult === '무'
+  const teammates = players.filter((player) => player.matchDetail.matchResult === myResult)
+  const opponents = players.filter((player) => player.matchDetail.matchResult !== myResult)
+
+  return {
+    me,
+    isDraw,
+    teammates: isDraw ? players : teammates.length > 0 ? teammates : [me],
+    opponents: isDraw ? [] : opponents,
+    myScore: getDisplayScore(me),
+    opponentScore: isDraw ? getDisplayScore(me) : getDisplayScore(opponents[0]),
+  }
+}
+
+function summarizeMatches(matches: MatchData[], ouid: string | null | undefined) {
+  if (!ouid) return null
+
+  let wins = 0
+  let draws = 0
+  let losses = 0
+  let goalsFor = 0
+  let goalsAgainst = 0
+
+  for (const match of matches) {
+    const teams = buildVoltaTeams(match, ouid)
+    if (!teams) continue
+
+    const result = teams.me.matchDetail.matchResult
+    if (result === '승') wins += 1
+    else if (result === '무') draws += 1
+    else if (result === '패') losses += 1
+
+    goalsFor += teams.myScore
+    goalsAgainst += teams.opponentScore
+  }
+
+  const total = wins + draws + losses
+  if (total === 0) return null
+
+  return {
+    total,
+    wins,
+    draws,
+    losses,
+    goalsFor,
+    goalsAgainst,
+  }
+}
+
 export default function MatchesPage() {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const requestIdRef = useRef(0)
+
   const [query, setQuery] = useState('')
-  const [ouid, setOuid] = useState<string | null>(null)
-  const [matchType, setMatchType] = useState(214)
+  const [exactCandidate, setExactCandidate] = useState<MatchSearchCandidate | null>(null)
+  const [candidates, setCandidates] = useState<MatchSearchCandidate[]>([])
   const [matches, setMatches] = useState<MatchData[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [matchLoading, setMatchLoading] = useState(false)
-  const [notFound, setNotFound] = useState(false)
+  const [searchMessage, setSearchMessage] = useState('닉네임을 검색해보세요.')
 
-  const handleSearch = async () => {
-    const trimmed = query.trim()
-    if (!trimmed) return
-
-    setSearchLoading(true)
-    setNotFound(false)
-    setOuid(null)
-    setMatches([])
-
-    try {
-      const res = await fetch(`/api/nexon/matches/user?nickname=${encodeURIComponent(trimmed)}`)
-      const user = await res.json()
-
-      if (!user?.ouid) {
-        setNotFound(true)
-        return
-      }
-
-      setOuid(user.ouid)
-      loadMatches(user.ouid, matchType)
-    } finally {
-      setSearchLoading(false)
-    }
-  }
-
-  const loadMatches = async (targetOuid: string, type: number) => {
+  const loadMatches = async (targetOuid: string) => {
     setMatchLoading(true)
     setMatches([])
 
     try {
-      const res = await fetch(`/api/nexon/matches/list?ouid=${targetOuid}&matchtype=${type}&limit=10`)
-      const data = await res.json()
-      setMatches(data)
+      const res = await fetch(`/api/nexon/matches/list?ouid=${targetOuid}&matchtype=214&limit=20`)
+      if (!res.ok) {
+        setMatches([])
+        return
+      }
+
+      const data = await res.json().catch(() => [])
+      setMatches(Array.isArray(data) ? data : [])
     } finally {
       setMatchLoading(false)
     }
   }
 
-  const handleTypeChange = (type: number) => {
-    setMatchType(type)
-    if (ouid) loadMatches(ouid, type)
+  const handleSearch = async () => {
+    const trimmed = query.trim()
+    if (!trimmed) return
+
+    const requestId = ++requestIdRef.current
+
+    setSearchLoading(true)
+    setMatchLoading(false)
+    setExactCandidate(null)
+    setCandidates([])
+    setMatches([])
+    setSearchMessage('검색 중이에요.')
+
+    try {
+      const res = await fetch(`/api/nexon/matches/search?nickname=${encodeURIComponent(trimmed)}`)
+      const data = await res.json()
+
+      if (requestId !== requestIdRef.current) return
+
+      const nextExactMatch = data?.exactMatch ?? null
+      const nextCandidates: MatchSearchCandidate[] = Array.isArray(data?.candidates) ? data.candidates : []
+      const rankCandidates = nextCandidates.filter((candidate) => candidate.source !== 'exact')
+
+      setExactCandidate(nextExactMatch)
+      setCandidates(rankCandidates)
+
+      if (nextExactMatch?.ouid) {
+        await loadMatches(nextExactMatch.ouid)
+      }
+
+      setSearchMessage(
+        nextExactMatch
+          ? `"${trimmed}"의 볼타 공식 경기 기록을 확인할 수 있어요.`
+          : `"${trimmed}" 검색 결과가 없어요.`
+      )
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setSearchLoading(false)
+      }
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       inputRef.current?.blur()
-      handleSearch()
+      void handleSearch()
     }
   }
+
+  const voltaSummary = summarizeMatches(matches, exactCandidate?.ouid)
 
   return (
     <div className="pt-5">
@@ -89,17 +178,14 @@ export default function MatchesPage() {
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setNotFound(false)
-          }}
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="닉네임 검색"
           className="min-w-0 flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
         />
         <button
           type="button"
-          onClick={handleSearch}
+          onClick={() => void handleSearch()}
           disabled={searchLoading}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md active:bg-[#f4f5f6] disabled:opacity-50"
         >
@@ -108,78 +194,181 @@ export default function MatchesPage() {
       </div>
 
       <div className="mt-4">
-        {searchLoading && <LoadingDots label="검색 중이에요" />}
+        {searchLoading && <LoadingDots label="닉네임 목록을 찾는 중이에요" />}
 
-        {notFound && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">해당 닉네임의 유저를 찾을 수 없어요.</p>
-        )}
-
-        {!searchLoading && !notFound && !ouid && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">닉네임을 검색해보세요.</p>
-        )}
-
-        {ouid && (
+        {!searchLoading && (
           <>
-            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {VOLTA_MATCH_TYPES.map((t) => (
-                <button
-                  key={t.type}
-                  type="button"
-                  onClick={() => handleTypeChange(t.type)}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    matchType === t.type
-                      ? 'border-[#1e2124] bg-[#1e2124] text-white'
-                      : 'border-[#e6e8ea] bg-white text-[#58616a]'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+            <p className="pb-3 text-sm text-[#8a949e]">{searchMessage}</p>
 
-            <div className="mt-3">
-              {matchLoading && <LoadingDots label="경기 기록을 불러오는 중이에요" />}
+            {exactCandidate && (
+              <section className="mb-6">
+                <div className="border-b border-[#e6e8ea] pb-4">
+                  <h2 className="truncate text-2xl font-bold tracking-[-0.03em] text-[#1e2124]">
+                    {exactCandidate.nickname}
+                  </h2>
 
-              {!matchLoading && matches.length === 0 && (
-                <p className="py-8 text-center text-sm text-[#8a949e]">해당 모드의 경기 기록이 없어요.</p>
-              )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#58616a]">
+                    <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                      볼타 공식 최근 20경기
+                    </span>
 
-              {matches.map((match) => {
-                const me = match.matchInfo.find((p) => p.ouid === ouid)
-                const opponent = match.matchInfo.find((p) => p.ouid !== ouid)
-                const result = me?.matchDetail.matchResult ?? '-'
-                const resultColor = RESULT_COLOR[result] ?? '#8a949e'
+                    {voltaSummary && (
+                      <>
+                        <span className="rounded-full bg-[#eef6ff] px-2.5 py-1 text-[12px] font-semibold text-[#256ef4]">
+                          {voltaSummary.wins}승 {voltaSummary.draws}무 {voltaSummary.losses}패
+                        </span>
+                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                          총 득점 {voltaSummary.goalsFor}
+                        </span>
+                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                          총 실점 {voltaSummary.goalsAgainst}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-                return (
+                <div className="mt-4">
+                  <div className="mb-2 text-xs font-semibold text-[#58616a]">볼타 공식 최근 경기</div>
+
+                  {matchLoading && <LoadingDots label="볼타공식 기록을 불러오는 중이에요" />}
+
+                  {!matchLoading && matches.length === 0 && (
+                    <p className="py-4 text-sm text-[#8a949e]">볼타공식 경기 기록이 없어요.</p>
+                  )}
+
+                  {!matchLoading && (
+                    <div className="space-y-3">
+                      {matches.map((match) => {
+                        const teams = buildVoltaTeams(match, exactCandidate.ouid ?? '')
+                        const result = teams?.me.matchDetail.matchResult ?? '-'
+                        const resultColor = RESULT_COLOR[result] ?? '#8a949e'
+
+                        if (!teams) {
+                          return null
+                        }
+
+                        return (
+                          <div
+                            key={match.matchId}
+                            className="rounded-2xl border border-[#e6e8ea] bg-white p-4"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+                                style={{ backgroundColor: resultColor }}
+                              >
+                                {result}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-[#1e2124]">
+                                  <span>{result}</span>
+                                  <span>{teams.isDraw ? '무승부' : '내팀'}</span>
+                                  <span className="font-bold">
+                                    {teams.myScore} : {teams.opponentScore}
+                                  </span>
+                                  <span>{teams.isDraw ? '무승부' : '상대팀'}</span>
+                                </div>
+                                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#8a949e]">
+                                  <span>{MATCH_TYPE_NAMES[match.matchType] ?? match.matchType}</span>
+                                  <span className="text-[#c1c7cd]">|</span>
+                                  <span>{formatDate(match.matchDate)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <details className="mt-3 rounded-2xl bg-[#f4f7fb] px-3 py-2 text-xs text-[#58616a]">
+                              <summary className="cursor-pointer list-none font-semibold text-[#464c53]">
+                                팀 정보 보기
+                              </summary>
+                              <div className="mt-3 grid gap-3">
+                                <div>
+                                  <div className="mb-2 font-semibold text-[#1e2124]">
+                                    {teams.isDraw ? '참가자' : '내팀'}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {teams.teammates.map((player) => (
+                                      <span
+                                        key={player.ouid}
+                                        className={`rounded-full px-2.5 py-1 ${
+                                          player.ouid === teams.me.ouid
+                                            ? 'bg-[#256ef4] text-white'
+                                            : 'bg-white text-[#464c53]'
+                                        }`}
+                                      >
+                                        {player.nickname}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {!teams.isDraw && (
+                                  <div>
+                                    <div className="mb-2 font-semibold text-[#1e2124]">
+                                      {teams.opponents.length > 0 ? '상대팀' : '다른 참가자'}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {teams.opponents.length > 0 ? (
+                                        teams.opponents.map((player) => (
+                                          <span
+                                            key={player.ouid}
+                                            className="rounded-full bg-white px-2.5 py-1 text-[#464c53]"
+                                          >
+                                            {player.nickname}
+                                          </span>
+                                        ))
+                                      ) : (
+                                        <span className="text-[#8a949e]">
+                                          팀 구분 데이터가 없어 상대 팀원을 분리하지 못했습니다.
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </details>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {candidates.length > 0 && (
+              <div className="space-y-2">
+                <p className="pb-1 text-xs font-semibold text-[#8a949e]">랭킹 후보</p>
+                {candidates.map((candidate) => (
                   <div
-                    key={match.matchId}
-                    className="flex items-center gap-3 border-b border-[#e6e8ea] py-3.5"
+                    key={`${candidate.nexonSn}-${candidate.nickname}`}
+                    className="block w-full rounded-2xl border border-[#e6e8ea] bg-white px-4 py-3 text-left"
                   >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-                      style={{ backgroundColor: resultColor }}
-                    >
-                      {result}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold">{candidate.nickname}</div>
+                        <div className="mt-1 text-xs text-[#8a949e]">{candidate.modes.join(' · ')}</div>
+                      </div>
+                      {candidate.rank !== null ? (
+                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
+                          랭킹 {candidate.rank}위
+                        </span>
+                      ) : null}
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <span className="text-sm font-semibold text-[#1e2124]">
-                        {me?.nickname ?? '-'}
-                        <span className="mx-1.5 font-bold">
-                          {me?.shoot.goalTotal ?? 0} : {opponent?.shoot.goalTotal ?? 0}
-                        </span>
-                        {opponent?.nickname ?? '-'}
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#58616a]">
+                      <span>레벨 {candidate.level ?? '-'}</span>
+                      <span>공식 랭킹 점수 {candidate.elo ?? '-'}</span>
+                      <span>공식 랭킹 승률 {candidate.winRate !== null ? `${candidate.winRate}%` : '-'}</span>
+                      <span>
+                        공식 랭킹 전적 {candidate.wins ?? '-'} / {candidate.draws ?? '-'} / {candidate.losses ?? '-'}
                       </span>
-                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#8a949e]">
-                        <span>{MATCH_TYPE_NAMES[match.matchType] ?? match.matchType}</span>
-                        <span className="text-[#c1c7cd]">|</span>
-                        <span>{formatDate(match.matchDate)}</span>
-                      </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
