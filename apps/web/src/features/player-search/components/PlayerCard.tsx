@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { getStrongPoint, formatPriceWithKoreanUnits } from '../player-detail'
+import { getStrongPoint, formatPriceWithKoreanUnits, calculateSkillMoveStars } from '../player-detail'
 import { Player, Season } from '../types'
 import PlayerImage from './PlayerImage'
 
@@ -65,19 +65,41 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1">
-          {season && (
-            <div className="relative -mr-1 h-4 w-6 shrink-0">
-              <Image
-                src={season.seasonImg}
-                alt={season.className}
-                fill
-                className="object-contain object-left"
-                unoptimized
-              />
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1">
+            {season && (
+              <div className="relative -mr-1 h-4 w-6 shrink-0">
+                <Image
+                  src={season.seasonImg}
+                  alt={season.className}
+                  fill
+                  className="object-contain object-left"
+                  unoptimized
+                />
+              </div>
+            )}
+            <span className="truncate text-sm font-semibold text-[#1e2124]">{player.name}</span>
+          </div>
+
+          {detail?.skillMove != null && (
+            <div className="shrink-0 flex gap-0.5">
+              {Array.from({ length: calculateSkillMoveStars(detail.skillMove, strongLevel) }, (_, i) => (
+                <svg
+                  key={i}
+                  width="12"
+                  height="12"
+                  viewBox="0 0 19 18"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4.19227 17.44L6.27227 11.08L0.832266 7.16H7.51227L9.59227 0.799999L11.6723 7.16H18.3923L12.9523 11.08L15.0323 17.44L9.59227 13.52L4.19227 17.44Z"
+                    fill="#F1C018"
+                  />
+                </svg>
+              ))}
             </div>
           )}
-          <span className="truncate text-sm font-semibold text-[#1e2124]">{player.name}</span>
         </div>
 
         {detail && (

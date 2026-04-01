@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { formatPriceWithKoreanUnits, getStrongPoint } from '../player-detail'
+import { formatPriceWithKoreanUnits, getStrongPoint, calculateSkillMoveStars } from '../player-detail'
 import { AbilityStat, PlayerDetail } from '../types'
 
 const ABILITY_TIER_COLOR: Record<AbilityStat['tier'], string> = {
@@ -334,7 +334,7 @@ export default function PlayerDetailPanel({
           <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f4f5f6] px-4 py-3">
             <p className="text-xs font-medium text-[#8a949e]">개인기</p>
             <div className="flex gap-0.5">
-              {Array.from({ length: 5 }, (_, i) => (
+              {Array.from({ length: 6 }, (_, i) => (
                 <svg
                   key={i}
                   width="16"
@@ -345,7 +345,7 @@ export default function PlayerDetailPanel({
                 >
                   <path
                     d="M4.19227 17.44L6.27227 11.08L0.832266 7.16H7.51227L9.59227 0.799999L11.6723 7.16H18.3923L12.9523 11.08L15.0323 17.44L9.59227 13.52L4.19227 17.44Z"
-                    fill={i < (detail.skillMove ?? 0) ? '#F1C018' : '#d1d5db'}
+                    fill={i < calculateSkillMoveStars(detail.skillMove, strongLevel) ? '#F1C018' : '#d1d5db'}
                   />
                 </svg>
               ))}

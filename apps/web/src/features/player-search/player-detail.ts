@@ -110,6 +110,20 @@ function extractFootStats(html: string) {
   }
 }
 
+export function calculateSkillMoveStars(skillMove: number | null, strongLevel: number): number {
+  if (skillMove == null) return 0
+
+  let stars = skillMove
+
+  if (strongLevel >= 8) {
+    stars += 2
+  } else if (strongLevel >= 5) {
+    stars += 1
+  }
+
+  return Math.min(stars, 6)
+}
+
 export function formatPriceWithKoreanUnits(price: string | undefined | null) {
   if (!price) {
     return '-'
