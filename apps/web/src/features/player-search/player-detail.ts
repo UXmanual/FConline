@@ -113,17 +113,17 @@ function extractFootStats(html: string) {
 function extractTraits(html: string) {
   const traits: Array<{ name: string }> = []
 
-  // Find the _area_skillmove section which contains trait images
-  const skillmoveMatch = html.match(/<div[^>]*class="[^"]*_area_skillmove[^"]*"[^>]*>([\s\S]*?)<\/div>/)
+  // Find the featureList section which contains trait images
+  const featureListMatch = html.match(/<div[^>]*class="[^"]*featureList[^"]*"[^>]*>([\s\S]*?)<\/div>/)
 
-  if (!skillmoveMatch || !skillmoveMatch[1]) {
+  if (!featureListMatch || !featureListMatch[1]) {
     return traits
   }
 
-  const skillmoveSection = skillmoveMatch[1]
+  const featureListSection = featureListMatch[1]
 
-  // Extract trait alt attributes from img elements within the skillmove section
-  for (const match of skillmoveSection.matchAll(/<img[^>]*alt="([^"]+)"[^>]*>/g)) {
+  // Extract trait alt attributes from img elements within the featureList section
+  for (const match of featureListSection.matchAll(/<img[^>]*alt="([^"]+)"[^>]*>/g)) {
     const name = decodeHtml(match[1])
     if (name && !traits.find((t) => t.name === name)) {
       traits.push({ name })
