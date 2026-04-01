@@ -42,8 +42,8 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
     ? [
         { label: `${strongLevel}카`, emphasize: null },
         { label: '포지션', value: detail.position ?? '-', emphasize: true },
-        { label: '오버롤', value: currentOverall ?? '-', emphasize: false },
-        { label: '급여', value: detail.pay ?? '-', emphasize: true },
+        { label: '오버롤', value: currentOverall ?? '-', emphasize: true },
+        { label: '급여', value: detail.pay ?? '-', emphasize: false },
         { label: '현재 금액', value: formatPriceWithKoreanUnits(detail.prices[strongLevel]), emphasize: true },
         { label: '키', value: detail.height ? `${detail.height}cm` : '-', emphasize: false },
         { label: '몸무게', value: detail.weight ? `${detail.weight}kg` : '-', emphasize: false },

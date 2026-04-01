@@ -161,7 +161,9 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
     pay: matchNumber(html, /<span class="pay">[\s\S]*?<span>(\d+)</),
     height: matchNumber(html, /<span>(\d+)cm</),
     weight: matchNumber(html, /<span>(\d+)kg</),
-    bodyType: matchGroup(html, /<span>([^<]*\([^<]+\))</),
+    bodyType:
+      matchGroup(html, /kg<\/span>\s*<span>([^<]+)</) ??
+      matchGroup(html, /<span>([^<]+)/),
     leftFoot: footStats.leftFoot,
     rightFoot: footStats.rightFoot,
     skillMove: matchNumber(html, /name="SkillMove\d+" value="(\d+)"/),
