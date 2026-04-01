@@ -138,48 +138,56 @@ function parseOfficialCandidates(html: string, modeLabel: string) {
 }
 
 function parseVoltaExactCandidate(html: string, nickname: string): Partial<MatchSearchCandidate> | null {
-  const tbody = html.match(/<div class="tbody">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/)?.[1] ?? html
-  const rows = [...tbody.matchAll(/<div class="tr">([\s\S]*?)<\/div>\s*(?=<div class="tr">|$)/g)]
   const normalizedTarget = normalizeNickname(nickname)
+  const nicknameMatch = new RegExp(
+    `<span class="name profile_pointer"[^>]*>[\\s\\S]*?${nickname}[\\s\\S]*?<\\/span>`
+  ).exec(html)
 
-  for (const row of rows) {
-    const rowHtml = row[0]
-    const rowNickname = stripTags(
-      rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? ''
-    )
-
-    if (!rowNickname || normalizeNickname(rowNickname) !== normalizedTarget) {
-      continue
-    }
-
-    const getCellValue = (cellClass: string) =>
-      stripTags(rowHtml.match(new RegExp(`<div class="td ${cellClass}[^"]*">([\\s\\S]*?)<\\/div>`))?.[0] ?? '') ||
-      null
-
-    return {
-      price:
-        stripTags(rowHtml.match(/<span class="price"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '') || null,
-      voltaRank: parseNumber(getCellValue('no')),
-      voltaRankIconUrl: rowHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null,
-      voltaRankPoint: parseNumber(getCellValue('small s1')),
-      voltaWins: parseNumber(getCellValue('small s2')),
-      voltaDraws: parseNumber(getCellValue('small s3')),
-      voltaLosses: parseNumber(getCellValue('small s4')),
-      voltaWinRate: parseNumber(getCellValue('small s5')),
-      voltaAverageRating: parseNumber(getCellValue('small s6')),
-      voltaMomCount: parseNumber(getCellValue('small s7')),
-      voltaGoals: parseNumber(getCellValue('small s8')),
-      voltaAssists: parseNumber(getCellValue('small s9')),
-      voltaTackleRate: getCellValue('medium m1 usebr'),
-      voltaBlockRate: getCellValue('medium m2 usebr'),
-      voltaEffectiveShots: getCellValue('medium m3 usebr'),
-      voltaPassRate: getCellValue('medium m5 usebr'),
-      voltaDribbleRate: getCellValue('medium m6 usebr'),
-      voltaMainPosition: getCellValue('large usebr'),
-    }
+  if (!nicknameMatch || nicknameMatch.index === undefined) {
+    return null
   }
 
-  return null
+  const rowStart = html.lastIndexOf('<div class="tr">', nicknameMatch.index)
+  const paginationStart = html.indexOf('<div class="pagination">', nicknameMatch.index)
+
+  if (rowStart === -1 || paginationStart === -1) {
+    return null
+  }
+
+  const rowHtml = html.slice(rowStart, paginationStart)
+  const rowNickname = stripTags(
+    rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? ''
+  )
+
+  if (!rowNickname || normalizeNickname(rowNickname) !== normalizedTarget) {
+    return null
+  }
+
+  const getCellValue = (cellClass: string) =>
+    stripTags(rowHtml.match(new RegExp(`<div class="td ${cellClass}[^"]*">([\\s\\S]*?)<\\/div>`))?.[0] ?? '') ||
+    null
+
+  return {
+    price:
+      stripTags(rowHtml.match(/<span class="price"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '') || null,
+    voltaRank: parseNumber(getCellValue('no')),
+    voltaRankIconUrl: rowHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null,
+    voltaRankPoint: parseNumber(getCellValue('small s1')),
+    voltaWins: parseNumber(getCellValue('small s2')),
+    voltaDraws: parseNumber(getCellValue('small s3')),
+    voltaLosses: parseNumber(getCellValue('small s4')),
+    voltaWinRate: parseNumber(getCellValue('small s5')),
+    voltaAverageRating: parseNumber(getCellValue('small s6')),
+    voltaMomCount: parseNumber(getCellValue('small s7')),
+    voltaGoals: parseNumber(getCellValue('small s8')),
+    voltaAssists: parseNumber(getCellValue('small s9')),
+    voltaTackleRate: getCellValue('medium m1 usebr'),
+    voltaBlockRate: getCellValue('medium m2 usebr'),
+    voltaEffectiveShots: getCellValue('medium m3 usebr'),
+    voltaPassRate: getCellValue('medium m5 usebr'),
+    voltaDribbleRate: getCellValue('medium m6 usebr'),
+    voltaMainPosition: getCellValue('large usebr'),
+  }
 }
 
 function mergeCandidate(base: MatchSearchCandidate, incoming: Partial<MatchSearchCandidate>) {
