@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CaretDown } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import PlayerSearchBar from '@/features/player-search/components/PlayerSearchBar'
@@ -24,6 +24,7 @@ export default function PlayersPage() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const isInitialRestoreRef = useRef(true)
 
   const handleSearch = () => {
     setSearchQuery(query.trim())
@@ -129,6 +130,14 @@ export default function PlayersPage() {
       return
     }
 
+    // 초기 복원 후 첫 번째 searchQuery 변경은 스킵 (이미 sessionStorage에서 복원됨)
+    if (isInitialRestoreRef.current && players.length > 0) {
+      isInitialRestoreRef.current = false
+      return
+    }
+
+    isInitialRestoreRef.current = false
+
     if (!searchQuery.trim()) {
       setPlayers([])
       setSeasons([])
@@ -151,7 +160,7 @@ export default function PlayersPage() {
         )
       })
       .finally(() => setLoading(false))
-  }, [hydrated, searchQuery])
+  }, [hydrated, searchQuery, players.length])
 
   const sortedPlayers = getSortedPlayers(players)
 
