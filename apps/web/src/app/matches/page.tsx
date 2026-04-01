@@ -1,41 +1,83 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRef, useState } from 'react'
 import { MagnifyingGlass } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
-import { MatchUser } from '@/features/match-analysis/types'
+import { MatchData, MATCH_TYPE_NAMES, VOLTA_MATCH_TYPES } from '@/features/match-analysis/types'
+
+const RESULT_COLOR: Record<string, string> = {
+  승: '#256ef4',
+  패: '#f64f5e',
+  무: '#8a949e',
+}
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const hour = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${month}/${day} ${hour}:${min}`
+}
 
 export default function MatchesPage() {
-  const router = useRouter()
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const [query, setQuery] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [ouid, setOuid] = useState<string | null>(null)
+  const [matchType, setMatchType] = useState(214)
+  const [matches, setMatches] = useState<MatchData[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [matchLoading, setMatchLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
   const handleSearch = async () => {
     const trimmed = query.trim()
     if (!trimmed) return
 
-    setLoading(true)
+    setSearchLoading(true)
     setNotFound(false)
+    setOuid(null)
+    setMatches([])
 
     try {
       const res = await fetch(`/api/nexon/matches/user?nickname=${encodeURIComponent(trimmed)}`)
-      const user: MatchUser | null = await res.json()
+      const user = await res.json()
 
-      if (!user) {
+      if (!user?.ouid) {
         setNotFound(true)
         return
       }
 
-      router.push(`/matches/${user.ouid}?nickname=${encodeURIComponent(user.nickname)}`)
+      setOuid(user.ouid)
+      loadMatches(user.ouid, matchType)
     } finally {
-      setLoading(false)
+      setSearchLoading(false)
     }
   }
 
+  const loadMatches = async (targetOuid: string, type: number) => {
+    setMatchLoading(true)
+    setMatches([])
+
+    try {
+      const res = await fetch(`/api/nexon/matches/list?ouid=${targetOuid}&matchtype=${type}&limit=10`)
+      const data = await res.json()
+      setMatches(data)
+    } finally {
+      setMatchLoading(false)
+    }
+  }
+
+  const handleTypeChange = (type: number) => {
+    setMatchType(type)
+    if (ouid) loadMatches(ouid, type)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch()
+    if (e.key === 'Enter') {
+      inputRef.current?.blur()
+      handleSearch()
+    }
   }
 
   return (
@@ -44,6 +86,7 @@ export default function MatchesPage() {
 
       <div className="mt-3 flex h-14 items-center gap-2 rounded-lg border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
         <input
+          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => {
@@ -57,26 +100,87 @@ export default function MatchesPage() {
         <button
           type="button"
           onClick={handleSearch}
-          disabled={loading}
+          disabled={searchLoading}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md active:bg-[#f4f5f6] disabled:opacity-50"
         >
           <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
         </button>
       </div>
 
-      <div className="mt-6">
-        {loading && <LoadingDots label="검색 중이에요" />}
+      <div className="mt-4">
+        {searchLoading && <LoadingDots label="검색 중이에요" />}
 
         {notFound && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">
-            해당 닉네임의 유저를 찾을 수 없어요.
-          </p>
+          <p className="py-8 text-center text-sm text-[#8a949e]">해당 닉네임의 유저를 찾을 수 없어요.</p>
         )}
 
-        {!loading && !notFound && !query && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">
-            닉네임을 검색해보세요.
-          </p>
+        {!searchLoading && !notFound && !ouid && (
+          <p className="py-8 text-center text-sm text-[#8a949e]">닉네임을 검색해보세요.</p>
+        )}
+
+        {ouid && (
+          <>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {VOLTA_MATCH_TYPES.map((t) => (
+                <button
+                  key={t.type}
+                  type="button"
+                  onClick={() => handleTypeChange(t.type)}
+                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    matchType === t.type
+                      ? 'border-[#1e2124] bg-[#1e2124] text-white'
+                      : 'border-[#e6e8ea] bg-white text-[#58616a]'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3">
+              {matchLoading && <LoadingDots label="경기 기록을 불러오는 중이에요" />}
+
+              {!matchLoading && matches.length === 0 && (
+                <p className="py-8 text-center text-sm text-[#8a949e]">해당 모드의 경기 기록이 없어요.</p>
+              )}
+
+              {matches.map((match) => {
+                const me = match.matchInfo.find((p) => p.ouid === ouid)
+                const opponent = match.matchInfo.find((p) => p.ouid !== ouid)
+                const result = me?.matchDetail.matchResult ?? '-'
+                const resultColor = RESULT_COLOR[result] ?? '#8a949e'
+
+                return (
+                  <div
+                    key={match.matchId}
+                    className="flex items-center gap-3 border-b border-[#e6e8ea] py-3.5"
+                  >
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+                      style={{ backgroundColor: resultColor }}
+                    >
+                      {result}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-semibold text-[#1e2124]">
+                        {me?.nickname ?? '-'}
+                        <span className="mx-1.5 font-bold">
+                          {me?.shoot.goalTotal ?? 0} : {opponent?.shoot.goalTotal ?? 0}
+                        </span>
+                        {opponent?.nickname ?? '-'}
+                      </span>
+                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#8a949e]">
+                        <span>{MATCH_TYPE_NAMES[match.matchType] ?? match.matchType}</span>
+                        <span className="text-[#c1c7cd]">|</span>
+                        <span>{formatDate(match.matchDate)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
