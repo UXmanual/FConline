@@ -70,28 +70,6 @@ function StatRow({ label, left, right }: { label: string; left: string | number;
   )
 }
 
-function PlayerColumn({ player }: { player: MatchPlayerInfo }) {
-  const result = textOrDash(player.matchDetail.matchResult)
-  const nickname = textOrDash(player.nickname)
-  const score = goalDisplay(player)
-  const rating = formatRating(player.matchDetail.averageRating)
-  const badgeClass =
-    result === '승'
-      ? 'bg-[#256ef4]'
-      : result === '패'
-        ? 'bg-[#f64f5e]'
-        : 'bg-[#8a949e]'
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${badgeClass}`}>{result}</div>
-      <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{nickname}</p>
-      <p className="text-3xl font-bold text-[#1e2124]">{String(score)}</p>
-      <p className="text-xs text-[#8a949e]">평점 {rating}</p>
-    </div>
-  )
-}
-
 export default async function MatchDetailPage({ params, searchParams }: Props) {
   const { ouid, matchid } = await params
   const { nickname } = await searchParams
@@ -119,6 +97,16 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
 
   const mePass = calcPassTotal(me.pass)
   const opPass = calcPassTotal(opponent.pass)
+  const meResult = textOrDash(me.matchDetail.matchResult)
+  const opponentResult = textOrDash(opponent.matchDetail.matchResult)
+  const meBadgeClass =
+    meResult === '승' ? 'bg-[#256ef4]' : meResult === '패' ? 'bg-[#f64f5e]' : 'bg-[#8a949e]'
+  const opponentBadgeClass =
+    opponentResult === '승'
+      ? 'bg-[#256ef4]'
+      : opponentResult === '패'
+        ? 'bg-[#f64f5e]'
+        : 'bg-[#8a949e]'
 
   return (
     <div className="pt-5">
@@ -137,9 +125,19 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
 
       <div className="mt-6 rounded-2xl border border-[#e6e8ea] bg-white p-5">
         <div className="grid grid-cols-3 items-center">
-          <PlayerColumn player={me} />
+          <div className="flex flex-col items-center gap-1">
+            <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${meBadgeClass}`}>{meResult}</div>
+            <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{textOrDash(me.nickname)}</p>
+            <p className="text-3xl font-bold text-[#1e2124]">{String(goalDisplay(me))}</p>
+            <p className="text-xs text-[#8a949e]">평점 {formatRating(me.matchDetail.averageRating)}</p>
+          </div>
           <div className="text-center text-lg font-bold text-[#c1c7cd]">VS</div>
-          <PlayerColumn player={opponent} />
+          <div className="flex flex-col items-center gap-1">
+            <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${opponentBadgeClass}`}>{opponentResult}</div>
+            <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{textOrDash(opponent.nickname)}</p>
+            <p className="text-3xl font-bold text-[#1e2124]">{String(goalDisplay(opponent))}</p>
+            <p className="text-xs text-[#8a949e]">평점 {formatRating(opponent.matchDetail.averageRating)}</p>
+          </div>
         </div>
       </div>
 
