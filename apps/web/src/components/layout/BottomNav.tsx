@@ -17,7 +17,7 @@ const PRESERVE_KEY = 'player-search-preserve'
 const navItems = [
   { href: '/home', icon: HomeIcon, label: '홈' },
   { href: '/players', icon: PlayerIcon, label: '선수' },
-  { href: '/matches', icon: AnalysisIcon, label: '경기' },
+  { href: '/matches', icon: AnalysisIcon, label: '분석' },
   { href: '/community', icon: CommunityIcon, label: '커뮤니티' },
   { href: '/mypage', icon: MypageIcon, label: '더보기' },
 ]
