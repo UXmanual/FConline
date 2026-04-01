@@ -1,18 +1,19 @@
+'use client'
+
 import Image from 'next/image'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { getStrongPoint, formatPriceWithKoreanUnits, calculateSkillMoveStars } from '../player-detail'
 import { Player, Season } from '../types'
 import PlayerImage from './PlayerImage'
 
 const EMPHASIS_COLOR = '#f64f5e'
+const PRESERVE_KEY = 'player-search-preserve'
 
 interface Props {
   player: Player
   seasons: Season[]
   strongLevel: number
 }
-
-const PRESERVE_KEY = 'player-search-preserve'
 
 function getSeasonId(spid: number) {
   return Math.floor(spid / 1000000)
@@ -21,13 +22,12 @@ function getSeasonId(spid: number) {
 function normalizeBodyType(bodyType: string | null): string {
   if (!bodyType) return '-'
 
-  // 괄호 안의 숫자만 있는 경우 (예: "(168)") 제거
   const cleaned = bodyType.replace(/^\s*\(\d+\)\s*$/, '').trim()
-
   return cleaned || '-'
 }
 
 export default function PlayerCard({ player, seasons, strongLevel }: Props) {
+  const router = useRouter()
   const seasonId = getSeasonId(player.id)
   const season = seasons.find((item) => item.seasonId === seasonId)
   const detail = player.detail
@@ -40,7 +40,7 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
 
   const detailItems = detail
     ? [
-        { label: `${strongLevel}카`, emphasize: null },
+        { label: `${strongLevel}카`, value: null, emphasize: null as boolean | null },
         { label: '포지션', value: detail.position ?? '-', emphasize: true },
         { label: '오버롤', value: currentOverall ?? '-', emphasize: true },
         { label: '급여', value: detail.pay ?? '-', emphasize: true },
@@ -52,13 +52,16 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
       ]
     : []
 
+  const handleOpenDetail = () => {
+    sessionStorage.setItem(PRESERVE_KEY, '1')
+    router.push(`/players/${player.id}?level=${strongLevel}`)
+  }
+
   return (
-    <Link
-      href={`/players/${player.id}?level=${strongLevel}`}
-      onClick={() => {
-        sessionStorage.setItem(PRESERVE_KEY, '1')
-      }}
-      className="flex gap-3 border-b border-[#e6e8ea] py-3 active:bg-[#f4f5f6]"
+    <button
+      type="button"
+      onClick={handleOpenDetail}
+      className="flex w-full gap-3 border-b border-[#e6e8ea] py-3 text-left active:bg-[#f4f5f6]"
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f4f5f6]">
         <PlayerImage spid={player.id} alt={player.name} className="object-contain" sizes="64px" />
@@ -127,6 +130,6 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
           </div>
         )}
       </div>
-    </Link>
+    </button>
   )
 }

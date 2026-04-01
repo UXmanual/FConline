@@ -78,19 +78,30 @@ function summarizeMatches(matches: MatchData[], ouid: string | null | undefined)
   const total = wins + draws + losses
   if (total === 0) return null
 
-  return {
-    total,
-    wins,
-    draws,
-    losses,
-    goalsFor,
-    goalsAgainst,
-  }
+  return { total, wins, draws, losses, goalsFor, goalsAgainst }
 }
 
 function statValue(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') return '-'
   return value
+}
+
+function InfoCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl bg-[#f7f8fa] px-4 py-3">
+      <div className="text-[11px] text-[#8a949e]">{label}</div>
+      <div className="mt-1 text-sm font-semibold text-[#1e2124]">{value}</div>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-xl bg-[#fbfbfc] px-4 py-3">
+      <span className="text-xs text-[#8a949e]">{label}</span>
+      <span className="text-right text-xs font-medium text-[#464c53]">{value}</span>
+    </div>
+  )
 }
 
 export default function MatchesPage() {
@@ -165,8 +176,8 @@ export default function MatchesPage() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
       inputRef.current?.blur()
       void handleSearch()
     }
@@ -187,7 +198,7 @@ export default function MatchesPage() {
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="닉네임 검색"
           className="min-w-0 flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
@@ -212,97 +223,75 @@ export default function MatchesPage() {
             {exactCandidate && (
               <section className="mb-6">
                 <div className="border-b border-[#e6e8ea] pb-5">
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-center gap-4">
                     {exactCandidate.voltaRankIconUrl ? (
                       <img
                         src={exactCandidate.voltaRankIconUrl}
                         alt="볼타 등급"
-                        className="h-16 w-16 shrink-0 object-contain"
+                        className="h-14 w-14 shrink-0 object-contain"
                       />
                     ) : (
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#f4f5f6] text-xs font-semibold text-[#58616a]">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f4f5f6] text-xs font-semibold text-[#58616a]">
                         볼타
                       </div>
                     )}
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
                       <h2 className="truncate text-2xl font-bold tracking-[-0.03em] text-[#1e2124]">
                         {exactCandidate.nickname}
                       </h2>
                       <p className="mt-1 text-sm text-[#58616a]">
                         {hasVoltaRank ? '볼타 라이브 공식 랭킹' : '볼타 랭킹 정보 없음'}
                       </p>
-
-                      {hasVoltaRank ? (
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-[#1e2124] sm:grid-cols-3">
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">현재 순위</div>
-                            <div className="mt-1 font-semibold">#{statValue(exactCandidate.voltaRank)}</div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">랭킹 포인트</div>
-                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaRankPoint)}</div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">승무패</div>
-                            <div className="mt-1 font-semibold">
-                              {statValue(exactCandidate.voltaWins)}승 {statValue(exactCandidate.voltaDraws)}무 {statValue(exactCandidate.voltaLosses)}패
-                            </div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">승률</div>
-                            <div className="mt-1 font-semibold">
-                              {exactCandidate.voltaWinRate !== null ? `${exactCandidate.voltaWinRate}%` : '-'}
-                            </div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">평균 평점</div>
-                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaAverageRating)}</div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">MOM 선정</div>
-                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaMomCount)}</div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">득점</div>
-                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaGoals)}</div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">도움</div>
-                            <div className="mt-1 font-semibold">{statValue(exactCandidate.voltaAssists)}</div>
-                          </div>
-                          <div className="rounded-2xl bg-[#f7f8fa] px-3 py-2">
-                            <div className="text-[11px] text-[#8a949e]">구단가치</div>
-                            <div className="mt-1 font-semibold">{statValue(exactCandidate.price)}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#58616a]">
-                          <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
-                            볼타 랭킹 1만위 밖 유저일 수 있어요
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {hasVoltaRank && (
-                    <div className="mt-4 grid gap-2 text-xs text-[#58616a] sm:grid-cols-2">
-                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">태클 성공률 {statValue(exactCandidate.voltaTackleRate)}</div>
-                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">차단 성공률 {statValue(exactCandidate.voltaBlockRate)}</div>
-                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">유효슛 {statValue(exactCandidate.voltaEffectiveShots)}</div>
-                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">패스 성공률 {statValue(exactCandidate.voltaPassRate)}</div>
-                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">드리블 성공률 {statValue(exactCandidate.voltaDribbleRate)}</div>
-                      <div className="rounded-2xl bg-[#fbfbfc] px-3 py-3">주요 포지션 {statValue(exactCandidate.voltaMainPosition)}</div>
+                  {hasVoltaRank ? (
+                    <>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <InfoCard label="현재 순위" value={`#${statValue(exactCandidate.voltaRank)}`} />
+                        <InfoCard label="랭킹 포인트" value={statValue(exactCandidate.voltaRankPoint)} />
+                        <InfoCard
+                          label="승무패"
+                          value={`${statValue(exactCandidate.voltaWins)}승 ${statValue(exactCandidate.voltaDraws)}무 ${statValue(exactCandidate.voltaLosses)}패`}
+                        />
+                        <InfoCard
+                          label="승률"
+                          value={exactCandidate.voltaWinRate !== null ? `${exactCandidate.voltaWinRate}%` : '-'}
+                        />
+                        <InfoCard label="평균 평점" value={statValue(exactCandidate.voltaAverageRating)} />
+                        <InfoCard label="MOM 선정" value={statValue(exactCandidate.voltaMomCount)} />
+                        <InfoCard label="득점" value={statValue(exactCandidate.voltaGoals)} />
+                        <InfoCard label="도움" value={statValue(exactCandidate.voltaAssists)} />
+                        <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
+                        {voltaSummary ? (
+                          <InfoCard
+                            label="최근 20경기"
+                            value={`${voltaSummary.wins}승 ${voltaSummary.draws}무 ${voltaSummary.losses}패`}
+                          />
+                        ) : (
+                          <InfoCard label="최근 20경기" value="-" />
+                        )}
+                      </div>
+
+                      <div className="mt-4 space-y-2">
+                        <DetailRow label="태클 성공률" value={statValue(exactCandidate.voltaTackleRate)} />
+                        <DetailRow label="차단 성공률" value={statValue(exactCandidate.voltaBlockRate)} />
+                        <DetailRow label="유효슛" value={statValue(exactCandidate.voltaEffectiveShots)} />
+                        <DetailRow label="패스 성공률" value={statValue(exactCandidate.voltaPassRate)} />
+                        <DetailRow label="드리블 성공률" value={statValue(exactCandidate.voltaDribbleRate)} />
+                        <DetailRow label="주요 포지션" value={statValue(exactCandidate.voltaMainPosition)} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-4 rounded-xl bg-[#f4f5f6] px-4 py-3 text-sm text-[#58616a]">
+                      볼타 랭킹 1만위 밖 유저일 수 있어요.
                     </div>
                   )}
 
                   {voltaSummary && (
                     <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[#58616a]">
                       <span className="rounded-full bg-[#eef6ff] px-2.5 py-1 text-[12px] font-semibold text-[#256ef4]">
-                        최근 20경기 {voltaSummary.wins}승 {voltaSummary.draws}무 {voltaSummary.losses}패
-                      </span>
-                      <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
                         총 득점 {voltaSummary.goalsFor}
                       </span>
                       <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
