@@ -2,15 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { use } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import { CaretLeft } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import { MatchData, MATCH_TYPE_NAMES, VOLTA_MATCH_TYPES } from '@/features/match-analysis/types'
-
-interface Props {
-  params: Promise<{ ouid: string }>
-  searchParams: Promise<{ nickname?: string }>
-}
 
 const RESULT_COLOR: Record<string, string> = {
   승: '#256ef4',
@@ -27,9 +22,10 @@ function formatDate(dateStr: string) {
   return `${month}/${day} ${hour}:${min}`
 }
 
-export default function MatchListPage({ params, searchParams }: Props) {
-  const { ouid } = use(params)
-  const { nickname } = use(searchParams)
+export default function MatchListPage() {
+  const { ouid } = useParams<{ ouid: string }>()
+  const searchParams = useSearchParams()
+  const nickname = searchParams.get('nickname')
   const [matchType, setMatchType] = useState(214)
   const [matches, setMatches] = useState<MatchData[]>([])
   const [loading, setLoading] = useState(false)
