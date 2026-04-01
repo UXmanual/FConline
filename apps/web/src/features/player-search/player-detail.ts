@@ -1,4 +1,4 @@
-import { PlayerDetail } from './types'
+import { AbilityStat, PlayerDetail } from './types'
 
 const DEFAULT_HEADERS = {
   'user-agent': 'Mozilla/5.0',
@@ -67,6 +67,26 @@ function extractClubHistory(html: string) {
     club: decodeHtml(item[2]) ?? '',
     rent: decodeHtml(item[3]),
   }))
+}
+
+function extractAbilities(html: string): AbilityStat[] {
+  const TIER_PATTERN = /over120|over110|over100|over90|over60|over20|over10/
+
+  const rows = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
+    .map((m) => m[1])
+    .filter((s) => s.includes('_area_point') && s.includes('class="txt"'))
+
+  return rows.map((row) => {
+    const nameMatch = row.match(/<div class="txt">([^<]+)<\/div>/)
+    const valueMatch = row.match(/_area_point[^>]*>\s*(\d+)\s*</)
+    const tierMatch = row.match(TIER_PATTERN)
+
+    const name = nameMatch ? nameMatch[1].trim() : ''
+    const value = valueMatch ? Number(valueMatch[1]) : 0
+    const tier = (tierMatch ? tierMatch[0] : 'base') as AbilityStat['tier']
+
+    return { name, value, tier }
+  }).filter((a) => a.name && a.value > 0)
 }
 
 function extractFootStats(html: string) {
@@ -141,6 +161,8 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
   const latestClubName = extractLatestClubName(html)
   const clubHistory = extractClubHistory(html)
   const footStats = extractFootStats(html)
+  const abilities = extractAbilities(html)
+  const totalAbility = abilities.length > 0 ? abilities.reduce((sum, a) => sum + a.value, 0) : null
 
   return {
     name: matchGroup(html, /<div class="name">([^<]+)</) ?? '',
@@ -167,6 +189,8 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
     leftFoot: footStats.leftFoot,
     rightFoot: footStats.rightFoot,
     skillMove: matchNumber(html, /name="SkillMove\d+" value="(\d+)"/),
+    abilities,
+    totalAbility,
     prices,
   }
 }

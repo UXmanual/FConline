@@ -3,7 +3,39 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatPriceWithKoreanUnits, getStrongPoint } from '../player-detail'
-import { PlayerDetail } from '../types'
+import { AbilityStat, PlayerDetail } from '../types'
+
+const ABILITY_TIER_COLOR: Record<AbilityStat['tier'], string> = {
+  over120: '#d946ef',
+  over110: '#a855f7',
+  over100: '#3b82f6',
+  over90:  '#e2e8f0',
+  over60:  '#e2e8f0',
+  over20:  '#64748b',
+  over10:  '#64748b',
+  base:    '#64748b',
+}
+
+// 능력치 그룹 순서 (이미지 기준 2열 배치)
+const ABILITY_GROUPS = [
+  ['속력', '밸런스'],
+  ['가속력', '반응 속도'],
+  ['골 결정력', '대인 수비'],
+  ['슛 파워', '태클'],
+  ['중거리 슛', '가로채기'],
+  ['위치 선정', '헤더'],
+  ['발리슛', '슬라이딩 태클'],
+  ['페널티 킥', '몸싸움'],
+  ['짧은 패스', '스태미너'],
+  ['시야', '적극성'],
+  ['크로스', '점프'],
+  ['긴 패스', '침착성'],
+  ['프리킥', 'GK 다이빙'],
+  ['커브', 'GK 핸들링'],
+  ['드리블', 'GK 킥'],
+  ['볼 컨트롤', 'GK 반응속도'],
+  ['민첩성', 'GK 위치 선정'],
+]
 
 interface Props {
   detail: PlayerDetail
@@ -281,7 +313,58 @@ export default function PlayerDetailPanel({
             }
           />
         </div>
+
+        {detail.skillMove != null && (
+          <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f4f5f6] px-4 py-3">
+            <p className="text-xs font-medium text-[#8a949e]">개인기</p>
+            <div className="flex gap-0.5">
+              {Array.from({ length: 5 }, (_, i) => (
+                <svg
+                  key={i}
+                  width="16"
+                  height="16"
+                  viewBox="0 0 19 18"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4.19227 17.44L6.27227 11.08L0.832266 7.16H7.51227L9.59227 0.799999L11.6723 7.16H18.3923L12.9523 11.08L15.0323 17.44L9.59227 13.52L4.19227 17.44Z"
+                    fill={i < (detail.skillMove ?? 0) ? '#F1C018' : '#d1d5db'}
+                  />
+                </svg>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
+
+      {detail.abilities.length > 0 && (
+        <section className="rounded-2xl border border-[#e6e8ea] bg-[#1e2124] p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-white">능력치</h2>
+            {detail.totalAbility != null && (
+              <span className="text-sm font-bold text-white">
+                총 능력치 <span className="text-[#d946ef]">{detail.totalAbility.toLocaleString()}</span>
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {ABILITY_GROUPS.map(([leftName, rightName]) => {
+              const left = detail.abilities.find((a) => a.name === leftName)
+              const right = detail.abilities.find((a) => a.name === rightName)
+              if (!left && !right) return null
+
+              return (
+                <div key={leftName} className="grid grid-cols-2 gap-4">
+                  <AbilityRow stat={left} name={leftName} align="left" />
+                  <AbilityRow stat={right} name={rightName} align="left" />
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-[#e6e8ea] bg-white p-4">
         <h2 className="text-base font-semibold text-[#1e2124]">소속 정보</h2>
@@ -337,6 +420,36 @@ function InfoCard({ label, value }: { label: string; value?: string | null }) {
     <div className="rounded-xl bg-[#f4f5f6] px-4 py-3">
       <p className="text-xs font-medium text-[#8a949e]">{label}</p>
       <p className="mt-1 break-words text-sm font-semibold text-[#1e2124]">{value ?? '-'}</p>
+    </div>
+  )
+}
+
+function AbilityRow({
+  stat,
+  name,
+  align,
+}: {
+  stat: AbilityStat | undefined
+  name: string
+  align: 'left' | 'right'
+}) {
+  if (!stat) {
+    return (
+      <div className={`flex items-center justify-between gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+        <span className="text-xs text-[#58616a]">{name}</span>
+        <span className="text-xs text-[#464c53]">-</span>
+      </div>
+    )
+  }
+
+  const color = ABILITY_TIER_COLOR[stat.tier]
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs text-[#8a949e]">{stat.name}</span>
+      <span className="text-sm font-bold" style={{ color }}>
+        {stat.value}
+      </span>
     </div>
   )
 }

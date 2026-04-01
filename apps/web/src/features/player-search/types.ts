@@ -10,6 +10,12 @@ export interface Season {
   seasonImg: string
 }
 
+export interface AbilityStat {
+  name: string
+  value: number
+  tier: 'over120' | 'over110' | 'over100' | 'over90' | 'over60' | 'over20' | 'over10' | 'base'
+}
+
 export interface PlayerDetail {
   name: string
   seasonImg: string | null
@@ -32,5 +38,7 @@ export interface PlayerDetail {
   leftFoot: number | null
   rightFoot: number | null
   skillMove: number | null
+  abilities: AbilityStat[]
+  totalAbility: number | null
   prices: Record<number, string>
 }
