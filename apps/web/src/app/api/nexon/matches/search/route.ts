@@ -10,6 +10,10 @@ const SEARCH_MODES = [
   { key: 'manager', label: '감독모드 랭킹' },
 ] as const
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -22,6 +26,40 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   } finally {
     clearTimeout(timer)
   }
+}
+
+async function fetchTextWithRetry(url: string, init: RequestInit, timeoutMs: number, retries = 1) {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const res = await fetchWithTimeout(url, init, timeoutMs)
+      if (res.ok) {
+        return await res.text()
+      }
+    } catch {}
+
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 150))
+    }
+  }
+
+  return null
+}
+
+async function fetchJsonWithRetry<T>(url: string, init: RequestInit, timeoutMs: number, retries = 1): Promise<T | null> {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const res = await fetchWithTimeout(url, init, timeoutMs)
+      if (res.ok) {
+        return (await res.json().catch(() => null)) as T | null
+      }
+    } catch {}
+
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 150))
+    }
+  }
+
+  return null
 }
 
 function decodeHtml(value: string) {
@@ -140,7 +178,7 @@ function parseOfficialCandidates(html: string, modeLabel: string) {
 function parseVoltaExactCandidate(html: string, nickname: string): Partial<MatchSearchCandidate> | null {
   const normalizedTarget = normalizeNickname(nickname)
   const nicknameMatch = new RegExp(
-    `<span class="name profile_pointer"[^>]*>[\\s\\S]*?${nickname}[\\s\\S]*?<\\/span>`
+    `<span class="name profile_pointer"[^>]*>[\\s\\S]*?${escapeRegExp(nickname)}[\\s\\S]*?<\\/span>`
   ).exec(html)
 
   if (!nicknameMatch || nicknameMatch.index === undefined) {
@@ -211,34 +249,32 @@ export async function GET(req: NextRequest) {
   }
 
   const encodedNickname = encodeURIComponent(nickname)
-  const [exactResult, rankResults, voltaResult] = await Promise.allSettled([
-    fetchWithTimeout(
+  const [exactData, rankResults, voltaHtml] = await Promise.all([
+    fetchJsonWithRetry<{ ouid?: string }>(
       `https://open.api.nexon.com/fconline/v1/id?nickname=${encodedNickname}`,
       { headers: nexonHeaders, next: { revalidate: 300 } },
-      5000
+      10000,
+      2
     ),
     Promise.all(
       SEARCH_MODES.map(async (mode) => {
-        try {
-          const res = await fetchWithTimeout(
-            `https://fconline.nexon.com/datacenter/rank_inner?rt=${mode.key}&strCharacterName=${encodedNickname}&n4seasonno=0&n4pageno=1`,
-            {
-              headers: {
-                'user-agent':
-                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-              },
-              next: { revalidate: 300 },
+        const html = await fetchTextWithRetry(
+          `https://fconline.nexon.com/datacenter/rank_inner?rt=${mode.key}&strCharacterName=${encodedNickname}&n4seasonno=0&n4pageno=1`,
+          {
+            headers: {
+              'user-agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
             },
-            4000
-          )
+            next: { revalidate: 300 },
+          },
+          8000,
+          1
+        )
 
-          return parseOfficialCandidates(await res.text(), mode.label)
-        } catch {
-          return []
-        }
+        return html ? parseOfficialCandidates(html, mode.label) : []
       })
     ),
-    fetchWithTimeout(
+    fetchTextWithRetry(
       `https://fconline.nexon.com/datacenter/rank_volta?rtype=all&strCharacterName=${encodedNickname}`,
       {
         headers: {
@@ -247,27 +283,24 @@ export async function GET(req: NextRequest) {
         },
         next: { revalidate: 300 },
       },
-      5000
+      8000,
+      1
     ),
   ])
 
   let exactCandidate: MatchSearchCandidate | null = null
 
-  if (exactResult.status === 'fulfilled' && exactResult.value.ok) {
-    const exactData = await exactResult.value.json().catch(() => null)
-    if (exactData?.ouid) {
-      exactCandidate = {
-        ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
-        ouid: exactData.ouid,
-        modes: ['정확일치'],
-      }
+  if (exactData?.ouid) {
+    exactCandidate = {
+      ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
+      ouid: exactData.ouid,
+      modes: ['정확일치'],
     }
   }
 
   const merged = new Map<string, MatchSearchCandidate>()
-  const results = rankResults.status === 'fulfilled' ? rankResults.value : []
 
-  for (const candidates of results) {
+  for (const candidates of rankResults) {
     for (const candidate of candidates) {
       const key = `${candidate.nexonSn}:${candidate.nickname}`
       merged.set(key, merged.has(key) ? mergeCandidate(merged.get(key)!, candidate) : candidate)
@@ -283,10 +316,14 @@ export async function GET(req: NextRequest) {
     })
     .slice(0, 20)
 
-  const voltaCandidate =
-    exactCandidate && voltaResult.status === 'fulfilled' && voltaResult.value.ok
-      ? parseVoltaExactCandidate(await voltaResult.value.text(), nickname)
-      : null
+  const voltaCandidate = voltaHtml ? parseVoltaExactCandidate(voltaHtml, nickname) : null
+
+  if (!exactCandidate && voltaCandidate) {
+    exactCandidate = {
+      ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
+      modes: ['볼타 랭킹'],
+    }
+  }
 
   if (exactCandidate) {
     const exactNickname = exactCandidate.nickname

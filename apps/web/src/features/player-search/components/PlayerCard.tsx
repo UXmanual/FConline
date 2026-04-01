@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getStrongPoint, formatPriceWithKoreanUnits, calculateSkillMoveStars } from '../player-detail'
 import { Player, Season } from '../types'
 import PlayerImage from './PlayerImage'
@@ -27,7 +27,6 @@ function normalizeBodyType(bodyType: string | null): string {
 }
 
 export default function PlayerCard({ player, seasons, strongLevel }: Props) {
-  const router = useRouter()
   const seasonId = getSeasonId(player.id)
   const season = seasons.find((item) => item.seasonId === seasonId)
   const detail = player.detail
@@ -52,16 +51,13 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
       ]
     : []
 
-  const handleOpenDetail = () => {
-    sessionStorage.setItem(PRESERVE_KEY, '1')
-    router.push(`/players/${player.id}?level=${strongLevel}`)
-  }
-
   return (
-    <button
-      type="button"
-      onClick={handleOpenDetail}
-      className="flex w-full gap-3 border-b border-[#e6e8ea] py-3 text-left active:bg-[#f4f5f6]"
+    <Link
+      href={`/players/${player.id}?level=${strongLevel}`}
+      onClick={() => {
+        sessionStorage.setItem(PRESERVE_KEY, '1')
+      }}
+      className="flex gap-3 border-b border-[#e6e8ea] py-3 active:bg-[#f4f5f6]"
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f4f5f6]">
         <PlayerImage spid={player.id} alt={player.name} className="object-contain" sizes="64px" />
@@ -130,6 +126,6 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
           </div>
         )}
       </div>
-    </button>
+    </Link>
   )
 }
