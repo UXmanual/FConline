@@ -103,27 +103,39 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
         </div>
 
         {detail && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-[#58616a]">
-            {detailItems.map((item, index) => (
-              <span key={`${player.id}-${index}`} className="flex items-center gap-1.5">
-                {index > 0 && <span className="text-[#c1c7cd]">|</span>}
-                {item.emphasize === null ? (
-                  <span className="text-[#464c53]">{item.label}</span>
-                ) : item.emphasize === true ? (
-                  <span className="text-[#464c53]">
-                    {item.label}{' '}
-                    <span style={{ color: EMPHASIS_COLOR }} className="font-semibold">
-                      {item.value}
+          <div className="mt-1.5 space-y-1">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-[#58616a]">
+              {detailItems.map((item, index) => (
+                <span key={`${player.id}-${index}`} className="flex items-center gap-1.5">
+                  {index > 0 && <span className="text-[#c1c7cd]">|</span>}
+                  {item.emphasize === null ? (
+                    <span className="text-[#464c53]">{item.label}</span>
+                  ) : item.emphasize === true ? (
+                    <span className="text-[#464c53]">
+                      {item.label}{' '}
+                      <span style={{ color: EMPHASIS_COLOR }} className="font-semibold">
+                        {item.value}
+                      </span>
                     </span>
+                  ) : (
+                    <span className="text-[#464c53]">
+                      {item.label} {item.value}
+                    </span>
+                  )}
+                  {item.right && <span className="text-[#464c53]">{item.right}</span>}
+                </span>
+              ))}
+            </div>
+
+            {detail.traits.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {detail.traits.map((trait, index) => (
+                  <span key={index} className="inline-block rounded-full bg-[#f4f5f6] px-2 py-0.5 text-[10px] font-medium text-[#464c53] border border-[#e6e8ea]">
+                    {trait.name}
                   </span>
-                ) : (
-                  <span className="text-[#464c53]">
-                    {item.label} {item.value}
-                  </span>
-                )}
-                {item.right && <span className="text-[#464c53]">{item.right}</span>}
-              </span>
-            ))}
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

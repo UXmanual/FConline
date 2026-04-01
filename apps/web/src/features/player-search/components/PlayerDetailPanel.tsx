@@ -352,6 +352,19 @@ export default function PlayerDetailPanel({
             </div>
           </div>
         )}
+
+        {detail.traits.length > 0 && (
+          <div className="mt-4 rounded-xl bg-[#f4f5f6] px-4 py-3">
+            <p className="text-xs font-medium text-[#8a949e]">특성</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {detail.traits.map((trait, index) => (
+                <span key={index} className="inline-block rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[#464c53] border border-[#e6e8ea]">
+                  {trait.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {adjustedAbilities.length > 0 && (

@@ -110,6 +110,27 @@ function extractFootStats(html: string) {
   }
 }
 
+function extractTraits(html: string) {
+  const traits: Array<{ name: string }> = []
+
+  // Find the _area_skillmove section which contains traits
+  const skillmoveSection = matchGroup(html, /<div[^>]*_area_skillmove[^>]*>([\s\S]*?)<\/div>/)
+
+  if (!skillmoveSection) {
+    return traits
+  }
+
+  // Extract trait alt attributes from img elements within the skillmove section
+  for (const match of skillmoveSection.matchAll(/<img[^>]*alt="([^"]+)"[^>]*>/g)) {
+    const name = decodeHtml(match[1])
+    if (name && !traits.find((t) => t.name === name)) {
+      traits.push({ name })
+    }
+  }
+
+  return traits
+}
+
 export function calculateSkillMoveStars(skillMove: number | null, strongLevel: number): number {
   if (skillMove == null) return 0
 
@@ -176,6 +197,7 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
   const clubHistory = extractClubHistory(html)
   const footStats = extractFootStats(html)
   const abilities = extractAbilities(html)
+  const traits = extractTraits(html)
   const totalAbility = abilities.length > 0 ? abilities.reduce((sum, a) => sum + a.value, 0) : null
 
   return {
@@ -205,6 +227,7 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
     skillMove: matchNumber(html, /name="SkillMove\d+" value="(\d+)"/),
     abilities,
     totalAbility,
+    traits,
     prices,
   }
 }
