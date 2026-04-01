@@ -42,27 +42,25 @@ export default function MatchesPage() {
     <div className="pt-5">
       <h1 className="text-xl font-bold tracking-[-0.02em] text-[#1e2124]">경기분석</h1>
 
-      <div className="mt-3 flex gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setNotFound(false)
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="닉네임을 입력하세요"
-            className="h-11 w-full rounded-xl border border-[#e6e8ea] bg-white pl-4 pr-4 text-sm text-[#1e2124] outline-none placeholder:text-[#c1c7cd] focus:border-[#256ef4]"
-          />
-        </div>
+      <div className="mt-3 flex h-14 items-center gap-2 rounded-lg border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setNotFound(false)
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="닉네임 검색"
+          className="min-w-0 flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
+        />
         <button
           type="button"
           onClick={handleSearch}
           disabled={loading}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1e2124] text-white disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md active:bg-[#f4f5f6] disabled:opacity-50"
         >
-          <MagnifyingGlass size={18} weight="bold" />
+          <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
         </button>
       </div>
 
