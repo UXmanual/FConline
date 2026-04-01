@@ -43,7 +43,7 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
         { label: `${strongLevel}카`, emphasize: null },
         { label: '포지션', value: detail.position ?? '-', emphasize: true },
         { label: '오버롤', value: currentOverall ?? '-', emphasize: true },
-        { label: '급여', value: detail.pay ?? '-', emphasize: false },
+        { label: '급여', value: detail.pay ?? '-', emphasize: true },
         { label: '현재 금액', value: formatPriceWithKoreanUnits(detail.prices[strongLevel]), emphasize: true },
         { label: '키', value: detail.height ? `${detail.height}cm` : '-', emphasize: false },
         { label: '몸무게', value: detail.weight ? `${detail.weight}kg` : '-', emphasize: false },
@@ -87,12 +87,16 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
                 {index > 0 && <span className="text-[#c1c7cd]">|</span>}
                 {item.emphasize === null ? (
                   <span className="text-[#464c53]">{item.label}</span>
-                ) : (
+                ) : item.emphasize === true ? (
                   <span className="text-[#464c53]">
                     {item.label}{' '}
                     <span style={{ color: EMPHASIS_COLOR }} className="font-semibold">
                       {item.value}
                     </span>
+                  </span>
+                ) : (
+                  <span className="text-[#464c53]">
+                    {item.label} {item.value}
                   </span>
                 )}
                 {item.right && <span className="text-[#464c53]">{item.right}</span>}
