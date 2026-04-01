@@ -33,7 +33,7 @@ export default function BottomNav() {
         className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[28px] bg-black sm:max-w-[480px]"
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
-          borderTop: '1px solid rgba(0, 0, 0, 0.4)',
+          borderTop: '1px solid #71717a',
         }}
       >
         <div className="flex h-[70px] items-center justify-around px-1">
