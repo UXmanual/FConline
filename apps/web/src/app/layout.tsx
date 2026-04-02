@@ -44,7 +44,10 @@ export default function RootLayout({
       <body className="min-h-full bg-[#f4f5f6]">
         <div className="relative mx-auto min-h-screen w-full bg-white pt-[env(safe-area-inset-top)] sm:max-w-[480px]">
           <main className="px-4 pb-[60px]">{children}</main>
-          <footer className="px-4 pb-4 text-left text-xs font-medium tracking-[0.02em] text-[#d1d5db]">
+          <div className="px-4 pb-1 text-left text-[11px] leading-5 text-[#d1d5db]">
+            게임 배너, 이미지, 일부 정보의 저작권은 NEXON Korea Corporation에 있습니다.
+          </div>
+          <footer className="px-4 pb-[88px] text-left text-xs font-medium tracking-[0.02em] text-[#d1d5db]">
             {'\u00A9uxdmanual'}
           </footer>
           <BottomNav />

@@ -2,6 +2,7 @@ import Image from 'next/image'
 import logo from '@/components/icons/logo.svg'
 import HomeStatusPanel from './HomeStatusPanel'
 import HomeEventCarousel from './HomeEventCarousel'
+import HomeTipsSection from './HomeTipsSection'
 import HomeWeatherBadge from './HomeWeatherBadge'
 import { getHomeEvents } from './home-feed'
 
@@ -28,6 +29,7 @@ export default async function HomePage() {
       <main className="space-y-8">
         <HomeStatusPanel />
         <HomeEventCarousel events={events} />
+        <HomeTipsSection />
       </main>
     </div>
   )

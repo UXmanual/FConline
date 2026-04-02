@@ -414,8 +414,9 @@ export default function HomeEventCarousel({ events }: Props) {
         </div>
 
         <div className="pt-3">
-          <p className="line-clamp-2 text-sm font-semibold leading-6 text-[#58616a]">
-            {events[displayIndex]?.title}
+          <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold leading-6 text-[#58616a]">
+            <span className="shrink-0 text-[0.9em] leading-none text-[#6b7280]">↗</span>
+            <span className="min-w-0 line-clamp-2">{events[displayIndex]?.title}</span>
           </p>
         </div>
       </div>
