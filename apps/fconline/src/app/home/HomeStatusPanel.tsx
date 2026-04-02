@@ -1,4 +1,5 @@
 import { getLatestNotices } from './home-feed'
+import HomeDateCard from './HomeDateCard'
 import HomeQuickActions from './HomeQuickActions'
 
 const TODAY_LABEL = '\uC624\uB298 \uB0A0\uC9DC'
@@ -22,19 +23,12 @@ export default async function HomeStatusPanel() {
   return (
     <section className="space-y-10">
       <div className="space-y-3">
-        <div className="rounded-[6px] bg-[#F0F5FA] px-5 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold tracking-[0.02em] text-[#58616a]">{TODAY_LABEL}</p>
-              <p className="mt-2 text-lg font-bold tracking-[-0.02em] text-[#111827]">{formatToday()}</p>
-            </div>
-
-            <div className="shrink-0 px-1 py-1 text-right">
-              <p className="text-xs font-semibold tracking-[0.02em] text-[#58616a]">{SEASON_LABEL}</p>
-              <p className="mt-2 text-lg font-bold tracking-[-0.02em] text-[#111827]">{SEASON_PERIOD}</p>
-            </div>
-          </div>
-        </div>
+        <HomeDateCard
+          todayLabel={TODAY_LABEL}
+          todayValue={formatToday()}
+          seasonLabel={SEASON_LABEL}
+          seasonPeriod={SEASON_PERIOD}
+        />
 
         <HomeQuickActions />
       </div>
