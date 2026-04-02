@@ -26,7 +26,7 @@ export default async function HomePage() {
         <HomeWeatherBadge />
       </header>
 
-      <main className="space-y-8">
+      <main className="space-y-10">
         <HomeStatusPanel />
         <HomeEventCarousel events={events} />
         <HomeTipsSection />

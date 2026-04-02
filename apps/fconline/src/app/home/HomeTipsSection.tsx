@@ -1,7 +1,7 @@
 import { getTodayTips } from './home-tips'
 
 const SECTION_LABEL = '오늘의 팁'
-const SECTION_DESC = '볼타 플레이에 바로 써먹기 좋은 미세 팁만 짧게 모아봤어요.'
+const SECTION_DESC = '볼타 플레이에 바로 써먹기 좋은 팁만 짧게 모아봤어요'
 const TIP_EMOJI: Record<string, string> = {
   운영: '🧭',
   수비: '🛡️',
