@@ -2,7 +2,7 @@ services:
   - type: web
     name: fconline-render
     runtime: node
-    rootDir: apps/web
+    rootDir: apps/fconline
     buildCommand: npm install && npm run build
     startCommand: npm run start
     plan: free

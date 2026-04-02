@@ -4,8 +4,9 @@ node_modules
 .pnp.js
 
 # next.js
-apps/web/.next/
-apps/web/out/
+apps/fconline/.next/
+apps/fconline/out/
+apps/fconline/.codex/
 
 # production
 dist/
