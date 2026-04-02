@@ -184,10 +184,6 @@ export default function PlayersPage() {
           <p className="py-8 text-center text-sm text-[#8a949e]">검색 결과가 없어요.</p>
         )}
 
-        {!loading && !query && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">선수 이름을 검색해보세요.</p>
-        )}
-
         {!loading && query && players.length > 0 && (
           <div className="mb-3 flex items-center gap-2">
             <div className="relative flex-1">

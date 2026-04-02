@@ -39,9 +39,9 @@ export function CommunityIcon({ size = 26, className }: IconProps) {
 export function MypageIcon({ size = 26, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 30 30" fill="none" className={className}>
-      <circle cx="7" cy="15" r="2" fill="currentColor" />
-      <circle cx="15" cy="15" r="2" fill="currentColor" />
-      <circle cx="23" cy="15" r="2" fill="currentColor" />
+      <path d="M5 17C6.10457 17 7 16.1046 7 15C7 13.8954 6.10457 13 5 13C3.89543 13 3 13.8954 3 15C3 16.1046 3.89543 17 5 17Z" fill="currentColor" />
+      <path d="M15 17C16.1046 17 17 16.1046 17 15C17 13.8954 16.1046 13 15 13C13.8954 13 13 13.8954 13 15C13 16.1046 13.8954 17 15 17Z" fill="currentColor" />
+      <path d="M25 17C26.1046 17 27 16.1046 27 15C27 13.8954 26.1046 13 25 13C23.8954 13 23 13.8954 23 15C23 16.1046 23.8954 17 25 17Z" fill="currentColor" />
     </svg>
   )
 }

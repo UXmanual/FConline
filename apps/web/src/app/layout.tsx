@@ -44,6 +44,9 @@ export default function RootLayout({
       <body className="min-h-full bg-[#f4f5f6]">
         <div className="relative mx-auto min-h-screen w-full bg-white pt-[env(safe-area-inset-top)] sm:max-w-[480px]">
           <main className="px-4 pb-[60px]">{children}</main>
+          <footer className="px-4 pb-4 text-left text-xs font-medium tracking-[0.02em] text-[#d1d5db]">
+            {'\u00A9uxdmanual'}
+          </footer>
           <BottomNav />
         </div>
       </body>

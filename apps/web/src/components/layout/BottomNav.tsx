@@ -15,11 +15,11 @@ const RESET_KEY = 'player-search-reset'
 const PRESERVE_KEY = 'player-search-preserve'
 
 const navItems = [
-  { href: '/home', icon: HomeIcon, label: '홈' },
-  { href: '/players', icon: PlayerIcon, label: '선수' },
-  { href: '/matches', icon: AnalysisIcon, label: '분석' },
-  { href: '/community', icon: CommunityIcon, label: '커뮤니티' },
-  { href: '/mypage', icon: MypageIcon, label: '더보기' },
+  { href: '/home', icon: HomeIcon, label: '\uD648' },
+  { href: '/players', icon: PlayerIcon, label: '\uC120\uC218' },
+  { href: '/matches', icon: AnalysisIcon, label: '\uBD84\uC11D' },
+  { href: '/community', icon: CommunityIcon, label: '\uCEE4\uBBA4\uB2C8\uD2F0' },
+  { href: '/mypage', icon: MypageIcon, label: '\uB354\uBCF4\uAE30' },
 ]
 
 export default function BottomNav() {
@@ -43,8 +43,8 @@ export default function BottomNav() {
             return (
               <motion.div
                 key={href}
-                whileTap={{ scale: 1.25 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+                whileTap={{ scale: 1.08 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
                 className="h-full flex-1"
               >
                 <Link

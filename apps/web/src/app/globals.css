@@ -128,3 +128,128 @@
     @apply font-sans;
   }
 }
+
+@keyframes weather-icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes weather-icon-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@keyframes weather-icon-drift {
+  0%, 100% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(1.5px);
+  }
+}
+
+@keyframes weather-icon-fade {
+  0%, 100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes weather-rain-drop {
+  0% {
+    transform: translateY(-1px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+@keyframes weather-snow-dot {
+  0% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(5px) translateX(1px);
+    opacity: 0;
+  }
+}
+
+.weather-icon-spin {
+  animation: weather-icon-spin 7s linear infinite;
+}
+
+.weather-icon-float {
+  animation: weather-icon-float 2.4s ease-in-out infinite;
+}
+
+.weather-icon-drift {
+  animation: weather-icon-drift 2.8s ease-in-out infinite;
+}
+
+.weather-icon-fade {
+  animation: weather-icon-fade 2.2s ease-in-out infinite;
+}
+
+.weather-rain-drop {
+  animation: weather-rain-drop 1s ease-in infinite;
+}
+
+.weather-rain-drop-delay {
+  animation-delay: 0.35s;
+}
+
+.weather-snow-dot {
+  animation: weather-snow-dot 1.8s ease-in-out infinite;
+}
+
+.weather-snow-dot-delay {
+  animation-delay: 0.6s;
+}
+
+.home-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.home-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.home-image-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(238, 242, 246, 0.96) 0%,
+    rgba(248, 250, 252, 0.98) 48%,
+    rgba(238, 242, 246, 0.96) 100%
+  );
+  background-size: 200% 100%;
+  animation: home-image-shimmer 1.2s linear infinite;
+}
+
+@keyframes home-image-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

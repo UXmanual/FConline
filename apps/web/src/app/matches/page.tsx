@@ -17,6 +17,17 @@ const RESULT_COLOR: Record<string, string> = {
 }
 
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
+const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache'
+const MATCH_LIST_CACHE_KEY = 'fconline.match.list-cache'
+const MATCH_LIST_LIMIT = 10
+
+type MatchSearchCacheEntry = {
+  exactCandidate: MatchSearchCandidate | null
+  candidates: MatchSearchCandidate[]
+}
+
+type MatchSearchCacheStore = Record<string, MatchSearchCacheEntry>
+type MatchListCacheStore = Record<string, MatchData[]>
 
 function formatDate(dateStr: string) {
   const normalized = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`
@@ -96,6 +107,26 @@ function normalizeNicknameKey(value: string) {
   return value.trim().toLowerCase()
 }
 
+function readJsonStorage<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+function writeJsonStorage<T>(key: string, value: T) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {}
+}
+
 function readCachedOuid(nickname: string) {
   if (typeof window === 'undefined') return null
 
@@ -118,6 +149,30 @@ function writeCachedOuid(nickname: string, ouid: string) {
     parsed[normalizeNicknameKey(nickname)] = ouid
     window.localStorage.setItem(OUID_CACHE_KEY, JSON.stringify(parsed))
   } catch {}
+}
+
+function readCachedSearch(nickname: string) {
+  const parsed = readJsonStorage<MatchSearchCacheStore>(MATCH_SEARCH_CACHE_KEY)
+  if (!parsed) return null
+  return parsed[normalizeNicknameKey(nickname)] ?? null
+}
+
+function writeCachedSearch(nickname: string, entry: MatchSearchCacheEntry) {
+  const parsed = readJsonStorage<MatchSearchCacheStore>(MATCH_SEARCH_CACHE_KEY) ?? {}
+  parsed[normalizeNicknameKey(nickname)] = entry
+  writeJsonStorage(MATCH_SEARCH_CACHE_KEY, parsed)
+}
+
+function readCachedMatches(ouid: string) {
+  const parsed = readJsonStorage<MatchListCacheStore>(MATCH_LIST_CACHE_KEY)
+  if (!parsed) return null
+  return parsed[ouid] ?? null
+}
+
+function writeCachedMatches(ouid: string, matches: MatchData[]) {
+  const parsed = readJsonStorage<MatchListCacheStore>(MATCH_LIST_CACHE_KEY) ?? {}
+  parsed[ouid] = matches
+  writeJsonStorage(MATCH_LIST_CACHE_KEY, parsed)
 }
 
 function explainDetailValue(label: string, rawValue: string | number | null | undefined) {
@@ -179,21 +234,30 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchData[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [matchLoading, setMatchLoading] = useState(false)
-  const [searchMessage, setSearchMessage] = useState('닉네임을 검색해보세요.')
+  const [searchMessage, setSearchMessage] = useState('')
 
   const loadMatches = async (targetOuid: string) => {
+    const cachedMatches = readCachedMatches(targetOuid)
+    if (cachedMatches) {
+      setMatches(cachedMatches)
+      setMatchLoading(false)
+      return
+    }
+
     setMatchLoading(true)
     setMatches([])
 
     try {
-      const res = await fetch(`/api/nexon/matches/list?ouid=${targetOuid}&matchtype=214&limit=20`)
+      const res = await fetch(`/api/nexon/matches/list?ouid=${targetOuid}&matchtype=214&limit=${MATCH_LIST_LIMIT}`)
       if (!res.ok) {
         setMatches([])
         return
       }
 
       const data = await res.json().catch(() => [])
-      setMatches(Array.isArray(data) ? data : [])
+      const nextMatches = Array.isArray(data) ? data : []
+      setMatches(nextMatches)
+      writeCachedMatches(targetOuid, nextMatches)
     } finally {
       setMatchLoading(false)
     }
@@ -223,6 +287,30 @@ export default function MatchesPage() {
     if (!trimmed) return
 
     const requestId = ++requestIdRef.current
+    const cachedSearch = readCachedSearch(trimmed)
+
+    if (cachedSearch) {
+      setSearchLoading(false)
+      setMatchLoading(false)
+      setExactCandidate(cachedSearch.exactCandidate)
+      setCandidates(cachedSearch.candidates)
+
+      if (cachedSearch.exactCandidate?.ouid) {
+        writeCachedOuid(trimmed, cachedSearch.exactCandidate.ouid)
+        await loadMatches(cachedSearch.exactCandidate.ouid)
+      } else {
+        setMatches([])
+      }
+
+      setSearchMessage(
+        cachedSearch.exactCandidate
+          ? cachedSearch.exactCandidate.ouid
+            ? `"${trimmed}"?? 議고쉶 寃곌낵瑜?遺덈윭?붿뼱??`
+            : `"${trimmed}"?? ??궧 寃곌낵瑜?遺덈윭?붿?留? OUID???꾩쭅 ?놁뼱??`
+          : `"${trimmed}" 寃??寃곌낵媛 ?놁뼱??`
+      )
+      return
+    }
 
     setSearchLoading(true)
     setMatchLoading(false)
@@ -251,6 +339,10 @@ export default function MatchesPage() {
 
       setExactCandidate(nextExactMatch)
       setCandidates(rankCandidates)
+      writeCachedSearch(trimmed, {
+        exactCandidate: nextExactMatch,
+        candidates: rankCandidates,
+      })
 
       if (nextExactMatch?.ouid) {
         writeCachedOuid(trimmed, nextExactMatch.ouid)
@@ -360,7 +452,7 @@ export default function MatchesPage() {
                         <InfoCard label="도움" value={statValue(exactCandidate.voltaAssists)} />
                         <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
                         <InfoCard
-                          label="최근 20경기"
+                          label="최근 10경기"
                           value={
                             voltaSummary
                               ? `${voltaSummary.wins}승 ${voltaSummary.draws}무 ${voltaSummary.losses}패`
