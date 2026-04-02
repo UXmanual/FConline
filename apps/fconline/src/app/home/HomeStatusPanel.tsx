@@ -3,6 +3,8 @@ import { getLatestNotices } from './home-feed'
 const TODAY_LABEL = '\uC624\uB298 \uB0A0\uC9DC'
 const NOTICE_LABEL = '\uCD5C\uC2E0 \uACF5\uC9C0'
 const NOTICE_FALLBACK = '\uACF5\uC9C0 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'
+const SEASON_LABEL = '\uC2DC\uC98C2 \uC9C4\uD589\uC911'
+const SEASON_PERIOD = '03.19 - 05.28'
 
 function formatToday() {
   const now = new Date()
@@ -19,8 +21,17 @@ export default async function HomeStatusPanel() {
   return (
     <section className="space-y-8">
       <div className="rounded-[6px] bg-[#F0F5FA] px-5 py-4">
-        <p className="text-xs font-semibold tracking-[0.02em] text-[#58616a]">{TODAY_LABEL}</p>
-        <p className="mt-2 text-lg font-bold tracking-[-0.02em] text-[#111827]">{formatToday()}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-[0.02em] text-[#58616a]">{TODAY_LABEL}</p>
+            <p className="mt-2 text-lg font-bold tracking-[-0.02em] text-[#111827]">{formatToday()}</p>
+          </div>
+
+          <div className="shrink-0 px-1 py-1 text-right">
+            <p className="text-xs font-semibold tracking-[0.02em] text-[#58616a]">{SEASON_LABEL}</p>
+            <p className="mt-2 text-lg font-bold tracking-[-0.02em] text-[#111827]">{SEASON_PERIOD}</p>
+          </div>
+        </div>
       </div>
 
       <div>

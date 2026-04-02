@@ -11,7 +11,7 @@ export type HomeEventItem = {
   imageUrl?: string
 }
 
-const NOTICE_LIST_URL = 'https://m.fconline.nexon.com/news/notice/list'
+const NOTICE_LIST_URL = 'https://fconline.nexon.com/news/notice/list'
 const EVENT_LIST_URL = 'https://fconline.nexon.com/news/events/list'
 const EVENT_PAGES = [1, 2, 3]
 const TEXT_NEW = '\uC0C8 \uAE00'
@@ -45,6 +45,97 @@ function toAbsoluteUrl(input: string, base: string) {
   }
 }
 
+function parseNoticeTimestamp(input: string) {
+  const value = stripTags(input)
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  const now = new Date()
+
+  if (normalized === '방금 전') {
+    return now.getTime()
+  }
+
+  const hoursAgo = normalized.match(/(\d+)\s*시간\s*전/)
+
+  if (hoursAgo) {
+    return now.getTime() - Number(hoursAgo[1]) * 60 * 60 * 1000
+  }
+
+  const minutesAgo = normalized.match(/(\d+)\s*분\s*전/)
+
+  if (minutesAgo) {
+    return now.getTime() - Number(minutesAgo[1]) * 60 * 1000
+  }
+
+  if (normalized === '어제') {
+    return now.getTime() - 24 * 60 * 60 * 1000
+  }
+
+  if (normalized === '그제') {
+    return now.getTime() - 2 * 24 * 60 * 60 * 1000
+  }
+
+  const daysAgo = normalized.match(/(\d+)\s*일\s*전/)
+
+  if (daysAgo) {
+    return now.getTime() - Number(daysAgo[1]) * 24 * 60 * 60 * 1000
+  }
+
+  const weeksAgo = normalized.match(/(\d+)\s*주\s*전/)
+
+  if (weeksAgo) {
+    return now.getTime() - Number(weeksAgo[1]) * 7 * 24 * 60 * 60 * 1000
+  }
+
+  const dotted = normalized.match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/)
+
+  if (dotted) {
+    const [, year, month, day] = dotted
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime()
+  }
+
+  const slashed = normalized.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/)
+
+  if (slashed) {
+    const [, year, month, day] = slashed
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime()
+  }
+
+  const dashed = normalized.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+
+  if (dashed) {
+    const [, year, month, day] = dashed
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime()
+  }
+
+  const monthDayDotted = normalized.match(/(\d{1,2})\.(\d{1,2})/)
+
+  if (monthDayDotted) {
+    const [, month, day] = monthDayDotted
+    const candidate = new Date(now.getFullYear(), Number(month) - 1, Number(day))
+
+    if (candidate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
+      candidate.setFullYear(candidate.getFullYear() - 1)
+    }
+
+    return candidate.getTime()
+  }
+
+  const monthDaySlashed = normalized.match(/(\d{1,2})\/(\d{1,2})/)
+
+  if (monthDaySlashed) {
+    const [, month, day] = monthDaySlashed
+    const candidate = new Date(now.getFullYear(), Number(month) - 1, Number(day))
+
+    if (candidate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
+      candidate.setFullYear(candidate.getFullYear() - 1)
+    }
+
+    return candidate.getTime()
+  }
+
+  return 0
+}
+
 async function fetchHtml(url: string) {
   const res = await fetch(url, {
     next: { revalidate: 1800 },
@@ -64,28 +155,36 @@ async function fetchHtml(url: string) {
 export async function getLatestNotices(): Promise<NoticeItem[]> {
   try {
     const html = await fetchHtml(NOTICE_LIST_URL)
-    const itemMatches = [...html.matchAll(/<li class="item_list[\s\S]*?<\/li>/g)]
-      .filter((match) => !match[0].includes('item_list notice'))
-      .slice(0, 3)
+    const rowMatches = [
+      ...html.matchAll(
+        /<div class="tr[^"]*">\s*<a href="([^"]+)">[\s\S]*?<span class="td sort">([\s\S]*?)<\/span>[\s\S]*?<span class="td subject">([\s\S]*?)<\/span>[\s\S]*?<span class="td date">([\s\S]*?)<\/span>/g,
+      ),
+    ]
 
-    return itemMatches
+    return rowMatches
       .map((match) => {
-        const itemHtml = match[0]
-        const href = itemHtml.match(/<a href="([^"]+)"/)?.[1] ?? ''
-        const title = itemHtml.match(/<span class="txt">([\s\S]*?)<\/span>/)?.[1] ?? ''
-        const date = itemHtml.match(/<span class="date">([\s\S]*?)<\/span>/)?.[1] ?? ''
+        const href = match[1] ?? ''
+        const sort = stripTags(match[2] ?? '')
+        const title = stripTags(match[3] ?? '').replace(/\s*새 글\s*/g, ' ').trim()
+        const date = stripTags(match[4] ?? '')
 
-        if (!href || !title || !date) {
+        if (sort !== '공지' || !href || !title || !date) {
           return null
         }
 
         return {
           title: stripTags(title),
           date: stripTags(date),
-          href: toAbsoluteUrl(href, 'https://fconline.nexon.com'),
+          href: toAbsoluteUrl(href, NOTICE_LIST_URL),
+          timestamp: parseNoticeTimestamp(date),
         }
       })
-      .filter((item): item is NoticeItem => item !== null)
+      .filter(
+        (item): item is NoticeItem & { timestamp: number } => item !== null,
+      )
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 3)
+      .map(({ title, date, href }) => ({ title, date, href }))
   } catch {
     return []
   }
