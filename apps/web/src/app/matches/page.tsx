@@ -405,7 +405,9 @@ export default function MatchesPage() {
 
         {!searchLoading && (
           <>
-            <p className="pb-3 text-sm text-[#8a949e]">{searchMessage}</p>
+            {searchMessage ? (
+              <p className="pb-3 text-sm text-[#8a949e]">{searchMessage}</p>
+            ) : null}
 
             {exactCandidate && (
               <section className="mb-6">

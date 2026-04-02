@@ -1,6 +1,6 @@
 {
   "name": "fconlinemanual",
-  "version": "8.8",
+  "version": "8.9",
   "private": true,
   "scripts": {
     "dev": "next dev",
