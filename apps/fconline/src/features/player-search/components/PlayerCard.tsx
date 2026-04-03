@@ -13,6 +13,7 @@ interface Props {
   player: Player
   seasons: Season[]
   strongLevel: number
+  isLast?: boolean
 }
 
 function getSeasonId(spid: number) {
@@ -26,7 +27,7 @@ function normalizeBodyType(bodyType: string | null): string {
   return cleaned || '-'
 }
 
-export default function PlayerCard({ player, seasons, strongLevel }: Props) {
+export default function PlayerCard({ player, seasons, strongLevel, isLast = false }: Props) {
   const seasonId = getSeasonId(player.id)
   const season = seasons.find((item) => item.seasonId === seasonId)
   const detail = player.detail
@@ -57,9 +58,9 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
       onClick={() => {
         sessionStorage.setItem(PRESERVE_KEY, '1')
       }}
-      className="flex gap-3 border-b border-[#e6e8ea] py-3 active:bg-[#f0f3f5]"
+      className={`flex gap-3 py-3 active:bg-[#f0f3f5] ${isLast ? '' : 'border-b border-[#e6e8ea]'}`}
     >
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f0f3f5]">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f0f3f5]">
         <PlayerImage spid={player.id} alt={player.name} className="object-contain" sizes="64px" />
       </div>
 

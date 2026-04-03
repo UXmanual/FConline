@@ -41,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${pretendard.variable} h-full antialiased`}>
-      <body className="min-h-full bg-white">
+      <body className="min-h-full bg-[#f0f3f5]">
         <div className="relative mx-auto min-h-screen w-full bg-[#f0f3f5] pt-[env(safe-area-inset-top)] sm:max-w-[480px]">
           <main className="px-5 pb-6">{children}</main>
           <div className="px-5 pb-0.5 text-left text-[11px] leading-5 text-[#b5bec8]">

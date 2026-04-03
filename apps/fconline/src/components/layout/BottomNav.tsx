@@ -30,10 +30,10 @@ export default function BottomNav() {
       <div className="h-[70px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
 
       <nav
-        className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[12px] bg-white sm:max-w-[480px]"
+        className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[24px] bg-white sm:max-w-[480px]"
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
-          borderTop: '1px solid #e5e7eb',
+          borderTop: '1px solid #f0f3f5',
         }}
       >
         <div className="flex h-[70px] items-center justify-around px-1">

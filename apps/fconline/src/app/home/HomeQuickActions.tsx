@@ -26,7 +26,7 @@ export default function HomeQuickActions() {
         <motion.div key={href} whileTap={{ scale: 0.985 }} transition={{ duration: 0.14 }}>
           <Link
             href={href}
-            className="flex min-h-[88px] items-center justify-between gap-3 rounded-xl bg-white px-4 py-5 text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C93FF] focus-visible:ring-offset-2"
+            className="flex min-h-[88px] items-center justify-between gap-3 rounded-lg bg-white px-4 py-5 text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C93FF] focus-visible:ring-offset-2"
           >
             <div className="flex min-w-0 flex-1 flex-col items-start text-left">
               <span className="text-[15px] font-semibold leading-[1.2] tracking-[-0.02em]">

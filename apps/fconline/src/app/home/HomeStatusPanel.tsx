@@ -3,21 +3,125 @@ import HomeDateCard from './HomeDateCard'
 import HomeQuickActions from './HomeQuickActions'
 
 const NOTICE_FALLBACK = '\uACF5\uC9C0 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'
-const SEASON_LABEL = '\uC2DC\uC98C2 \uC9C4\uD589 \uC911'
-const SEASON_PERIOD = '03.19 - 05.28'
+const RECURRING_SEASON_DAYS = 70
+
+function getKstToday() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+
+  const year = Number(parts.find((part) => part.type === 'year')?.value ?? '0')
+  const month = Number(parts.find((part) => part.type === 'month')?.value ?? '1')
+  const day = Number(parts.find((part) => part.type === 'day')?.value ?? '1')
+
+  return new Date(year, month - 1, day)
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
+}
+
+function formatSeasonDate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}.${day}`
+}
+
+type SeasonRange = {
+  seasonNumber: number
+  start: Date
+  end: Date
+}
+
+function getRecurringSeasonStarts(year: number) {
+  const starts: Date[] = []
+  const nextYearStart = new Date(year + 1, 0, 1)
+  let currentStart = new Date(year, 4, 28)
+
+  while (currentStart.getTime() < nextYearStart.getTime()) {
+    starts.push(currentStart)
+    currentStart = addDays(currentStart, RECURRING_SEASON_DAYS)
+  }
+
+  return starts
+}
+
+function buildSeasonRanges(year: number) {
+  const seasonRanges: SeasonRange[] = []
+  const season2Start = new Date(year, 2, 19)
+  const season3Start = new Date(year, 4, 28)
+  const previousYearRecurringStarts = getRecurringSeasonStarts(year - 1)
+  const previousYearLastRecurringStart =
+    previousYearRecurringStarts[previousYearRecurringStarts.length - 1] ?? null
+  const season1Start = previousYearLastRecurringStart
+    ? addDays(previousYearLastRecurringStart, RECURRING_SEASON_DAYS)
+    : new Date(year, 0, 1)
+
+  if (season1Start.getTime() < season2Start.getTime()) {
+    seasonRanges.push({
+      seasonNumber: 1,
+      start: season1Start,
+      end: addDays(season2Start, -1),
+    })
+  }
+
+  seasonRanges.push({
+    seasonNumber: 2,
+    start: season2Start,
+    end: addDays(season3Start, -1),
+  })
+
+  const recurringStarts = getRecurringSeasonStarts(year)
+
+  recurringStarts.forEach((start, index) => {
+    const nextStart = recurringStarts[index + 1]
+
+    seasonRanges.push({
+      seasonNumber: index + 3,
+      start,
+      end: nextStart ? addDays(nextStart, -1) : addDays(start, RECURRING_SEASON_DAYS - 1),
+    })
+  })
+
+  return seasonRanges
+}
+
+function getSeasonCardContent(today: Date) {
+  const year = today.getFullYear()
+  const seasonRanges = [
+    ...buildSeasonRanges(year - 1),
+    ...buildSeasonRanges(year),
+    ...buildSeasonRanges(year + 1),
+  ]
+  const currentSeason =
+    seasonRanges.find(
+      (seasonRange) =>
+        seasonRange.start.getTime() <= today.getTime() &&
+        today.getTime() <= seasonRange.end.getTime(),
+    ) ?? buildSeasonRanges(year)[0]
+
+  return {
+    seasonLabel: `시즌${currentSeason.seasonNumber} 진행 중`,
+    seasonPeriod: `${formatSeasonDate(currentSeason.start)} - ${formatSeasonDate(currentSeason.end)}`,
+  }
+}
 
 export default async function HomeStatusPanel() {
   const notices = await getLatestNotices()
+  const { seasonLabel, seasonPeriod } = getSeasonCardContent(getKstToday())
 
   return (
     <section className="space-y-3">
       <div className="space-y-3">
-        <HomeDateCard seasonLabel={SEASON_LABEL} seasonPeriod={SEASON_PERIOD} />
+        <HomeDateCard seasonLabel={seasonLabel} seasonPeriod={seasonPeriod} />
 
         <HomeQuickActions />
       </div>
 
-      <div className="rounded-xl bg-white px-5 py-4">
+      <div className="rounded-lg bg-white px-5 py-4">
         {notices.length > 0 ? (
           <div>
             {notices.map((notice) => (

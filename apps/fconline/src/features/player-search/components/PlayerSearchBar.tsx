@@ -1,7 +1,7 @@
 'use client'
 
 import { MagnifyingGlass } from '@phosphor-icons/react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface Props {
   value: string
@@ -15,6 +15,10 @@ export default function PlayerSearchBar({
   onSearch,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   const runSearch = () => {
     onSearch()
@@ -31,7 +35,7 @@ export default function PlayerSearchBar({
   }
 
   return (
-    <div className="flex h-14 items-center gap-2 rounded-xl border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
+    <div className="flex h-14 items-center gap-2 rounded-lg border border-[#e6e8ea] bg-white px-4 focus-within:border-2 focus-within:border-[#457ae5]">
       <input
         ref={inputRef}
         type="text"
@@ -45,7 +49,7 @@ export default function PlayerSearchBar({
       <button
         type="button"
         onClick={runSearch}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl active:bg-[#f0f3f5]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg active:bg-[#f0f3f5]"
       >
         <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
       </button>

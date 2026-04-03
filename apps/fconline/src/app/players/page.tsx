@@ -6,7 +6,6 @@ import LoadingDots from '@/components/ui/LoadingDots'
 import PlayerSearchBar from '@/features/player-search/components/PlayerSearchBar'
 import PlayerCard from '@/features/player-search/components/PlayerCard'
 import { Player, Season } from '@/features/player-search/types'
-import { getStrongPoint } from '@/features/player-search/player-detail'
 
 const STORAGE_KEY = 'player-search-state'
 const RESULTS_KEY = 'player-search-results'
@@ -88,7 +87,6 @@ export default function PlayersPage() {
         setStrongLevel(parsed.strongLevel ?? 1)
         setSortBy(parsed.sortBy ?? 'latest')
 
-        // 검색 결과도 즉시 복원 (로딩 없이)
         if (savedResults) {
           try {
             const results = JSON.parse(savedResults) as {
@@ -121,7 +119,7 @@ export default function PlayersPage() {
         searchQuery,
         strongLevel,
         sortBy,
-      })
+      }),
     )
   }, [hydrated, query, searchQuery, strongLevel, sortBy])
 
@@ -130,7 +128,6 @@ export default function PlayersPage() {
       return
     }
 
-    // 초기 복원 후 첫 번째 searchQuery 변경은 스킵 (이미 sessionStorage에서 복원됨)
     if (isInitialRestoreRef.current && players.length > 0) {
       isInitialRestoreRef.current = false
       return
@@ -150,90 +147,99 @@ export default function PlayersPage() {
       .then((data) => {
         setPlayers(data.players)
         setSeasons(data.seasons)
-        // 검색 결과 캐싱
         sessionStorage.setItem(
           RESULTS_KEY,
           JSON.stringify({
             players: data.players,
             seasons: data.seasons,
-          })
+          }),
         )
       })
       .finally(() => setLoading(false))
   }, [hydrated, searchQuery, players.length])
 
   const sortedPlayers = getSortedPlayers(players)
+  const showResultsPanel = loading || !!query
 
   return (
     <div>
       <div className="pt-5">
-        <h1 className="text-xl font-bold tracking-[-0.02em] text-[#1e2124]">선수검색</h1>
-        <div className="mt-3">
-          <PlayerSearchBar
-            value={query}
-            onChange={setQuery}
-            onSearch={handleSearch}
-          />
+        <div className="flex h-4 items-center">
+          <h1 className="text-[15px] font-semibold tracking-[-0.02em] text-[#1e2124]">
+            선수 검색
+          </h1>
+        </div>
+        <div className="mt-4">
+          <PlayerSearchBar value={query} onChange={setQuery} onSearch={handleSearch} />
         </div>
       </div>
 
       <div className="mt-4">
-        {loading && <LoadingDots label="선수를 찾는중이에요" />}
+        {showResultsPanel && (
+          <div className="rounded-lg bg-white px-5 py-4">
+            {loading && <LoadingDots label="선수를 찾는 중이에요" />}
 
-        {!loading && query && players.length === 0 && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">검색 결과가 없어요.</p>
-        )}
+            {!loading && players.length === 0 && (
+              <p className="py-4 text-center text-sm text-[#8a949e]">검색 결과가 없어요</p>
+            )}
 
-        {!loading && query && players.length > 0 && (
-          <div className="mb-3 flex items-center gap-2">
-            <div className="relative flex-1">
-              <select
-                value={sortBy}
-                onChange={(event) => setSortBy(event.target.value as SortBy)}
-                className="h-10 w-full appearance-none rounded-xl border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
-                aria-label="정렬"
-              >
-                <option value="latest">최신순</option>
-                <option value="price">금액순</option>
-                <option value="pay">급여순</option>
-              </select>
-              <CaretDown
-                size={14}
-                weight="bold"
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#58616a]"
-              />
-            </div>
+            {!loading && players.length > 0 && (
+              <>
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <select
+                      value={sortBy}
+                      onChange={(event) => setSortBy(event.target.value as SortBy)}
+                      className="h-10 w-full appearance-none rounded-lg border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
+                      aria-label="정렬"
+                    >
+                      <option value="latest">최신순</option>
+                      <option value="price">금액순</option>
+                      <option value="pay">급여순</option>
+                    </select>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#58616a]"
+                    />
+                  </div>
 
-            <div className="relative">
-              <select
-                value={strongLevel}
-                onChange={(event) => setStrongLevel(Number(event.target.value))}
-                className="h-10 appearance-none rounded-xl border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
-                aria-label="강화 단계"
-              >
-                {Array.from({ length: 13 }, (_, index) => index + 1).map((level) => (
-                  <option key={level} value={level}>
-                    {level}카
-                  </option>
-                ))}
-              </select>
-              <CaretDown
-                size={14}
-                weight="bold"
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#58616a]"
-              />
-            </div>
+                  <div className="relative">
+                    <select
+                      value={strongLevel}
+                      onChange={(event) => setStrongLevel(Number(event.target.value))}
+                      className="h-10 appearance-none rounded-lg border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
+                      aria-label="강화 단계"
+                    >
+                      {Array.from({ length: 13 }, (_, index) => index + 1).map((level) => (
+                        <option key={level} value={level}>
+                          {level}강
+                        </option>
+                      ))}
+                    </select>
+                    <CaretDown
+                      size={14}
+                      weight="bold"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#58616a]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  {sortedPlayers.map((player, index) => (
+                    <PlayerCard
+                      key={player.id}
+                      player={player}
+                      seasons={seasons}
+                      strongLevel={strongLevel}
+                      isLast={index === sortedPlayers.length - 1}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
-
-        {sortedPlayers.map((player) => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            seasons={seasons}
-            strongLevel={strongLevel}
-          />
-        ))}
       </div>
     </div>
   )

@@ -88,7 +88,7 @@ function WeatherIcon({ code, isDay }: { code?: number; isDay: boolean }) {
       src={src}
       alt=""
       aria-hidden="true"
-      className={`h-8 w-8 shrink-0 object-contain ${className}`}
+      className={`h-4 w-4 shrink-0 object-contain ${className}`}
       draggable={false}
     />
   )
@@ -147,16 +147,16 @@ export default function HomeWeatherBadge() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-1.5" aria-hidden="true">
-        <span className="h-6 w-6 animate-pulse rounded-full bg-[#eef2f6]" />
-        <span className="h-4 w-9 animate-pulse rounded-full bg-[#eef2f6]" />
+      <div className="flex h-4 items-center gap-1" aria-hidden="true">
+        <span className="h-4 w-4 animate-pulse rounded-full bg-[#eef2f6]" />
+        <span className="h-3 w-8 animate-pulse rounded-full bg-[#eef2f6]" />
       </div>
     )
   }
 
   return (
     <div
-      className="flex min-h-8 items-center gap-1.5 text-sm font-semibold leading-none text-[#111827]"
+      className="flex h-4 items-center gap-1 text-[12px] font-semibold leading-none text-[#111827]"
       aria-label={`${TEMPERATURE_LABEL} ${weather.temperature}`}
     >
       <WeatherIcon code={weather.code} isDay={isDay} />

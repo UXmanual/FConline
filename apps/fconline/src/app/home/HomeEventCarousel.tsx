@@ -191,7 +191,7 @@ export default function HomeEventCarousel({ events }: Props) {
 
   if (events.length === 0) {
     return (
-      <section className="rounded-xl">
+      <section className="rounded-lg">
         <p className="text-sm text-[#6b7280]">{EMPTY_DESC}</p>
       </section>
     )
@@ -330,7 +330,7 @@ export default function HomeEventCarousel({ events }: Props) {
 
         <div
           ref={viewportRef}
-          className="relative touch-pan-y select-none overflow-hidden rounded-xl"
+          className="relative touch-pan-y select-none overflow-hidden rounded-lg"
           style={viewportStyle}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}

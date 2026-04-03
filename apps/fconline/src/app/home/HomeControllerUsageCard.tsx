@@ -9,7 +9,7 @@ export default function HomeControllerUsageCard({ usage }: Props) {
   const maxPercentage = Math.max(...percentages)
 
   return (
-    <section className="rounded-xl bg-white px-5 py-4">
+    <section className="rounded-lg bg-white px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-sm font-semibold text-[#111827]">
           <span>컨트롤러 이용 비중</span>
@@ -34,7 +34,7 @@ export default function HomeControllerUsageCard({ usage }: Props) {
           const isPrimary = numericPercentage === maxPercentage
 
           return (
-            <article key={item.label} className="rounded-xl bg-[#f7f9fb] px-4 py-4">
+            <article key={item.label} className="rounded-lg bg-[#f7f9fb] px-4 py-4">
               <p className="text-[13px] font-semibold text-[#58616a]">{item.label}</p>
               <p
                 className="mt-1 text-[22px] font-extrabold tracking-[-0.03em]"

@@ -268,10 +268,10 @@ export default function PlayerDetailPanel({
 
   return (
     <div className="mt-6 space-y-6">
-      <section className="rounded-xl border border-[#e6e8ea] bg-white p-4">
+      <section className="rounded-lg border border-[#e6e8ea] bg-white p-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-[#1e2124]">상세 정보</h2>
-          <div className="rounded-full bg-[#f0f3f5] px-3 py-1 text-xs font-semibold text-[#464c53]">
+          <div className="rounded-full bg-[#f7f9fb] px-3 py-1 text-xs font-semibold text-[#464c53]">
             {strongLevel}카
           </div>
         </div>
@@ -331,7 +331,7 @@ export default function PlayerDetailPanel({
         </div>
 
         {detail.skillMove != null && (
-          <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f0f3f5] px-4 py-3">
+          <div className="mt-4 flex items-center justify-between rounded-lg bg-[#f7f9fb] px-4 py-3">
             <p className="text-xs font-medium text-[#8a949e]">개인기</p>
             <div className="flex gap-0.5">
               {Array.from({ length: 6 }, (_, i) => (
@@ -354,7 +354,7 @@ export default function PlayerDetailPanel({
         )}
 
         {detail.traits.length > 0 && (
-          <div className="mt-4 rounded-xl bg-[#f0f3f5] px-4 py-3">
+          <div className="mt-4 rounded-lg bg-[#f7f9fb] px-4 py-3">
             <p className="text-xs font-medium text-[#8a949e]">특성</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {detail.traits.map((trait, index) => (
@@ -368,7 +368,7 @@ export default function PlayerDetailPanel({
       </section>
 
       {adjustedAbilities.length > 0 && (
-        <section className="rounded-xl border border-[#e6e8ea] bg-white p-4">
+        <section className="rounded-lg border border-[#e6e8ea] bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-[#1e2124]">능력치</h2>
             {adjustedTotalAbility != null && (
@@ -395,10 +395,10 @@ export default function PlayerDetailPanel({
         </section>
       )}
 
-      <section className="rounded-xl border border-[#e6e8ea] bg-white p-4">
+      <section className="rounded-lg border border-[#e6e8ea] bg-white p-4">
         <h2 className="text-base font-semibold text-[#1e2124]">소속 정보</h2>
         <div className="mt-4 flex items-center gap-3">
-          <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-[#e6e8ea] bg-[#f0f3f5]">
+          <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-[#e6e8ea] bg-[#f7f9fb]">
             {detail.teamLogo ? (
               <Image
                 src={detail.teamLogo}
@@ -425,7 +425,7 @@ export default function PlayerDetailPanel({
               {detail.clubHistory.map((club, index) => (
                 <div
                   key={`${club.year}-${club.club}-${index}`}
-                  className="flex items-start justify-between gap-3 rounded-xl bg-[#f0f3f5] px-4 py-3"
+                  className="flex items-start justify-between gap-3 rounded-lg bg-[#f7f9fb] px-4 py-3"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-[#1e2124]">{club.club}</p>
@@ -446,7 +446,7 @@ export default function PlayerDetailPanel({
 
 function InfoCard({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="rounded-xl bg-[#f0f3f5] px-4 py-3">
+    <div className="rounded-lg bg-[#f7f9fb] px-4 py-3">
       <p className="text-xs font-medium text-[#8a949e]">{label}</p>
       <p className="mt-1 break-words text-sm font-semibold text-[#1e2124]">{value ?? '-'}</p>
     </div>
