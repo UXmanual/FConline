@@ -13,8 +13,8 @@ const quickActions = [
   },
   {
     href: '/matches',
-    title: '내 플레이',
-    subtitle: '경기분석',
+    title: '내 경기',
+    subtitle: '플레이 분석',
     Icon: AnalysisActionIcon,
   },
 ] as const

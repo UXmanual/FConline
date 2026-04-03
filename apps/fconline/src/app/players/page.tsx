@@ -164,8 +164,8 @@ export default function PlayersPage() {
   return (
     <div>
       <div className="pt-5">
-        <div className="flex h-4 items-center">
-          <h1 className="text-[15px] font-semibold tracking-[-0.02em] text-[#1e2124]">
+        <div className="flex h-6 items-center">
+          <h1 className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">
             선수 검색
           </h1>
         </div>

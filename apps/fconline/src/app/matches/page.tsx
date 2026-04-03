@@ -236,10 +236,6 @@ export default function MatchesPage() {
   const [matchLoading, setMatchLoading] = useState(false)
   const [searchMessage, setSearchMessage] = useState('')
 
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
-
   const loadMatches = async (targetOuid: string) => {
     const cachedMatches = readCachedMatches(targetOuid)
     if (cachedMatches) {
@@ -382,8 +378,8 @@ export default function MatchesPage() {
 
   return (
     <div className="pt-5">
-      <div className="flex h-4 items-center">
-        <h1 className="text-[15px] font-semibold tracking-[-0.02em] text-[#1e2124]">경기분석</h1>
+      <div className="flex h-6 items-center">
+        <h1 className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">경기분석</h1>
       </div>
 
       <div className="mt-4 flex h-14 items-center gap-2 rounded-lg border border-[#e6e8ea] bg-white px-4 focus-within:border-2 focus-within:border-[#457ae5]">
