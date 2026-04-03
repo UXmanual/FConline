@@ -4,32 +4,37 @@ import HomeStatusPanel from './HomeStatusPanel'
 import HomeEventCarousel from './HomeEventCarousel'
 import HomeTipsSection from './HomeTipsSection'
 import HomeWeatherBadge from './HomeWeatherBadge'
-import { getHomeEvents } from './home-feed'
+import HomeControllerUsageCard from './HomeControllerUsageCard'
+import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
 const version = process.env.NEXT_PUBLIC_APP_VERSION
 
 export default async function HomePage() {
-  const events = await getHomeEvents()
+  const [events, controllerUsage] = await Promise.all([
+    getHomeEvents(),
+    getHomeControllerUsage(),
+  ])
 
   return (
-    <div className="space-y-4 pt-5">
-      <header className="flex items-center justify-between gap-3 pb-1">
-        <div className="flex items-center gap-3">
+    <div className="space-y-3 pt-5">
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex h-4 items-center gap-3">
           <Image
             src={logo}
             alt="FCO manual"
             priority
-            className="h-8 w-auto"
+            className="h-4 w-auto"
           />
           {version && <span className="font-mono text-[11px] text-[#6b7280]">v{version}</span>}
         </div>
         <HomeWeatherBadge />
       </header>
 
-      <main className="space-y-10">
+      <main className="space-y-3">
         <HomeStatusPanel />
         <HomeEventCarousel events={events} />
         <HomeTipsSection />
+        {controllerUsage ? <HomeControllerUsageCard usage={controllerUsage} /> : null}
       </main>
     </div>
   )

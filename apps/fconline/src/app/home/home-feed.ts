@@ -11,8 +11,21 @@ export type HomeEventItem = {
   imageUrl?: string
 }
 
+export type ControllerUsageItem = {
+  label: string
+  percentage: string
+  record: string
+}
+
+export type HomeControllerUsage = {
+  items: ControllerUsageItem[]
+  basisLabel: string
+  sourceUrl: string
+}
+
 const NOTICE_LIST_URL = 'https://fconline.nexon.com/news/notice/list'
 const EVENT_LIST_URL = 'https://fconline.nexon.com/news/events/list'
+const DAILY_SQUAD_URL = 'https://fconline.nexon.com/datacenter/dailysquad'
 const EVENT_PAGES = [1, 2, 3]
 const TEXT_NEW = '\uC0C8 \uAE00'
 const STATUS_ONGOING = '\uC9C4\uD589'
@@ -270,5 +283,42 @@ export async function getHomeEvents(): Promise<HomeEventItem[]> {
     return deduped
   } catch {
     return []
+  }
+}
+
+export async function getHomeControllerUsage(): Promise<HomeControllerUsage | null> {
+  try {
+    const html = await fetchHtml(DAILY_SQUAD_URL)
+    const sectionMatch = html.match(
+      /컨트롤러 이용 비중[\s\S]*?키보드[\s\S]*?패드[\s\S]*?(\d+(?:\.\d+)?)%\s*[\s\S]*?(\d+승\s*\d+무\s*\d+패)\s*[\s\S]*?(\d+(?:\.\d+)?)\s*%\s*[\s\S]*?(\d+승\s*\d+무\s*\d+패)/,
+    )
+
+    if (!sectionMatch) {
+      return null
+    }
+
+    const keyboardPercentage = `${sectionMatch[1]}%`
+    const keyboardRecord = sectionMatch[2].replace(/\s+/g, ' ').trim()
+    const padPercentage = `${sectionMatch[3]}%`
+    const padRecord = sectionMatch[4].replace(/\s+/g, ' ').trim()
+
+    return {
+      items: [
+        {
+          label: '키보드',
+          percentage: keyboardPercentage,
+          record: keyboardRecord,
+        },
+        {
+          label: '패드',
+          percentage: padPercentage,
+          record: padRecord,
+        },
+      ],
+      basisLabel: '공식 경기 1 ON 1, 전일 12시 업데이트 기준',
+      sourceUrl: DAILY_SQUAD_URL,
+    }
+  } catch {
+    return null
   }
 }

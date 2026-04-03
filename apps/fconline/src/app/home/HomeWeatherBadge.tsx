@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Cloud, CloudFog, CloudRain, CloudSnow, CloudSun, Moon, Sun } from '@phosphor-icons/react'
 
 type WeatherBadgeState = {
   temperature: string
@@ -9,7 +8,7 @@ type WeatherBadgeState = {
 }
 
 const SEOUL_COORDS = { latitude: 37.5665, longitude: 126.978 }
-const TEMPERATURE_LABEL = '\uD604\uC7AC \uAE30\uC628'
+const TEMPERATURE_LABEL = '현재 기온'
 
 async function fetchWeather(latitude: number, longitude: number) {
   const params = new URLSearchParams({
@@ -43,67 +42,55 @@ async function fetchWeather(latitude: number, longitude: number) {
   }
 }
 
-function WeatherIcon({ code, isDay }: { code?: number; isDay?: boolean }) {
+function getWeatherIcon(code: number | undefined, isDay: boolean) {
   if (code === 0) {
-    return (
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        {isDay ? (
-          <Sun className="weather-icon-spin h-5 w-5 text-[#f59e0b]" weight="fill" />
-        ) : (
-          <Moon className="weather-icon-float h-5 w-5 text-[#6366f1]" weight="fill" />
-        )}
-      </span>
-    )
+    return {
+      src: isDay ? '/weather-icons/clear-day.svg' : '/weather-icons/clear-night.svg',
+      className: isDay ? 'weather-meteocon weather-meteocon-sun' : 'weather-meteocon weather-meteocon-night',
+    }
   }
 
   if (code === 1 || code === 2) {
-    return (
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        <CloudSun className="weather-icon-float h-5 w-5 text-[#f59e0b]" weight="fill" />
-      </span>
-    )
+    return {
+      src: isDay ? '/weather-icons/partly-cloudy-day.svg' : '/weather-icons/partly-cloudy-night.svg',
+      className: 'weather-meteocon',
+    }
   }
 
   if (code === 3) {
-    return (
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        <Cloud className="weather-icon-drift h-5 w-5 text-[#60a5fa]" weight="fill" />
-      </span>
-    )
+    return { src: '/weather-icons/cloudy.svg', className: 'weather-meteocon' }
   }
 
   if (code === 45 || code === 48) {
-    return (
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        <CloudFog className="weather-icon-fade h-5 w-5 text-[#94a3b8]" weight="fill" />
-      </span>
-    )
+    return { src: '/weather-icons/fog.svg', className: 'weather-meteocon weather-meteocon-fog' }
   }
 
-  if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95].includes(code ?? -1)) {
-    return (
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        <CloudRain className="h-5 w-5 text-[#3b82f6]" weight="fill" />
-        <span className="weather-rain-drop absolute bottom-0 left-[8px] h-[5px] w-[1.5px] rounded-full bg-[#38bdf8]" />
-        <span className="weather-rain-drop weather-rain-drop-delay absolute bottom-0 left-[13px] h-[6px] w-[1.5px] rounded-full bg-[#0ea5e9]" />
-      </span>
-    )
+  if ([95].includes(code ?? -1)) {
+    return { src: '/weather-icons/thunderstorms.svg', className: 'weather-meteocon weather-meteocon-rain' }
   }
 
-  if ([71, 73, 75].includes(code ?? -1)) {
-    return (
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        <CloudSnow className="h-5 w-5 text-[#60a5fa]" weight="fill" />
-        <span className="weather-snow-dot absolute bottom-[1px] left-[8px] h-[2.5px] w-[2.5px] rounded-full bg-white shadow-[0_0_0_1px_rgba(147,197,253,0.7)]" />
-        <span className="weather-snow-dot weather-snow-dot-delay absolute bottom-[1px] left-[13px] h-[2.5px] w-[2.5px] rounded-full bg-white shadow-[0_0_0_1px_rgba(147,197,253,0.7)]" />
-      </span>
-    )
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code ?? -1)) {
+    return { src: '/weather-icons/rain.svg', className: 'weather-meteocon weather-meteocon-rain' }
   }
+
+  if ([71, 73, 75, 77, 85, 86].includes(code ?? -1)) {
+    return { src: '/weather-icons/snow.svg', className: 'weather-meteocon weather-meteocon-snow' }
+  }
+
+  return { src: '/weather-icons/cloudy.svg', className: 'weather-meteocon' }
+}
+
+function WeatherIcon({ code, isDay }: { code?: number; isDay: boolean }) {
+  const { src, className } = getWeatherIcon(code, isDay)
 
   return (
-    <span className="relative flex h-6 w-6 items-center justify-center">
-      <Cloud className="weather-icon-drift h-5 w-5 text-[#60a5fa]" weight="fill" />
-    </span>
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      className={`h-8 w-8 shrink-0 object-contain ${className}`}
+      draggable={false}
+    />
   )
 }
 
@@ -125,7 +112,7 @@ export default function HomeWeatherBadge() {
         setWeather({
           temperature:
             typeof data.current?.temperature_2m === 'number'
-              ? `${Math.round(data.current.temperature_2m)}C`
+              ? `${Math.round(data.current.temperature_2m)}°C`
               : '--',
           code: data.current?.weather_code,
         })
@@ -169,11 +156,11 @@ export default function HomeWeatherBadge() {
 
   return (
     <div
-      className="flex items-center gap-1.5 text-sm font-semibold text-[#111827]"
+      className="flex min-h-8 items-center gap-1.5 text-sm font-semibold leading-none text-[#111827]"
       aria-label={`${TEMPERATURE_LABEL} ${weather.temperature}`}
     >
       <WeatherIcon code={weather.code} isDay={isDay} />
-      <span>{weather.temperature}</span>
+      <span className="tracking-[-0.02em]">{weather.temperature}</span>
     </div>
   )
 }

@@ -190,7 +190,7 @@ export default function PlayersPage() {
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value as SortBy)}
-                className="h-10 w-full appearance-none rounded-lg border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
+                className="h-10 w-full appearance-none rounded-xl border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
                 aria-label="정렬"
               >
                 <option value="latest">최신순</option>
@@ -208,7 +208,7 @@ export default function PlayersPage() {
               <select
                 value={strongLevel}
                 onChange={(event) => setStrongLevel(Number(event.target.value))}
-                className="h-10 appearance-none rounded-lg border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
+                className="h-10 appearance-none rounded-xl border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
                 aria-label="강화 단계"
               >
                 {Array.from({ length: 13 }, (_, index) => index + 1).map((level) => (

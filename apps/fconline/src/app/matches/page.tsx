@@ -380,7 +380,7 @@ export default function MatchesPage() {
     <div className="pt-5">
       <h1 className="text-xl font-bold tracking-[-0.02em] text-[#1e2124]">경기분석</h1>
 
-      <div className="mt-3 flex h-14 items-center gap-2 rounded-lg border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
+      <div className="mt-3 flex h-14 items-center gap-2 rounded-xl border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
         <input
           ref={inputRef}
           type="text"
@@ -394,7 +394,7 @@ export default function MatchesPage() {
           type="button"
           onClick={() => void handleSearch()}
           disabled={searchLoading}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md active:bg-[#f4f5f6] disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl active:bg-[#f0f3f5] disabled:opacity-50"
         >
           <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
         </button>
@@ -420,7 +420,7 @@ export default function MatchesPage() {
                         className="h-14 w-14 shrink-0 object-contain"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f4f5f6] text-xs font-semibold text-[#58616a]">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#f0f3f5] text-xs font-semibold text-[#58616a]">
                         볼타
                       </div>
                     )}
@@ -473,7 +473,7 @@ export default function MatchesPage() {
                       </div>
                     </>
                   ) : (
-                    <div className="mt-4 rounded-xl bg-[#f4f5f6] px-4 py-3 text-sm text-[#58616a]">
+                    <div className="mt-4 rounded-xl bg-[#f0f3f5] px-4 py-3 text-sm text-[#58616a]">
                       볼타 랭킹 1만위 밖 유저거나 공개 랭킹 정보가 없어요.
                     </div>
                   )}
@@ -483,7 +483,7 @@ export default function MatchesPage() {
                       <span className="rounded-full bg-[#eef6ff] px-2.5 py-1 text-[12px] font-semibold text-[#256ef4]">
                         총 득점 {voltaSummary.goalsFor}
                       </span>
-                      <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
+                      <span className="rounded-full bg-[#f0f3f5] px-2.5 py-1 text-[12px] font-semibold text-[#464c53]">
                         총 실점 {voltaSummary.goalsAgainst}
                       </span>
                     </div>
@@ -511,7 +511,7 @@ export default function MatchesPage() {
                         }
 
                         return (
-                          <div key={match.matchId} className="rounded-2xl border border-[#e6e8ea] bg-white p-4">
+                          <div key={match.matchId} className="rounded-xl border border-[#e6e8ea] bg-white p-4">
                             <div className="flex items-start gap-3">
                               <div
                                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
@@ -537,7 +537,7 @@ export default function MatchesPage() {
                               </div>
                             </div>
 
-                            <details className="mt-3 rounded-2xl bg-[#f4f7fb] px-3 py-2 text-xs text-[#58616a]">
+                            <details className="mt-3 rounded-xl bg-[#f0f3f5] px-3 py-2 text-xs text-[#58616a]">
                               <summary className="cursor-pointer list-none font-semibold text-[#464c53]">
                                 팀 정보 보기
                               </summary>
@@ -602,7 +602,7 @@ export default function MatchesPage() {
                 {candidates.map((candidate) => (
                   <div
                     key={`${candidate.nexonSn}-${candidate.nickname}`}
-                    className="block w-full rounded-2xl border border-[#e6e8ea] bg-white px-4 py-3 text-left"
+                    className="block w-full rounded-xl border border-[#e6e8ea] bg-white px-4 py-3 text-left"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -610,11 +610,11 @@ export default function MatchesPage() {
                         <div className="mt-1 text-xs text-[#8a949e]">{candidate.modes.join(' · ')}</div>
                       </div>
                       {candidate.voltaRank !== null ? (
-                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
+                        <span className="rounded-full bg-[#f0f3f5] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
                           볼타 #{candidate.voltaRank}
                         </span>
                       ) : candidate.rank !== null ? (
-                        <span className="rounded-full bg-[#f4f5f6] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
+                        <span className="rounded-full bg-[#f0f3f5] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
                           공식 {candidate.rank}위
                         </span>
                       ) : null}

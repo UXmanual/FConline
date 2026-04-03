@@ -30,10 +30,10 @@ export default function BottomNav() {
       <div className="h-[70px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
 
       <nav
-        className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[28px] bg-black sm:max-w-[480px]"
+        className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[12px] bg-white sm:max-w-[480px]"
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
-          borderTop: '1px solid #71717a',
+          borderTop: '1px solid #e5e7eb',
         }}
       >
         <div className="flex h-[70px] items-center justify-around px-1">
@@ -57,10 +57,10 @@ export default function BottomNav() {
                   }}
                   className="flex h-full w-full flex-col items-center justify-center gap-2"
                 >
-                  <Icon size={22} className={isActive ? 'text-white' : 'text-zinc-500'} />
+                  <Icon size={22} className={isActive ? 'text-[#343e4d]' : 'text-[#ced3d9]'} />
                   <span
                     className={`text-[11px] font-semibold leading-none ${
-                      isActive ? 'text-white' : 'text-zinc-500'
+                      isActive ? 'text-[#343e4d]' : 'text-[#86919e]'
                     }`}
                   >
                     {label}

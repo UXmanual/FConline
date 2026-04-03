@@ -57,9 +57,9 @@ export default function PlayerCard({ player, seasons, strongLevel }: Props) {
       onClick={() => {
         sessionStorage.setItem(PRESERVE_KEY, '1')
       }}
-      className="flex gap-3 border-b border-[#e6e8ea] py-3 active:bg-[#f4f5f6]"
+      className="flex gap-3 border-b border-[#e6e8ea] py-3 active:bg-[#f0f3f5]"
     >
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f4f5f6]">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f0f3f5]">
         <PlayerImage spid={player.id} alt={player.name} className="object-contain" sizes="64px" />
       </div>
 

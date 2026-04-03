@@ -8,7 +8,6 @@ type Props = {
   events: HomeEventItem[]
 }
 
-const SECTION_LABEL = '진행 중 이벤트'
 const EMPTY_DESC = '현재 표시할 이벤트를 불러오지 못했습니다.'
 const AUTO_ADVANCE_MS = 4500
 const SWIPE_THRESHOLD = 18
@@ -180,13 +179,20 @@ export default function HomeEventCarousel({ events }: Props) {
     }
   }, [events.length])
 
+  useEffect(() => {
+    if (!transitionEnabled) {
+      const frame = requestAnimationFrame(() => {
+        setTransitionEnabled(true)
+      })
+
+      return () => cancelAnimationFrame(frame)
+    }
+  }, [transitionEnabled, activeLoopIndex])
+
   if (events.length === 0) {
     return (
-      <section className="rounded-[6px]">
-        <p className="text-base font-extrabold tracking-[0.02em] text-[#58616a]">
-          {SECTION_LABEL}
-        </p>
-        <p className="mt-3 text-sm text-[#6b7280]">{EMPTY_DESC}</p>
+      <section className="rounded-xl">
+        <p className="text-sm text-[#6b7280]">{EMPTY_DESC}</p>
       </section>
     )
   }
@@ -215,10 +221,7 @@ export default function HomeEventCarousel({ events }: Props) {
     const deltaY = point.clientY - startY
 
     if (!dragDirectionRef.current) {
-      if (
-        Math.abs(deltaX) < AXIS_LOCK_THRESHOLD &&
-        Math.abs(deltaY) < AXIS_LOCK_THRESHOLD
-      ) {
+      if (Math.abs(deltaX) < AXIS_LOCK_THRESHOLD && Math.abs(deltaY) < AXIS_LOCK_THRESHOLD) {
         return
       }
 
@@ -277,7 +280,6 @@ export default function HomeEventCarousel({ events }: Props) {
     }
 
     const startY = startYRef.current
-
     finishSwipe(endX - startX, (event.changedTouches[0]?.clientY ?? startY ?? 0) - (startY ?? 0))
   }
 
@@ -309,17 +311,6 @@ export default function HomeEventCarousel({ events }: Props) {
     isAnimatingRef.current = false
   }
 
-  useEffect(() => {
-    if (!transitionEnabled) {
-      const frame = requestAnimationFrame(() => {
-        setTransitionEnabled(true)
-      })
-
-      return () => cancelAnimationFrame(frame)
-    }
-  }, [transitionEnabled, activeLoopIndex])
-
-  const translateX = viewportWidth === 0 ? 0 : -activeLoopIndex * viewportWidth + dragOffset
   const currentEvent = events[displayIndex]
   const currentImageKey = currentEvent?.imageUrl ?? currentEvent?.href ?? ''
   const currentAspectRatio = imageAspectRatios[currentImageKey] ?? FALLBACK_ASPECT_RATIO
@@ -328,19 +319,18 @@ export default function HomeEventCarousel({ events }: Props) {
     ? { height: `${viewportHeight}px` }
     : { aspectRatio: FALLBACK_ASPECT_RATIO_CSS }
   const isCurrentImageLoaded = currentImageKey ? Boolean(loadedImages[currentImageKey]) : false
+  const translateX = viewportWidth === 0 ? 0 : -activeLoopIndex * viewportWidth + dragOffset
 
   return (
     <section>
-      <p className="text-xl font-extrabold tracking-[0.02em] text-[#111827]">{SECTION_LABEL}</p>
-
-      <div className="relative mt-4">
+      <div className="relative">
         <span className="pointer-events-none absolute right-3 top-3 z-20 inline-flex rounded-full bg-black/30 px-3 py-1 text-xs font-semibold text-white">
           {displayIndex + 1}/{events.length}
         </span>
 
         <div
           ref={viewportRef}
-          className="relative touch-pan-y select-none overflow-hidden rounded-[6px]"
+          className="relative touch-pan-y select-none overflow-hidden rounded-xl"
           style={viewportStyle}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -384,7 +374,9 @@ export default function HomeEventCarousel({ events }: Props) {
                         src={event.imageUrl}
                         alt={event.title}
                         draggable={false}
-                        className={`block w-full h-auto transition-opacity duration-200 ${isLoaded ? 'relative z-0 opacity-100' : 'relative z-0 opacity-0'}`}
+                        className={`block h-auto w-full transition-opacity duration-200 ${
+                          isLoaded ? 'relative z-0 opacity-100' : 'relative z-0 opacity-0'
+                        }`}
                         loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
                         fetchPriority={shouldPrioritizeImage ? 'high' : 'auto'}
                         onLoad={(event) => {
@@ -411,13 +403,6 @@ export default function HomeEventCarousel({ events }: Props) {
               )
             })}
           </div>
-        </div>
-
-        <div className="pt-3">
-          <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold leading-6 text-[#58616a]">
-            <span className="shrink-0 text-[0.9em] leading-none text-[#6b7280]">↗</span>
-            <span className="min-w-0 line-clamp-2">{events[displayIndex]?.title}</span>
-          </p>
         </div>
       </div>
     </section>

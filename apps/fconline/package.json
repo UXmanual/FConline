@@ -1,6 +1,6 @@
 {
   "name": "fconlinemanual",
-  "version": "9.0",
+  "version": "9.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@bybas/weather-icons": "^2.0.0",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.0",

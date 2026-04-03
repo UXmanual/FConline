@@ -31,7 +31,7 @@ export default function PlayerSearchBar({
   }
 
   return (
-    <div className="flex h-14 items-center gap-2 rounded-lg border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
+    <div className="flex h-14 items-center gap-2 rounded-xl border border-[#58616a] bg-white px-4 focus-within:border-2 focus-within:border-[#256ef4]">
       <input
         ref={inputRef}
         type="text"
@@ -45,7 +45,7 @@ export default function PlayerSearchBar({
       <button
         type="button"
         onClick={runSearch}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md active:bg-[#f4f5f6]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl active:bg-[#f0f3f5]"
       >
         <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
       </button>

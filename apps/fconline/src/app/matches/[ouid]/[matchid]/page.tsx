@@ -123,7 +123,7 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-[#e6e8ea] bg-white p-5">
+      <div className="mt-6 rounded-xl border border-[#e6e8ea] bg-white p-5">
         <div className="grid grid-cols-3 items-center">
           <div className="flex flex-col items-center gap-1">
             <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${meBadgeClass}`}>{meResult}</div>
@@ -141,7 +141,7 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-[#e6e8ea] bg-white p-4">
+      <div className="mt-4 rounded-xl border border-[#e6e8ea] bg-white p-4">
         <h2 className="text-sm font-semibold text-[#1e2124]">경기 통계</h2>
         <div className="mt-3 divide-y divide-[#f4f5f6]">
           <StatRow label="점유율(%)" left={valueOrDash(me.matchDetail.possession)} right={valueOrDash(opponent.matchDetail.possession)} />

@@ -94,7 +94,7 @@ export default function MatchListPage() {
             <Link
               key={match.matchId}
               href={`/matches/${ouid}/${match.matchId}?nickname=${encodeURIComponent(nickname ?? '')}`}
-              className="flex items-center gap-3 border-b border-[#e6e8ea] py-3.5 active:bg-[#f4f5f6]"
+              className="flex items-center gap-3 border-b border-[#e6e8ea] py-3.5 active:bg-[#f0f3f5]"
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
