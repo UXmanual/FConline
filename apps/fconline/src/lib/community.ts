@@ -8,6 +8,7 @@ export type CommunityPostSummary = {
   id: string
   category: CommunityCategory
   nickname: string
+  ipPrefix?: string | null
   title: string
   content: string
   createdAt: string
@@ -19,6 +20,7 @@ export type CommunityCommentItem = {
   id: string
   postId: string
   nickname: string
+  ipPrefix?: string | null
   content: string
   createdAt: string
   createdAtLabel: string
@@ -89,4 +91,33 @@ export function verifyPassword(password: string, hashedPassword: string) {
   }
 
   return timingSafeEqual(inputHash, storedBuffer)
+}
+
+export function getIpPrefixFromHeader(rawValue: string | null) {
+  const firstValue = rawValue?.split(',')[0]?.trim()
+
+  if (!firstValue) {
+    return null
+  }
+
+  const normalized = firstValue.replace(/^\[|\]$/g, '')
+
+  if (normalized.includes('.')) {
+    const ipv4Candidate = normalized.split(':')[0]
+    const parts = ipv4Candidate.split('.').filter(Boolean)
+
+    if (parts.length >= 2) {
+      return `${parts[0]}.${parts[1]}`
+    }
+  }
+
+  if (normalized.includes(':')) {
+    const parts = normalized.split(':').filter(Boolean)
+
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`
+    }
+  }
+
+  return null
 }

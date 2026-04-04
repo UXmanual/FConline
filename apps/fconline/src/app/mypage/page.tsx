@@ -1,6 +1,12 @@
+'use client'
+
+import { useState } from 'react'
+
 const version = process.env.NEXT_PUBLIC_APP_VERSION
 
 export default function MyPage() {
+  const [isDarkModeEnabled, setIsDarkModeEnabled] = useState(true)
+
   return (
     <div className="space-y-4 pt-5">
       <div className="flex h-6 items-center">
@@ -31,6 +37,30 @@ export default function MyPage() {
           >
             📧
           </a>
+        </div>
+      </section>
+
+      <section className="rounded-lg bg-white px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-[#1e2124]">다크모드</p>
+            <p className="text-sm leading-5 text-[#96a0aa]">준비 중인 기능이에요.</p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="다크모드 토글"
+            aria-pressed={isDarkModeEnabled}
+            onClick={() => setIsDarkModeEnabled((current) => !current)}
+            className="relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full transition-colors"
+            style={{ backgroundColor: isDarkModeEnabled ? '#457ae5' : '#d5dbe3' }}
+          >
+            <span
+              className="absolute h-6 w-6 rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+              style={{ transform: `translateX(${isDarkModeEnabled ? '24px' : '4px'})` }}
+              aria-hidden="true"
+            />
+          </button>
         </div>
       </section>
 

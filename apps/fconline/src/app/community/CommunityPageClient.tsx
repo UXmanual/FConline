@@ -193,17 +193,23 @@ function PostCard({
         {expanded ? <LinkifiedText text={post.content} className="mt-3 text-sm leading-6 text-[#58616a]" /> : null}
       </div>
 
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation()
-          onOpenComments(post)
-        }}
-        className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium transition"
-      >
-        <span className="text-[#1e2124]">댓글</span>
-        <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
-      </button>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onOpenComments(post)
+          }}
+          className="inline-flex items-center gap-1 text-[12px] font-medium transition"
+        >
+          <span className="text-[#1e2124]">댓글</span>
+          <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
+        </button>
+
+        {post.ipPrefix ? (
+          <span className="shrink-0 text-[12px] font-medium text-[#96a0aa]">{post.ipPrefix}</span>
+        ) : null}
+      </div>
     </article>
   )
 }
@@ -517,7 +523,11 @@ export default function CommunityPageClient() {
         <div className="flex h-6 items-center">
           <h1 className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">커뮤니티</h1>
         </div>
-        <p className="text-sm text-[#86919e]">모두 편안하게 이용할 수 있도록 예의를 지켜주세요</p>
+        <p className="text-sm text-[#86919e]">
+          여기는 누구나 글을 쓸 수 있는 공간이에요
+          <br />
+          서로를 배려하는 한 마디가 모두를 더 편안하게 만들어요 🙂
+        </p>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -784,9 +794,16 @@ export default function CommunityPageClient() {
                   <div className="space-y-4">
                     {sortedComments.map((comment) => (
                       <article key={comment.id} className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-[#1e2124]">{comment.nickname}</span>
-                          <span className="text-[12px] font-medium text-[#96a0aa]">{comment.createdAtLabel}</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="text-sm font-semibold text-[#1e2124]">{comment.nickname}</span>
+                            <span className="text-[12px] font-medium text-[#96a0aa]">{comment.createdAtLabel}</span>
+                          </div>
+                          {comment.ipPrefix ? (
+                            <span className="shrink-0 text-[12px] font-medium text-[#96a0aa]">
+                              {comment.ipPrefix}
+                            </span>
+                          ) : null}
                         </div>
                         <LinkifiedText text={comment.content} className="text-sm leading-6 text-[#58616a]" />
                       </article>

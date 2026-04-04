@@ -2,17 +2,20 @@ import { NextRequest } from 'next/server'
 import {
   formatRelativeTime,
   getKoreaTimestampString,
+  getIpPrefixFromHeader,
   hashPassword,
   isCommunityCategory,
   verifyPassword,
   type CommunityPostSummary,
 } from '@/lib/community'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 type PostRow = {
   id: string
   category: string
   nickname: string
+  ip_prefix?: string | null
   title: string
   content: string
   created_at: string
@@ -27,6 +30,7 @@ function mapPostSummary(post: PostRow, commentCount: number): CommunityPostSumma
     id: post.id,
     category: post.category as CommunityPostSummary['category'],
     nickname: post.nickname,
+    ipPrefix: post.ip_prefix ?? null,
     title: post.title,
     content: post.content,
     createdAt: post.created_at,
@@ -35,13 +39,24 @@ function mapPostSummary(post: PostRow, commentCount: number): CommunityPostSumma
   }
 }
 
+async function fetchPosts(supabase: SupabaseClient, includeIpPrefix = true) {
+  const selectFields = includeIpPrefix
+    ? 'id, category, nickname, ip_prefix, title, content, created_at'
+    : 'id, category, nickname, title, content, created_at'
+
+  const response = await supabase.from('community_posts').select(selectFields).order('created_at', { ascending: false })
+
+  if (!response.error || !includeIpPrefix) {
+    return response
+  }
+
+  return fetchPosts(supabase, false)
+}
+
 export async function GET() {
   const supabase = createSupabaseAdminClient()
   const [{ data: posts, error: postsError }, { data: commentRows, error: commentsError }] = await Promise.all([
-    supabase
-      .from('community_posts')
-      .select('id, category, nickname, title, content, created_at')
-      .order('created_at', { ascending: false }),
+    fetchPosts(supabase),
     supabase.from('community_comments').select('post_id'),
   ])
 
@@ -55,13 +70,19 @@ export async function GET() {
     commentCountMap.set(row.post_id, (commentCountMap.get(row.post_id) ?? 0) + 1)
   }
 
-  const items = ((posts ?? []) as PostRow[]).map((post) => mapPostSummary(post, commentCountMap.get(post.id) ?? 0))
+  const items = ((posts ?? []) as unknown as PostRow[]).map((post) =>
+    mapPostSummary(post, commentCountMap.get(post.id) ?? 0),
+  )
 
   return Response.json({ items })
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
+  const ipPrefix =
+    getIpPrefixFromHeader(request.headers.get('x-forwarded-for')) ??
+    getIpPrefixFromHeader(request.headers.get('x-real-ip')) ??
+    getIpPrefixFromHeader(request.headers.get('cf-connecting-ip'))
   const category = String(body.category ?? '').trim()
   const nickname = String(body.nickname ?? '').trim()
   const password = String(body.password ?? '').trim()
@@ -73,24 +94,46 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdminClient()
-  const { data, error } = await supabase
+  const insertPayload = {
+    category,
+    nickname,
+    password_hash: hashPassword(password),
+    title,
+    content,
+    created_at: getKoreaTimestampString(),
+    ip_prefix: ipPrefix,
+  }
+  let response = await supabase
     .from('community_posts')
-    .insert({
-      category,
-      nickname,
-      password_hash: hashPassword(password),
-      title,
-      content,
-      created_at: getKoreaTimestampString(),
-    })
-    .select('id, category, nickname, title, content, created_at')
+    .insert(insertPayload)
+    .select('id, category, nickname, ip_prefix, title, content, created_at')
     .single()
 
-  if (error || !data) {
+  if (response.error) {
+    response = await supabase
+      .from('community_posts')
+      .insert({
+        category,
+        nickname,
+        password_hash: insertPayload.password_hash,
+        title,
+        content,
+        created_at: insertPayload.created_at,
+      })
+      .select('id, category, nickname, title, content, created_at')
+      .single()
+  }
+
+  if (response.error || !response.data) {
     return Response.json({ message: '게시글을 저장하지 못했습니다.' }, { status: 500 })
   }
 
-  return Response.json({ item: mapPostSummary(data as PostRow, 0) }, { status: 201 })
+  const item = mapPostSummary(response.data as PostRow, 0)
+  if (!item.ipPrefix && ipPrefix) {
+    item.ipPrefix = ipPrefix
+  }
+
+  return Response.json({ item }, { status: 201 })
 }
 
 export async function DELETE(request: NextRequest) {
