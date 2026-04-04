@@ -7,6 +7,8 @@ import { CaretLeft } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import { MatchData, MATCH_TYPE_NAMES, VOLTA_MATCH_TYPES } from '@/features/match-analysis/types'
 
+const MATCH_PAGE_CACHE_KEY = 'fconline.match.page-cache'
+
 const RESULT_COLOR: Record<string, string> = {
   승: '#256ef4',
   패: '#f64f5e',
@@ -35,12 +37,34 @@ export default function MatchListPage() {
     if (prevTypeRef.current === matchType) return
     prevTypeRef.current = matchType
 
+    const cacheKey = `${ouid}:${matchType}`
+    try {
+      const raw = window.sessionStorage.getItem(MATCH_PAGE_CACHE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, MatchData[]>
+        const cached = parsed[cacheKey]
+        if (cached) {
+          setMatches(cached)
+          setLoading(false)
+          return
+        }
+      }
+    } catch {}
+
     setLoading(true)
     setMatches([])
 
     fetch(`/api/nexon/matches/list?ouid=${ouid}&matchtype=${matchType}&limit=10`)
       .then((r) => r.json())
-      .then((data) => setMatches(data))
+      .then((data) => {
+        setMatches(data)
+        try {
+          const raw = window.sessionStorage.getItem(MATCH_PAGE_CACHE_KEY)
+          const parsed = raw ? (JSON.parse(raw) as Record<string, MatchData[]>) : {}
+          parsed[cacheKey] = data
+          window.sessionStorage.setItem(MATCH_PAGE_CACHE_KEY, JSON.stringify(parsed))
+        } catch {}
+      })
       .finally(() => setLoading(false))
   }, [ouid, matchType])
 

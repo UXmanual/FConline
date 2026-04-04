@@ -33,6 +33,9 @@ export interface PlayerDetail {
   }>
   nationName: string | null
   nationLogo: string | null
+  leagueName: string | null
+  leagueLogo: string | null
+  birthDate: string | null
   position: string | null
   overall: number | null
   pay: number | null

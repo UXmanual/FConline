@@ -8,7 +8,7 @@ interface Props {
 }
 
 const DOT_SIZE = 10
-const GAP = 4
+const GAP = 3
 const STEP = DOT_SIZE + GAP
 const DURATION = 1.32
 const PHASE = DURATION / 3

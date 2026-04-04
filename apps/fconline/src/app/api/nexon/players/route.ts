@@ -1,31 +1,17 @@
 import { NextRequest } from 'next/server'
 import { getPlayerDetail } from '@/features/player-search/player-detail'
+import { getSeasonMeta, getSpidMeta } from '@/lib/nexon'
 
-const NEXON_API_KEY = process.env.NEXON_API_KEY!
-const headers = { 'x-nxopen-api-key': NEXON_API_KEY }
-
-export async function GET(req: NextRequest) {
-  const query = req.nextUrl.searchParams.get('q')?.trim()
-
-  const [playersRes, seasonsRes] = await Promise.all([
-    fetch('https://open.api.nexon.com/static/fconline/meta/spid.json', { headers, next: { revalidate: 3600 } }),
-    fetch('https://open.api.nexon.com/static/fconline/meta/seasonid.json', { headers, next: { revalidate: 3600 } }),
-  ])
-
-  const players = await playersRes.json()
-  const seasons = await seasonsRes.json()
-  const normalizedQuery = query?.toLowerCase()
+async function getPlayerSearchData(query: string) {
+  const normalizedQuery = query.trim().toLowerCase()
+  const [players, seasons] = await Promise.all([getSpidMeta(), getSeasonMeta()])
 
   const filtered = normalizedQuery
     ? players
-        .filter((p: { id: number; name: string }) =>
-          p.name.toLowerCase().includes(normalizedQuery)
-        )
+        .filter((player: { id: number; name: string }) => player.name.toLowerCase().includes(normalizedQuery))
         .sort(
-          (
-            a: { id: number; name: string },
-            b: { id: number; name: string }
-          ) => Math.floor(b.id / 1000000) - Math.floor(a.id / 1000000)
+          (a: { id: number; name: string }, b: { id: number; name: string }) =>
+            Math.floor(b.id / 1_000_000) - Math.floor(a.id / 1_000_000),
         )
     : []
 
@@ -33,8 +19,14 @@ export async function GET(req: NextRequest) {
     filtered.map(async (player: { id: number; name: string }) => ({
       ...player,
       detail: await getPlayerDetail(String(player.id)),
-    }))
+    })),
   )
 
-  return Response.json({ players: enrichedPlayers, seasons })
+  return { players: enrichedPlayers, seasons }
+}
+
+export async function GET(req: NextRequest) {
+  const query = req.nextUrl.searchParams.get('q')?.trim() ?? ''
+  const data = await getPlayerSearchData(query)
+  return Response.json(data)
 }

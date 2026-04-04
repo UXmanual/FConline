@@ -1,57 +1,50 @@
 'use client'
-
-import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { formatPriceWithKoreanUnits, getStrongPoint, calculateSkillMoveStars } from '../player-detail'
+import { calculateSkillMoveStars, formatPriceWithKoreanUnits, getStrongPoint } from '../player-detail'
+import { getPlayerImageCandidates } from '../player-image'
 import { AbilityStat, PlayerDetail } from '../types'
 
-const ABILITY_TIER_COLOR: Record<AbilityStat['tier'], string> = {
-  over120: '#d946ef',
-  over110: '#a855f7',
-  over100: '#3b82f6',
-  over90:  '#e2e8f0',
-  over60:  '#e2e8f0',
-  over20:  '#64748b',
-  over10:  '#64748b',
-  base:    '#64748b',
-}
-
-// 능력치 그룹 순서 (이미지 기준 2열 배치)
 const ABILITY_GROUPS = [
-  ['속력', '밸런스'],
-  ['가속력', '반응 속도'],
-  ['골 결정력', '대인 수비'],
-  ['슛 파워', '태클'],
-  ['중거리 슛', '가로채기'],
-  ['위치 선정', '헤더'],
-  ['발리슛', '슬라이딩 태클'],
-  ['페널티 킥', '몸싸움'],
-  ['짧은 패스', '스태미너'],
-  ['시야', '적극성'],
-  ['크로스', '점프'],
-  ['긴 패스', '침착성'],
-  ['프리킥', 'GK 다이빙'],
-  ['커브', 'GK 핸들링'],
-  ['드리블', 'GK 킥'],
-  ['볼 컨트롤', 'GK 반응속도'],
-  ['민첩성', 'GK 위치 선정'],
-]
-
-interface Props {
-  detail: PlayerDetail
-  seasonName?: string | null
-  initialStrongLevel?: number
-}
+  ['속력', '반응 속도'],
+  ['가속력', '밸런스'],
+  ['골 결정력', '슛 파워'],
+  ['중거리 슛', '위치 선정'],
+  ['헤더', '짧은 패스'],
+  ['긴 패스', '시야'],
+  ['커브', '프리킥'],
+  ['드리블', '볼 컨트롤'],
+  ['민첩성', '침착성'],
+  ['태클', '가로채기'],
+  ['대인 수비', '슬라이딩 태클'],
+  ['몸싸움', '스태미너'],
+  ['점프', '키퍼 다이빙'],
+  ['키퍼 핸들링', '키퍼 킥'],
+  ['키퍼 반응속도', '키퍼 위치 선정'],
+] as const
 
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, index) => index + 1)
 const DRAG_THRESHOLD = 8
+const PLAYER_THUMBNAIL_SIZE = 96
+
+interface Props {
+  playerName: string
+  spid: number | string
+  detail: PlayerDetail
+  seasonName?: string | null
+  seasonImageUrl?: string | null
+  initialStrongLevel?: number
+}
 
 export default function PlayerDetailPanel({
+  playerName,
+  spid,
   detail,
   seasonName,
+  seasonImageUrl,
   initialStrongLevel = 1,
 }: Props) {
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
+  const [imageSrcIndex, setImageSrcIndex] = useState(0)
   const [showLeftFade, setShowLeftFade] = useState(false)
   const [showRightFade, setShowRightFade] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -78,7 +71,9 @@ export default function PlayerDetailPanel({
   const currentPrice = formatPriceWithKoreanUnits(detail.prices[strongLevel])
 
   const adjustedAbilities = useMemo(() => {
-    if (detail.abilities.length === 0) return []
+    if (detail.abilities.length === 0) {
+      return []
+    }
 
     const boost = getStrongPoint(strongLevel) - getStrongPoint(1)
     return detail.abilities.map((ability) => ({
@@ -88,10 +83,27 @@ export default function PlayerDetailPanel({
   }, [detail.abilities, strongLevel])
 
   const adjustedTotalAbility = useMemo(() => {
-    if (detail.totalAbility == null) return null
+    if (detail.totalAbility == null) {
+      return null
+    }
+
     const boost = getStrongPoint(strongLevel) - getStrongPoint(1)
     return detail.totalAbility + boost * detail.abilities.length
   }, [detail.totalAbility, detail.abilities.length, strongLevel])
+
+  const orderedAbilities = useMemo(() => {
+    const abilityOrder = ABILITY_GROUPS.flat() as string[]
+
+    return adjustedAbilities
+      .slice()
+      .sort((a, b) => {
+        const leftIndex = abilityOrder.indexOf(a.name)
+        const rightIndex = abilityOrder.indexOf(b.name)
+        return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex)
+      })
+  }, [adjustedAbilities])
+
+  const imageCandidates = useMemo(() => getPlayerImageCandidates(spid), [spid])
 
   useEffect(() => {
     setStrongLevel(initialStrongLevel)
@@ -163,15 +175,15 @@ export default function PlayerDetailPanel({
     stopMomentum()
 
     const step = () => {
-      const dragState = dragStateRef.current
+      const state = dragStateRef.current
 
-      if (Math.abs(dragState.velocity) < 0.1) {
+      if (Math.abs(state.velocity) < 0.1) {
         momentumRef.current = null
         return
       }
 
-      element.scrollLeft -= dragState.velocity * 18
-      dragState.velocity *= 0.92
+      element.scrollLeft -= state.velocity * 18
+      state.velocity *= 0.92
       momentumRef.current = requestAnimationFrame(step)
     }
 
@@ -267,13 +279,136 @@ export default function PlayerDetailPanel({
   }
 
   return (
-    <div className="mt-6 space-y-6">
-      <section className="rounded-lg border border-[#e6e8ea] bg-white p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-[#1e2124]">상세 정보</h2>
-          <div className="rounded-full bg-[#f7f9fb] px-3 py-1 text-xs font-semibold text-[#464c53]">
-            {strongLevel}카
+    <div className="space-y-4">
+      <section className="rounded-lg bg-white px-5 py-5">
+        <div className="flex gap-4">
+          <div
+            className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f7f9fb]"
+            style={{
+              width: PLAYER_THUMBNAIL_SIZE,
+              height: PLAYER_THUMBNAIL_SIZE,
+              minWidth: PLAYER_THUMBNAIL_SIZE,
+              minHeight: PLAYER_THUMBNAIL_SIZE,
+              flex: `0 0 ${PLAYER_THUMBNAIL_SIZE}px`,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageCandidates[imageSrcIndex] ?? '/player-fallback.svg'}
+              alt={playerName}
+              width={PLAYER_THUMBNAIL_SIZE}
+              height={PLAYER_THUMBNAIL_SIZE}
+              className="block object-contain object-center"
+              style={{
+                width: PLAYER_THUMBNAIL_SIZE,
+                height: PLAYER_THUMBNAIL_SIZE,
+                maxWidth: '100%',
+                maxHeight: '100%',
+              }}
+              onError={() => {
+                setImageSrcIndex((current) => {
+                  if (current >= imageCandidates.length) {
+                    return current
+                  }
+
+                  return current + 1
+                })
+              }}
+            />
           </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {seasonImageUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={seasonImageUrl}
+                  alt={seasonName ?? '시즌'}
+                  className="block h-5 w-auto shrink-0 object-contain object-left"
+                />
+              )}
+              <h1 className="truncate text-[22px] font-bold tracking-[-0.03em] text-[#1e2124]">
+                {playerName}
+              </h1>
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {detail.position && <PositionBadge position={detail.position} />}
+              <span className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">
+                {currentOverall != null ? `${currentOverall}` : '-'}
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm font-medium text-[#58616a]">
+              {seasonName ?? '카드 타입 정보 없음'}
+            </p>
+
+            <p className="mt-1 text-sm text-[#8a949e]">{detail.birthDate ?? '출생 정보 없음'}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <InfoCard label="현재 금액" value={currentPrice} />
+          <FootInfoCard leftFoot={detail.leftFoot} rightFoot={detail.rightFoot} />
+          <InfoCard label="키" value={detail.height ? `${detail.height}cm` : '-'} />
+          <InfoCard label="몸무게" value={detail.weight ? `${detail.weight}kg` : '-'} />
+          <InfoCard label="체형" value={detail.bodyType} />
+          <InfoCard label="급여" value={detail.pay?.toString() ?? '-'} />
+        </div>
+
+        {detail.nationName && (
+          <div className="mt-4 rounded-lg bg-[#f7f9fb] px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-[#8a949e]">국적</p>
+                <p className="truncate text-sm font-semibold text-[#1e2124]">{detail.nationName}</p>
+              </div>
+              {detail.nationLogo && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={detail.nationLogo}
+                  alt={detail.nationName}
+                  className="h-4 w-auto shrink-0 rounded-[3px] object-contain"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {detail.traits.length > 0 && (
+          <div className="mt-4 rounded-lg bg-[#f7f9fb] px-4 py-3">
+            <p className="text-xs font-medium text-[#8a949e]">특성</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {detail.traits.map((trait, index) => (
+                <span
+                  key={`${trait.name}-${index}`}
+                  className="inline-flex rounded-full border border-[#e6e8ea] bg-white px-3 py-1.5 text-xs font-medium text-[#464c53]"
+                >
+                  {trait.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-lg bg-white px-5 py-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-[#1e2124]">능력치</h2>
+          {adjustedTotalAbility != null && (
+            <span className="text-sm font-bold text-[#1e2124]">
+              총 능력치{' '}
+              <span
+                style={{
+                  color: getAbilityValueColor(
+                    Math.round(adjustedTotalAbility / Math.max(1, adjustedAbilities.length)),
+                  ),
+                }}
+              >
+                {adjustedTotalAbility.toLocaleString()}
+              </span>
+            </span>
+          )}
         </div>
 
         <div className="relative mt-4">
@@ -312,31 +447,13 @@ export default function PlayerDetailPanel({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <InfoCard label="포지션" value={detail.position} />
-          <InfoCard label="오버롤" value={currentOverall?.toString() ?? '-'} />
-          <InfoCard label="급여" value={detail.pay?.toString() ?? '-'} />
-          <InfoCard label="현재 금액" value={currentPrice} />
-          <InfoCard label="키" value={detail.height ? `${detail.height}cm` : '-'} />
-          <InfoCard label="몸무게" value={detail.weight ? `${detail.weight}kg` : '-'} />
-          <InfoCard label="체형" value={detail.bodyType} />
-          <InfoCard
-            label="왼발 오른발"
-            value={
-              detail.leftFoot != null && detail.rightFoot != null
-                ? `왼발 ${detail.leftFoot} 오른발 ${detail.rightFoot}`
-                : '-'
-            }
-          />
-        </div>
-
         {detail.skillMove != null && (
           <div className="mt-4 flex items-center justify-between rounded-lg bg-[#f7f9fb] px-4 py-3">
             <p className="text-xs font-medium text-[#8a949e]">개인기</p>
             <div className="flex gap-0.5">
-              {Array.from({ length: 6 }, (_, i) => (
+              {Array.from({ length: 6 }, (_, index) => (
                 <svg
-                  key={i}
+                  key={index}
                   width="16"
                   height="16"
                   viewBox="0 0 19 18"
@@ -345,7 +462,11 @@ export default function PlayerDetailPanel({
                 >
                   <path
                     d="M4.19227 17.44L6.27227 11.08L0.832266 7.16H7.51227L9.59227 0.799999L11.6723 7.16H18.3923L12.9523 11.08L15.0323 17.44L9.59227 13.52L4.19227 17.44Z"
-                    fill={i < calculateSkillMoveStars(detail.skillMove, strongLevel) ? '#F1C018' : '#d1d5db'}
+                    fill={
+                      index < calculateSkillMoveStars(detail.skillMove, strongLevel)
+                        ? '#F1C018'
+                        : '#d1d5db'
+                    }
                   />
                 </svg>
               ))}
@@ -353,73 +474,17 @@ export default function PlayerDetailPanel({
           </div>
         )}
 
-        {detail.traits.length > 0 && (
-          <div className="mt-4 rounded-lg bg-[#f7f9fb] px-4 py-3">
-            <p className="text-xs font-medium text-[#8a949e]">특성</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {detail.traits.map((trait, index) => (
-                <span key={index} className="inline-block rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[#464c53] border border-[#e6e8ea]">
-                  {trait.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          {orderedAbilities.map((ability) => (
+            <AbilityCard key={ability.name} stat={ability} />
+          ))}
+        </div>
       </section>
 
-      {adjustedAbilities.length > 0 && (
-        <section className="rounded-lg border border-[#e6e8ea] bg-white p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-[#1e2124]">능력치</h2>
-            {adjustedTotalAbility != null && (
-              <span className="text-sm font-bold text-[#1e2124]">
-                총 능력치 <span style={{ color: ABILITY_TIER_COLOR.over120 }}>{adjustedTotalAbility.toLocaleString()}</span>
-              </span>
-            )}
-          </div>
-
-          <div className="mt-4 space-y-2">
-            {ABILITY_GROUPS.map(([leftName, rightName]) => {
-              const left = adjustedAbilities.find((a) => a.name === leftName)
-              const right = adjustedAbilities.find((a) => a.name === rightName)
-              if (!left && !right) return null
-
-              return (
-                <div key={leftName} className="grid grid-cols-2 gap-4">
-                  <AbilityRow stat={left} name={leftName} align="left" />
-                  <AbilityRow stat={right} name={rightName} align="left" />
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      <section className="rounded-lg border border-[#e6e8ea] bg-white p-4">
-        <h2 className="text-base font-semibold text-[#1e2124]">소속 정보</h2>
-        <div className="mt-4 flex items-center gap-3">
-          <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-[#e6e8ea] bg-[#f7f9fb]">
-            {detail.teamLogo ? (
-              <Image
-                src={detail.teamLogo}
-                alt={detail.teamName ?? '팀 로고'}
-                fill
-                className="object-contain p-2"
-                unoptimized
-              />
-            ) : (
-              <span className="text-xs text-[#8a949e]">로고 없음</span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[#8a949e]">실제 현 소속팀</p>
-            <p className="truncate text-base font-semibold text-[#1e2124]">{detail.teamName ?? '-'}</p>
-            <p className="mt-1 text-sm text-[#58616a]">{seasonName ?? '시즌 정보 없음'}</p>
-          </div>
-        </div>
-
-        {detail.clubHistory.length > 0 && (
-          <div className="mt-5 border-t border-[#e6e8ea] pt-4">
+      {detail.clubHistory.length > 0 && (
+        <section className="rounded-lg bg-white px-5 py-5">
+          <h2 className="text-base font-semibold text-[#1e2124]">소속 정보</h2>
+          <div className="mt-4">
             <p className="text-xs font-medium text-[#8a949e]">이전 소속팀</p>
             <div className="mt-3 space-y-2">
               {detail.clubHistory.map((club, index) => (
@@ -438,9 +503,25 @@ export default function PlayerDetailPanel({
               ))}
             </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
+  )
+}
+
+function PositionBadge({ position }: { position: string }) {
+  const upper = position.toUpperCase()
+  const style =
+    upper === 'ST' || upper === 'CF' || upper === 'LW' || upper === 'RW'
+      ? 'bg-[#fdecec] text-[#d14343]'
+      : upper === 'CM' || upper === 'CAM' || upper === 'CDM' || upper === 'LM' || upper === 'RM'
+        ? 'bg-[#e9f7ef] text-[#2f8f57]'
+        : 'bg-[#eef3ff] text-[#457ae5]'
+
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}>
+      {position}
+    </span>
   )
 }
 
@@ -453,32 +534,55 @@ function InfoCard({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function AbilityRow({
-  stat,
-  name,
-  align,
+function FootInfoCard({
+  leftFoot,
+  rightFoot,
 }: {
-  stat: AbilityStat | undefined
-  name: string
-  align: 'left' | 'right'
+  leftFoot: number | null
+  rightFoot: number | null
 }) {
-  if (!stat) {
-    return (
-      <div className={`flex items-center justify-between gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
-        <span className="text-xs text-[#58616a]">{name}</span>
-        <span className="text-xs text-[#464c53]">-</span>
-      </div>
-    )
-  }
-
-  const color = ABILITY_TIER_COLOR[stat.tier]
-
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-xs text-[#8a949e]">{stat.name}</span>
-      <span className="text-sm font-bold" style={{ color }}>
+    <div className="rounded-lg bg-[#f7f9fb] px-4 py-3">
+      <p className="text-xs font-medium text-[#8a949e]">주발</p>
+      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm font-semibold text-[#1e2124]">
+        <span>
+          왼발{' '}
+          <span>
+            {leftFoot ?? '-'}
+          </span>
+        </span>
+        <span>
+          오른발{' '}
+          <span>
+            {rightFoot ?? '-'}
+          </span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+
+function AbilityCard({ stat }: { stat: AbilityStat }) {
+  const color = getAbilityValueColor(stat.value)
+  return (
+    <div className="rounded-lg bg-[#f7f9fb] px-4 py-3">
+      <p className="text-xs font-medium text-[#8a949e]">{stat.name}</p>
+      <span className="mt-1 block text-[18px] font-bold tracking-[-0.02em]" style={{ color }}>
         {stat.value}
       </span>
     </div>
   )
+}
+
+function getAbilityValueColor(value: number) {
+  if (value >= 160) return '#22c7a9'
+  if (value >= 150) return '#28bdd6'
+  if (value >= 140) return '#ff9f43'
+  if (value >= 130) return '#ef4444'
+  if (value >= 120) return '#a855f7'
+  if (value >= 110) return '#457ae5'
+  if (value >= 100) return '#2f8f57'
+  if (value >= 90) return '#7f8a96'
+  return '#58616a'
 }

@@ -1,15 +1,74 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { HomeControllerUsage } from './home-feed'
 
 type Props = {
   usage: HomeControllerUsage
 }
 
+function formatAnimatedPercentage(value: number, original: string) {
+  const hasDecimal = original.includes('.')
+  return `${hasDecimal ? value.toFixed(1) : Math.round(value)}%`
+}
+
 export default function HomeControllerUsageCard({ usage }: Props) {
-  const percentages = usage.items.map((item) => Number(item.percentage.replace('%', '').trim()))
+  const cardRef = useRef<HTMLElement | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const hasAnimatedRef = useRef(false)
+  const percentages = useMemo(
+    () => usage.items.map((item) => Number(item.percentage.replace('%', '').trim())),
+    [usage.items],
+  )
   const maxPercentage = Math.max(...percentages)
+  const [animatedPercentages, setAnimatedPercentages] = useState(() => usage.items.map(() => 0))
+
+  useEffect(() => {
+    const target = cardRef.current
+
+    if (!target || hasAnimatedRef.current) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting || hasAnimatedRef.current) {
+          return
+        }
+
+        hasAnimatedRef.current = true
+        const startAt = performance.now()
+        const duration = 1500
+
+        const tick = (now: number) => {
+          const progress = Math.min((now - startAt) / duration, 1)
+          const easedProgress = 1 - (1 - progress) * (1 - progress)
+
+          setAnimatedPercentages(percentages.map((value) => value * easedProgress))
+
+          if (progress < 1) {
+            animationFrameRef.current = window.requestAnimationFrame(tick)
+          }
+        }
+
+        animationFrameRef.current = window.requestAnimationFrame(tick)
+        observer.disconnect()
+      },
+      { threshold: 0.35 },
+    )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [percentages])
 
   return (
-    <section className="rounded-lg bg-white px-5 py-4">
+    <section ref={cardRef} className="rounded-lg bg-white px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-sm font-semibold text-[#111827]">
           <span>컨트롤러 이용 비중</span>
@@ -29,8 +88,8 @@ export default function HomeControllerUsageCard({ usage }: Props) {
       <p className="mt-1 text-[12px] leading-5 text-[#86919e]">{usage.basisLabel}</p>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
-        {usage.items.map((item) => {
-          const numericPercentage = Number(item.percentage.replace('%', '').trim())
+        {usage.items.map((item, index) => {
+          const numericPercentage = percentages[index] ?? 0
           const isPrimary = numericPercentage === maxPercentage
 
           return (
@@ -40,7 +99,7 @@ export default function HomeControllerUsageCard({ usage }: Props) {
                 className="mt-1 text-[22px] font-extrabold tracking-[-0.03em]"
                 style={{ color: isPrimary ? '#457ae5' : '#111827' }}
               >
-                {item.percentage}
+                {formatAnimatedPercentage(animatedPercentages[index] ?? 0, item.percentage)}
               </p>
               <p className="mt-1 text-[12px] leading-5 text-[#86919e]">{item.record}</p>
             </article>

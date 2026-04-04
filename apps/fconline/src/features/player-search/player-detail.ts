@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { AbilityStat, PlayerDetail } from './types'
 
 const DEFAULT_HEADERS = {
@@ -70,23 +71,25 @@ function extractClubHistory(html: string) {
 }
 
 function extractAbilities(html: string): AbilityStat[] {
-  const TIER_PATTERN = /over120|over110|over100|over90|over60|over20|over10/
+  const tierPattern = /over120|over110|over100|over90|over60|over20|over10/
 
   const rows = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
-    .map((m) => m[1])
-    .filter((s) => s.includes('_area_point') && s.includes('class="txt"'))
+    .map((match) => match[1])
+    .filter((snippet) => snippet.includes('_area_point') && snippet.includes('class="txt"'))
 
-  return rows.map((row) => {
-    const nameMatch = row.match(/<div class="txt">([^<]+)<\/div>/)
-    const valueMatch = row.match(/_area_point[^>]*>\s*(\d+)\s*</)
-    const tierMatch = row.match(TIER_PATTERN)
+  return rows
+    .map((row) => {
+      const nameMatch = row.match(/<div class="txt">([^<]+)<\/div>/)
+      const valueMatch = row.match(/_area_point[^>]*>\s*(\d+)\s*</)
+      const tierMatch = row.match(tierPattern)
 
-    const name = nameMatch ? nameMatch[1].trim() : ''
-    const value = valueMatch ? Number(valueMatch[1]) : 0
-    const tier = (tierMatch ? tierMatch[0] : 'base') as AbilityStat['tier']
+      const name = nameMatch ? nameMatch[1].trim() : ''
+      const value = valueMatch ? Number(valueMatch[1]) : 0
+      const tier = (tierMatch ? tierMatch[0] : 'base') as AbilityStat['tier']
 
-    return { name, value, tier }
-  }).filter((a) => a.name && a.value > 0)
+      return { name, value, tier }
+    })
+    .filter((ability) => ability.name && ability.value > 0)
 }
 
 function extractFootStats(html: string) {
@@ -113,11 +116,9 @@ function extractFootStats(html: string) {
 function extractTraits(html: string) {
   const traits: Array<{ name: string }> = []
 
-  // Extract all trait images from featureList sections
-  // Traits appear as <img src="...trait_icon_*.png" alt="특성명" />
   for (const match of html.matchAll(/<img[^>]*src="[^"]*trait_icon_[^"]*"[^>]*alt="([^"]*)"[^>]*>/g)) {
     const name = decodeHtml(match[1])
-    if (name && !traits.find((t) => t.name === name)) {
+    if (name && !traits.find((trait) => trait.name === name)) {
       traits.push({ name })
     }
   }
@@ -175,7 +176,7 @@ export function formatPriceWithKoreanUnits(price: string | undefined | null) {
   return parts.length > 0 ? parts.join(' ') : `${Math.floor(numeric / 10000).toLocaleString()}만`
 }
 
-export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null> {
+async function getPlayerDetailRaw(spid: string): Promise<PlayerDetail | null> {
   const res = await fetch(`https://m.fconline.nexon.com/datacenter/playerinfo?spid=${spid}`, {
     headers: DEFAULT_HEADERS,
     next: { revalidate: 3600 },
@@ -192,7 +193,7 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
   const footStats = extractFootStats(html)
   const abilities = extractAbilities(html)
   const traits = extractTraits(html)
-  const totalAbility = abilities.length > 0 ? abilities.reduce((sum, a) => sum + a.value, 0) : null
+  const totalAbility = abilities.length > 0 ? abilities.reduce((sum, ability) => sum + ability.value, 0) : null
 
   return {
     name: matchGroup(html, /<div class="name">([^<]+)</) ?? '',
@@ -206,6 +207,9 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
     clubHistory,
     nationName: matchGroup(html, /<span class="nation">[\s\S]*?<span class="txt">([^<]+)</),
     nationLogo: matchGroup(html, /<span class="nation">\s*<img src="([^"]+)"/),
+    leagueName: matchGroup(html, /<span class="league">[\s\S]*?<span class="txt">([^<]+)</),
+    leagueLogo: matchGroup(html, /<span class="league">\s*<img src="([^"]+)"/),
+    birthDate: matchGroup(html, /출생[\s\S]*?(\d{4}\.\d{2}\.\d{2}(?:\s*\([^)]*\))?)/),
     position:
       matchGroup(html, /<strong class="([a-z]+)">([^<]+)</, 2) ??
       matchGroup(html, /<span class="position [^"]+">([^<]+)</),
@@ -225,6 +229,12 @@ export async function getPlayerDetail(spid: string): Promise<PlayerDetail | null
     prices,
   }
 }
+
+export const getPlayerDetail = unstable_cache(
+  async (spid: string) => getPlayerDetailRaw(spid),
+  ['player-detail'],
+  { revalidate: 3600 },
+)
 
 export function getStrongPoint(level: number) {
   switch (level) {

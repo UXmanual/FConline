@@ -123,6 +123,25 @@ export interface MatchData {
   matchInfo: MatchPlayerInfo[]
 }
 
+export interface VoltaTopRankItem {
+  rank: number
+  nickname: string
+  rankPoint: number | null
+  winRate: number | null
+  averageRating: number | null
+  mainPosition: string | null
+  mainPositionDetail: string | null
+  price: string | null
+  rankIconUrl: string | null
+}
+
+export interface VoltaBestStatItem {
+  label: string
+  nickname: string
+  count: string
+  iconUrl?: string | null
+}
+
 export function calcPassTotal(pass: MatchPlayerInfo['pass']) {
   const try_ =
     (pass.shortPassTry ?? 0) +

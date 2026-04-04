@@ -2,7 +2,8 @@ import { getLatestNotices } from './home-feed'
 import HomeDateCard from './HomeDateCard'
 import HomeQuickActions from './HomeQuickActions'
 
-const NOTICE_FALLBACK = '\uACF5\uC9C0 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'
+const NOTICE_FALLBACK =
+  '\uACF5\uC9C0 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'
 const RECURRING_SEASON_DAYS = 70
 
 function getKstToday() {
@@ -28,6 +29,15 @@ function formatSeasonDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${month}.${day}`
+}
+
+function getSeasonCountdown(end: Date, today: Date) {
+  const msPerDay = 24 * 60 * 60 * 1000
+  return Math.max(0, Math.ceil((end.getTime() - today.getTime()) / msPerDay))
+}
+
+function formatSeasonCountdown(daysRemaining: number) {
+  return `D-${daysRemaining}`
 }
 
 type SeasonRange = {
@@ -104,19 +114,25 @@ function getSeasonCardContent(today: Date) {
     ) ?? buildSeasonRanges(year)[0]
 
   return {
-    seasonLabel: `시즌${currentSeason.seasonNumber} 진행 중`,
+    seasonLabel: `\uC2DC\uC98C${currentSeason.seasonNumber} \uC9C4\uD589 \uC911`,
     seasonPeriod: `${formatSeasonDate(currentSeason.start)} - ${formatSeasonDate(currentSeason.end)}`,
+    seasonCountdownDays: getSeasonCountdown(currentSeason.end, today),
   }
 }
 
 export default async function HomeStatusPanel() {
   const notices = await getLatestNotices()
-  const { seasonLabel, seasonPeriod } = getSeasonCardContent(getKstToday())
+  const { seasonLabel, seasonPeriod, seasonCountdownDays } = getSeasonCardContent(getKstToday())
 
   return (
     <section className="space-y-3">
       <div className="space-y-3">
-        <HomeDateCard seasonLabel={seasonLabel} seasonPeriod={seasonPeriod} />
+        <HomeDateCard
+          seasonLabel={seasonLabel}
+          seasonPeriod={seasonPeriod}
+          seasonCountdown={formatSeasonCountdown(seasonCountdownDays)}
+          seasonCountdownDays={seasonCountdownDays}
+        />
 
         <HomeQuickActions />
       </div>
@@ -134,7 +150,7 @@ export default async function HomeStatusPanel() {
               >
                 <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium leading-6 text-[#111827]">
                   <span className="shrink-0 text-[0.9em] leading-none text-[#6b7280]">
-                    ↗
+                    {'\u2197'}
                   </span>
                   <span className="min-w-0">{notice.title}</span>
                 </p>

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
-import BottomNav from '@/components/layout/BottomNav'
+import AppChrome from '@/components/layout/AppChrome'
 
 const pretendard = localFont({
   src: [
@@ -14,14 +14,56 @@ const pretendard = localFont({
   display: 'swap',
 })
 
+const metadataBase = (() => {
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL
+
+  if (!siteUrl) {
+    return new URL('http://localhost:3000')
+  }
+
+  const normalizedUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`
+  return new URL(normalizedUrl)
+})()
+
 export const metadata: Metadata = {
-  title: 'FC Online',
-  description: 'FC Online 선수정보, 경기정보, 커뮤니티',
+  metadataBase,
+  title: 'FConline Ground',
+  applicationName: 'FC온라인 그라운드',
+  description:
+    'FConline Ground는 FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 한곳에서 확인할 수 있는 서비스입니다.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icons/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: ['/favicon.ico'],
+  },
+  openGraph: {
+    title: 'FConline Ground',
+    siteName: 'FC온라인 그라운드',
+    locale: 'ko_KR',
+    type: 'website',
+    description:
+      'FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 제공하는 FConline Ground.',
+    images: [{ url: '/og-image.png' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FConline Ground',
+    description:
+      'FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 제공하는 FConline Ground.',
+    images: ['/og-image.png'],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'FC Online',
+    title: 'FConline Ground',
   },
 }
 
@@ -44,13 +86,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[#f0f3f5]">
         <div className="relative mx-auto min-h-screen w-full bg-[#f0f3f5] pt-[env(safe-area-inset-top)] sm:max-w-[480px]">
           <main className="px-5 pb-6">{children}</main>
-          <div className="px-5 pb-0.5 text-left text-[11px] leading-5 text-[#b5bec8]">
-            게임 배너, 이미지, 일부 정보의 저작권은 NEXON Korea Corporation에 있습니다.
-          </div>
-          <footer className="px-5 pb-4 text-left text-xs font-medium tracking-[0.02em] text-[#b5bec8]">
-            {'\u00A9uxdmanual'}
-          </footer>
-          <BottomNav />
+          <AppChrome />
         </div>
       </body>
     </html>

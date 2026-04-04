@@ -1,12 +1,8 @@
+import { unstable_cache } from 'next/cache'
 import { NextRequest } from 'next/server'
+import { getNexonHeaders } from '@/lib/nexon'
 
-const NEXON_API_KEY = process.env.NEXON_API_KEY!
-const headers = { 'x-nxopen-api-key': NEXON_API_KEY }
-const ouidCache = new Map<string, string>()
-
-function normalizeNickname(value: string) {
-  return value.trim().toLowerCase()
-}
+const headers = getNexonHeaders()
 
 async function fetchWithRetry(url: string, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -28,6 +24,13 @@ async function fetchWithRetry(url: string, retries = 2) {
   return null
 }
 
+const getCachedOuid = unstable_cache(
+  async (nickname: string) =>
+    fetchWithRetry(`https://open.api.nexon.com/fconline/v1/id?nickname=${encodeURIComponent(nickname)}`),
+  ['match-user-ouid'],
+  { revalidate: 300 },
+)
+
 export async function GET(req: NextRequest) {
   const nickname = req.nextUrl.searchParams.get('nickname')?.trim()
 
@@ -35,16 +38,11 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: 'nickname required' }, { status: 400 })
   }
 
-  const normalizedNickname = normalizeNickname(nickname)
-  const resolvedOuid =
-    (await fetchWithRetry(
-      `https://open.api.nexon.com/fconline/v1/id?nickname=${encodeURIComponent(nickname)}`
-    )) ?? ouidCache.get(normalizedNickname) ?? null
+  const resolvedOuid = await getCachedOuid(nickname)
 
   if (!resolvedOuid) {
     return Response.json(null)
   }
 
-  ouidCache.set(normalizedNickname, resolvedOuid)
   return Response.json({ ouid: resolvedOuid, nickname })
 }

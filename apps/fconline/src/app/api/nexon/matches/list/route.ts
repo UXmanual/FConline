@@ -1,8 +1,37 @@
+import https from 'node:https'
 import { NextRequest } from 'next/server'
 import { MatchData } from '@/features/match-analysis/types'
+import { getNexonHeaders } from '@/lib/nexon'
 
-const NEXON_API_KEY = process.env.NEXON_API_KEY!
-const headers = { 'x-nxopen-api-key': NEXON_API_KEY }
+const headers = getNexonHeaders()
+const FETCH_TIMEOUT_MS = 7000
+const DETAIL_CONCURRENCY = 3
+const MATCH_CACHE_TTL_MS = 1000 * 60 * 5
+const DETAIL_MAX_RETRIES = 4
+const DETAIL_RETRY_DELAY_MS = 250
+
+type MatchIdsCacheEntry = {
+  expiresAt: number
+  value: string[]
+}
+
+type MatchDetailCacheEntry = {
+  expiresAt: number
+  value: MatchData
+}
+
+const matchIdsCache = new Map<string, MatchIdsCacheEntry>()
+const matchDetailCache = new Map<string, MatchDetailCacheEntry>()
+const matchIdsPromiseCache = new Map<string, Promise<string[]>>()
+const matchDetailPromiseCache = new Map<string, Promise<MatchData | null>>()
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return String(error)
+}
 
 function isMatchData(value: unknown): value is MatchData {
   if (!value || typeof value !== 'object') return false
@@ -11,50 +40,176 @@ function isMatchData(value: unknown): value is MatchData {
   return typeof candidate.matchId === 'string' && Array.isArray(candidate.matchInfo)
 }
 
-async function fetchMatchDetail(matchId: string, retries = 2) {
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    try {
-      const res = await fetch(
-        `https://open.api.nexon.com/fconline/v1/match-detail?matchid=${matchId}`,
-        { headers }
-      )
-
-      if (res.ok) {
-        const detail = (await res.json().catch(() => null)) as MatchData | null
-        if (isMatchData(detail)) {
-          return detail
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = FETCH_TIMEOUT_MS) {
+  return new Promise<string>((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: init.method ?? 'GET',
+        headers: init.headers as Record<string, string>,
+      },
+      (res) => {
+        if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+          res.resume()
+          reject(new Error(`Request failed with status ${res.statusCode ?? 0}`))
+          return
         }
-      }
-    } catch {}
 
-    if (attempt < retries) {
-      await new Promise((resolve) => setTimeout(resolve, 120))
-    }
+        let raw = ''
+        res.setEncoding('utf8')
+        res.on('data', (chunk) => {
+          raw += chunk
+        })
+        res.on('end', () => resolve(raw))
+      },
+    )
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error('Request timeout'))
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fetchMatchDetailRaw(matchId: string) {
+  try {
+    const raw = await fetchWithTimeout(
+      `https://open.api.nexon.com/fconline/v1/match-detail?matchid=${matchId}`,
+      {
+        headers,
+      },
+    )
+    const detail = JSON.parse(raw) as MatchData | null
+    return isMatchData(detail) ? detail : null
+  } catch (error) {
+    console.warn(
+      `[matches/list] match-detail fetch failed: matchId=${matchId} reason="${getErrorMessage(error)}"`,
+    )
+    return null
+  }
+}
+
+async function fetchMatchIdsRaw(ouid: string, matchtype: string, offset: string, limit: string) {
+  try {
+    const raw = await fetchWithTimeout(
+      `https://open.api.nexon.com/fconline/v1/user/match?ouid=${ouid}&matchtype=${matchtype}&offset=${offset}&limit=${limit}`,
+      { headers },
+    )
+    return JSON.parse(raw) as string[]
+  } catch (error) {
+    console.warn(
+      `[matches/list] match-id fetch failed: ouid=${ouid} matchtype=${matchtype} offset=${offset} limit=${limit} reason="${getErrorMessage(error)}"`,
+    )
+    return []
+  }
+}
+
+async function fetchMatchIds(ouid: string, matchtype: string, offset: string, limit: string) {
+  const key = `${ouid}:${matchtype}:${offset}:${limit}`
+  const now = Date.now()
+  const cached = matchIdsCache.get(key)
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value
   }
 
-  return null
+  const pending = matchIdsPromiseCache.get(key)
+  if (pending) {
+    return pending
+  }
+
+  const request = fetchMatchIdsRaw(ouid, matchtype, offset, limit)
+    .then((value) => {
+      matchIdsCache.set(key, {
+        expiresAt: Date.now() + MATCH_CACHE_TTL_MS,
+        value,
+      })
+      return value
+    })
+    .finally(() => {
+      matchIdsPromiseCache.delete(key)
+    })
+
+  matchIdsPromiseCache.set(key, request)
+  return request
+}
+
+async function fetchMatchDetail(matchId: string) {
+  const now = Date.now()
+  const cached = matchDetailCache.get(matchId)
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value
+  }
+
+  const pending = matchDetailPromiseCache.get(matchId)
+  if (pending) {
+    return pending
+  }
+
+  const request = (async () => {
+    for (let attempt = 1; attempt <= DETAIL_MAX_RETRIES; attempt += 1) {
+      const value = await fetchMatchDetailRaw(matchId)
+
+      if (value) {
+        matchDetailCache.set(matchId, {
+          expiresAt: Date.now() + MATCH_CACHE_TTL_MS,
+          value,
+        })
+        return value
+      }
+
+      if (attempt < DETAIL_MAX_RETRIES) {
+        console.info(
+          `[matches/list] retrying match-detail: matchId=${matchId} attempt=${attempt + 1}/${DETAIL_MAX_RETRIES}`,
+        )
+        await delay(DETAIL_RETRY_DELAY_MS * attempt)
+      }
+    }
+
+    console.warn(
+      `[matches/list] match-detail permanently failed after retries: matchId=${matchId} attempts=${DETAIL_MAX_RETRIES}`,
+    )
+    return null
+  })().finally(() => {
+    matchDetailPromiseCache.delete(matchId)
+  })
+
+  matchDetailPromiseCache.set(matchId, request)
+  return request
 }
 
 export async function GET(req: NextRequest) {
   const ouid = req.nextUrl.searchParams.get('ouid')
   const matchtype = req.nextUrl.searchParams.get('matchtype') ?? '214'
-  const offset = req.nextUrl.searchParams.get('offset') ?? '0'
-  const limit = req.nextUrl.searchParams.get('limit') ?? '10'
+  const offset = Number(req.nextUrl.searchParams.get('offset') ?? '0')
+  const limit = Number(req.nextUrl.searchParams.get('limit') ?? '10')
 
   if (!ouid) {
     return Response.json({ error: 'ouid required' }, { status: 400 })
   }
 
-  const matchListRes = await fetch(
-    `https://open.api.nexon.com/fconline/v1/user/match?ouid=${ouid}&matchtype=${matchtype}&offset=${offset}&limit=${limit}`,
-    { headers }
-  )
-
-  if (!matchListRes.ok) {
-    return Response.json([])
+  if (!Number.isFinite(offset) || offset < 0 || !Number.isFinite(limit) || limit <= 0) {
+    return Response.json({ error: 'invalid pagination params' }, { status: 400 })
   }
 
-  const matchIds: string[] = await matchListRes.json()
+  const targetLimit = Math.min(Math.floor(limit), 50)
+  const normalizedOffset = Math.floor(offset)
+  const matchIds = await fetchMatchIds(
+    ouid,
+    matchtype,
+    String(normalizedOffset),
+    String(targetLimit),
+  )
+
+  console.info(
+    `[matches/list] fetched match IDs: ouid=${ouid} offset=${normalizedOffset} requested=${targetLimit} received=${matchIds.length}`,
+  )
 
   if (!matchIds.length) {
     return Response.json([])
@@ -62,12 +217,25 @@ export async function GET(req: NextRequest) {
 
   const matchDetails: MatchData[] = []
 
-  for (const matchId of matchIds) {
-    const detail = await fetchMatchDetail(matchId)
-    if (detail) {
-      matchDetails.push(detail)
-    }
+  for (let index = 0; index < matchIds.length && matchDetails.length < targetLimit; index += DETAIL_CONCURRENCY) {
+    const chunk = matchIds.slice(index, index + DETAIL_CONCURRENCY)
+    const settled = await Promise.allSettled(chunk.map((matchId) => fetchMatchDetail(matchId)))
+    const resolvedChunk = settled
+      .filter((result): result is PromiseFulfilledResult<MatchData | null> => result.status === 'fulfilled')
+      .map((result) => result.value)
+      .filter((detail): detail is MatchData => detail !== null)
+
+    const remaining = targetLimit - matchDetails.length
+    matchDetails.push(...resolvedChunk.slice(0, remaining))
+
+    console.info(
+      `[matches/list] resolved recent match details: ouid=${ouid} chunkSize=${chunk.length} success=${resolvedChunk.length} accumulated=${matchDetails.length}/${Math.min(targetLimit, matchIds.length)}`,
+    )
   }
 
-  return Response.json(matchDetails)
+  if (!matchDetails.length) {
+    return Response.json([])
+  }
+
+  return Response.json(matchDetails.slice(0, targetLimit))
 }

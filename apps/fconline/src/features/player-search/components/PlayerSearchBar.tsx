@@ -9,11 +9,7 @@ interface Props {
   onSearch: () => void
 }
 
-export default function PlayerSearchBar({
-  value,
-  onChange,
-  onSearch,
-}: Props) {
+export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const runSearch = () => {
@@ -30,15 +26,27 @@ export default function PlayerSearchBar({
     runSearch()
   }
 
+  const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement
+    if (target.closest('button')) {
+      return
+    }
+
+    inputRef.current?.focus()
+  }
+
   return (
-    <div className="flex h-14 items-center gap-2 rounded-lg border border-[#e6e8ea] bg-white px-4 focus-within:border-2 focus-within:border-[#457ae5]">
+    <div
+      className="flex h-14 items-center gap-2 rounded-lg border border-[#e6e8ea] bg-white px-4 focus-within:border-2 focus-within:border-[#457ae5]"
+      onClick={handleContainerClick}
+    >
       <input
         ref={inputRef}
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="선수 이름 검색"
+        placeholder="선수 이름을 입력해주세요"
         className="min-w-0 flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
       />
 

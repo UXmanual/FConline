@@ -4,12 +4,30 @@ import { MatchSearchCandidate } from '@/features/match-analysis/types'
 const NEXON_API_KEY = process.env.NEXON_API_KEY!
 const nexonHeaders = { 'x-nxopen-api-key': NEXON_API_KEY }
 const ouidCache = new Map<string, string>()
+const SEARCH_CACHE_TTL_MS = 1000 * 60 * 5
 
 const SEARCH_MODES = [
-  { key: '1vs1', label: '1vs1 랭킹' },
-  { key: '2vs2', label: '2vs2 랭킹' },
-  { key: 'manager', label: '감독모드 랭킹' },
+  { key: '1vs1', label: '1vs1' },
+  { key: '2vs2', label: '2vs2' },
+  { key: 'manager', label: 'manager' },
 ] as const
+
+type MatchSearchResponse = {
+  nickname: string
+  candidates: MatchSearchCandidate[]
+  exactMatch: MatchSearchCandidate | null
+  source: string
+}
+
+const searchCache = new Map<
+  string,
+  {
+    expiresAt: number
+    value: MatchSearchResponse
+  }
+>()
+
+const searchPromiseCache = new Map<string, Promise<MatchSearchResponse>>()
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -29,7 +47,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-async function fetchTextWithRetry(url: string, init: RequestInit, timeoutMs: number, retries = 1) {
+async function fetchTextWithRetry(url: string, init: RequestInit, timeoutMs: number, retries = 0) {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       const res = await fetchWithTimeout(url, init, timeoutMs)
@@ -46,7 +64,7 @@ async function fetchTextWithRetry(url: string, init: RequestInit, timeoutMs: num
   return null
 }
 
-async function fetchJsonWithRetry<T>(url: string, init: RequestInit, timeoutMs: number, retries = 1): Promise<T | null> {
+async function fetchJsonWithRetry<T>(url: string, init: RequestInit, timeoutMs: number, retries = 0): Promise<T | null> {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       const res = await fetchWithTimeout(url, init, timeoutMs)
@@ -129,7 +147,7 @@ function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact'
 
 function parseOfficialRankResult(candidateHtml: string, modeLabel: string): MatchSearchCandidate | null {
   const nickname = stripTags(
-    candidateHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? ''
+    candidateHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '',
   )
   const nexonSn = candidateHtml.match(/data-sn="(\d+)"/)?.[1] ?? ''
 
@@ -141,19 +159,19 @@ function parseOfficialRankResult(candidateHtml: string, modeLabel: string): Matc
 
   candidate.level = parseNumber(
     stripTags(
-      candidateHtml.match(/<span class="txt">\d+<\/span><\/span>\s*<span class="name profile_pointer"/)?.[0] ?? ''
-    ).match(/\d+/)?.[0] ?? null
+      candidateHtml.match(/<span class="txt">\d+<\/span><\/span>\s*<span class="name profile_pointer"/)?.[0] ?? '',
+    ).match(/\d+/)?.[0] ?? null,
   )
   candidate.rank = parseNumber(
-    stripTags(candidateHtml.match(/<span class="td rank_no">[\s\S]*?<\/span>/)?.[0] ?? '')
+    stripTags(candidateHtml.match(/<span class="td rank_no">[\s\S]*?<\/span>/)?.[0] ?? ''),
   )
   candidate.elo = parseNumber(
-    stripTags(candidateHtml.match(/<span class="td rank_r_win_point">[\s\S]*?<\/span>/)?.[0] ?? '')
+    stripTags(candidateHtml.match(/<span class="td rank_r_win_point">[\s\S]*?<\/span>/)?.[0] ?? ''),
   )
-  candidate.rankLabel = candidate.elo !== null ? '공식 랭킹 점수' : null
+  candidate.rankLabel = candidate.elo !== null ? modeLabel : null
   candidate.rankIconUrl = candidateHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null
   candidate.winRate = parseNumber(
-    stripTags(candidateHtml.match(/<span class="top">[\s\S]*?%[\s\S]*?<\/span>/)?.[0] ?? '')
+    stripTags(candidateHtml.match(/<span class="top">[\s\S]*?%[\s\S]*?<\/span>/)?.[0] ?? ''),
   )
   candidate.wins = wins ?? null
   candidate.draws = draws ?? null
@@ -179,7 +197,7 @@ function parseOfficialCandidates(html: string, modeLabel: string) {
 function parseVoltaExactCandidate(html: string, nickname: string): Partial<MatchSearchCandidate> | null {
   const normalizedTarget = normalizeNickname(nickname)
   const nicknameMatch = new RegExp(
-    `<span class="name profile_pointer"[^>]*>[\\s\\S]*?${escapeRegExp(nickname)}[\\s\\S]*?<\\/span>`
+    `<span class="name profile_pointer"[^>]*>[\\s\\S]*?${escapeRegExp(nickname)}[\\s\\S]*?<\\/span>`,
   ).exec(html)
 
   if (!nicknameMatch || nicknameMatch.index === undefined) {
@@ -195,7 +213,7 @@ function parseVoltaExactCandidate(html: string, nickname: string): Partial<Match
 
   const rowHtml = html.slice(rowStart, paginationStart)
   const rowNickname = stripTags(
-    rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? ''
+    rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '',
   )
 
   if (!rowNickname || normalizeNickname(rowNickname) !== normalizedTarget) {
@@ -242,23 +260,77 @@ function mergeCandidate(base: MatchSearchCandidate, incoming: Partial<MatchSearc
   }
 }
 
-export async function GET(req: NextRequest) {
-  const nickname = req.nextUrl.searchParams.get('nickname')?.trim()
+async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse> {
+  const normalizedNickname = normalizeNickname(nickname)
+  const now = Date.now()
+  const cached = searchCache.get(normalizedNickname)
 
-  if (!nickname) {
-    return Response.json({ error: 'nickname required' }, { status: 400 })
+  if (cached && cached.expiresAt > now) {
+    return cached.value
   }
 
-  const encodedNickname = encodeURIComponent(nickname)
-  const normalizedNickname = normalizeNickname(nickname)
-  const [exactData, rankResults, voltaHtml] = await Promise.all([
-    fetchJsonWithRetry<{ ouid?: string }>(
-      `https://open.api.nexon.com/fconline/v1/id?nickname=${encodedNickname}`,
-      { headers: nexonHeaders, next: { revalidate: 300 } },
-      10000,
-      2
-    ),
-    Promise.all(
+  const pending = searchPromiseCache.get(normalizedNickname)
+  if (pending) {
+    return pending
+  }
+
+  const request = (async () => {
+    const encodedNickname = encodeURIComponent(nickname)
+    const [exactData, voltaHtml] = await Promise.all([
+      fetchJsonWithRetry<{ ouid?: string }>(
+        `https://open.api.nexon.com/fconline/v1/id?nickname=${encodedNickname}`,
+        { headers: nexonHeaders, cache: 'no-store' },
+        3500,
+        0,
+      ),
+      fetchTextWithRetry(
+        `https://fconline.nexon.com/datacenter/rank_volta?rtype=all&strCharacterName=${encodedNickname}`,
+        {
+          headers: {
+            'user-agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+          },
+          cache: 'no-store',
+        },
+        4000,
+        0,
+      ),
+    ])
+
+    if (exactData?.ouid) {
+      ouidCache.set(normalizedNickname, exactData.ouid)
+    }
+
+    const voltaCandidate = voltaHtml ? parseVoltaExactCandidate(voltaHtml, nickname) : null
+    let exactCandidate: MatchSearchCandidate | null = null
+
+    if (exactData?.ouid) {
+      exactCandidate = {
+        ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
+        ouid: exactData.ouid,
+        modes: ['exact'],
+      }
+    } else if (voltaCandidate) {
+      exactCandidate = {
+        ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
+        modes: ['volta'],
+      }
+    }
+
+    if (exactCandidate && voltaCandidate) {
+      exactCandidate = mergeCandidate(exactCandidate, voltaCandidate)
+    }
+
+    if (exactCandidate) {
+      return {
+        nickname,
+        candidates: [exactCandidate],
+        exactMatch: exactCandidate,
+        source: 'official-rank-search',
+      }
+    }
+
+    const rankResults = await Promise.all(
       SEARCH_MODES.map(async (mode) => {
         const html = await fetchTextWithRetry(
           `https://fconline.nexon.com/datacenter/rank_inner?rt=${mode.key}&strCharacterName=${encodedNickname}&n4seasonno=0&n4pageno=1`,
@@ -267,102 +339,60 @@ export async function GET(req: NextRequest) {
               'user-agent':
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
             },
-            next: { revalidate: 300 },
+            cache: 'no-store',
           },
-          8000,
-          1
+          3000,
+          0,
         )
 
         return html ? parseOfficialCandidates(html, mode.label) : []
+      }),
+    )
+
+    const merged = new Map<string, MatchSearchCandidate>()
+
+    for (const candidates of rankResults) {
+      for (const candidate of candidates) {
+        const key = `${candidate.nexonSn}:${candidate.nickname}`
+        merged.set(key, merged.has(key) ? mergeCandidate(merged.get(key)!, candidate) : candidate)
+      }
+    }
+
+    return {
+      nickname,
+      candidates: [...merged.values()]
+        .sort((a, b) => {
+          if (a.rank === null && b.rank === null) return a.nickname.localeCompare(b.nickname, 'ko')
+          if (a.rank === null) return 1
+          if (b.rank === null) return -1
+          return a.rank - b.rank
+        })
+        .slice(0, 20),
+      exactMatch: null,
+      source: 'official-rank-search',
+    }
+  })()
+    .then((value) => {
+      searchCache.set(normalizedNickname, {
+        expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+        value,
       })
-    ),
-    fetchTextWithRetry(
-      `https://fconline.nexon.com/datacenter/rank_volta?rtype=all&strCharacterName=${encodedNickname}`,
-      {
-        headers: {
-          'user-agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-        },
-        next: { revalidate: 300 },
-      },
-      8000,
-      1
-    ),
-  ])
-
-  const cachedOuid = ouidCache.get(normalizedNickname) ?? null
-  const resolvedOuid = exactData?.ouid ?? cachedOuid
-
-  if (exactData?.ouid) {
-    ouidCache.set(normalizedNickname, exactData.ouid)
-  }
-
-  let exactCandidate: MatchSearchCandidate | null = null
-
-  if (exactData?.ouid) {
-    exactCandidate = {
-      ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
-      ouid: exactData.ouid,
-      modes: ['정확일치'],
-    }
-  }
-
-  const merged = new Map<string, MatchSearchCandidate>()
-
-  for (const candidates of rankResults) {
-    for (const candidate of candidates) {
-      const key = `${candidate.nexonSn}:${candidate.nickname}`
-      merged.set(key, merged.has(key) ? mergeCandidate(merged.get(key)!, candidate) : candidate)
-    }
-  }
-
-  const candidates = [...merged.values()]
-    .sort((a, b) => {
-      if (a.rank === null && b.rank === null) return a.nickname.localeCompare(b.nickname, 'ko')
-      if (a.rank === null) return 1
-      if (b.rank === null) return -1
-      return a.rank - b.rank
+      return value
     })
-    .slice(0, 20)
+    .finally(() => {
+      searchPromiseCache.delete(normalizedNickname)
+    })
 
-  const voltaCandidate = voltaHtml ? parseVoltaExactCandidate(voltaHtml, nickname) : null
+  searchPromiseCache.set(normalizedNickname, request)
+  return request
+}
 
-  if (!exactCandidate && voltaCandidate) {
-    exactCandidate = {
-      ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
-      modes: ['볼타 랭킹'],
-    }
+export async function GET(req: NextRequest) {
+  const nickname = req.nextUrl.searchParams.get('nickname')?.trim()
+
+  if (!nickname) {
+    return Response.json({ error: 'nickname required' }, { status: 400 })
   }
 
-  if (exactCandidate) {
-    const exactNickname = exactCandidate.nickname
-    const matchedRankCandidate =
-      candidates.find(
-        (candidate) => normalizeNickname(candidate.nickname) === normalizeNickname(exactNickname)
-      ) ?? null
-
-    if (matchedRankCandidate) {
-      exactCandidate = mergeCandidate(exactCandidate, matchedRankCandidate)
-    }
-
-    if (voltaCandidate) {
-      exactCandidate = mergeCandidate(exactCandidate, voltaCandidate)
-    }
-  }
-
-  const finalCandidates = exactCandidate
-    ? [
-        exactCandidate,
-        ...candidates.filter(
-          (candidate) => candidate.nickname !== exactCandidate.nickname || candidate.source !== 'exact'
-        ),
-      ]
-    : candidates
-
-  return Response.json({
-    nickname,
-    candidates: finalCandidates,
-    exactMatch: exactCandidate,
-    source: 'official-rank-search',
-  })
+  return Response.json(await getMatchSearchData(nickname))
 }
