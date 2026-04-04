@@ -223,6 +223,7 @@ export default function CommunityPageClient() {
   const [posts, setPosts] = useState<CommunityPostSummary[]>([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false)
   const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
   const [comments, setComments] = useState<CommunityCommentItem[]>([])
   const [isLoadingComments, setIsLoadingComments] = useState(false)
@@ -388,6 +389,10 @@ export default function CommunityPageClient() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
+    if (isSubmittingPost) {
+      return
+    }
+
     const trimmedNickname = nickname.trim()
     const trimmedPassword = password.trim()
     const trimmedTitle = title.trim()
@@ -398,6 +403,7 @@ export default function CommunityPageClient() {
     }
 
     try {
+      setIsSubmittingPost(true)
       const response = await fetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -428,6 +434,8 @@ export default function CommunityPageClient() {
       setPageWindowStart(1)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 저장하지 못했습니다.')
+    } finally {
+      setIsSubmittingPost(false)
     }
   }
 
@@ -698,7 +706,8 @@ export default function CommunityPageClient() {
                   <button
                     type="button"
                     onClick={() => setIsComposerOpen(false)}
-                    className="flex items-center justify-center text-sm font-semibold transition"
+                    disabled={isSubmittingPost}
+                    className="flex items-center justify-center text-sm font-semibold transition disabled:opacity-60"
                     style={{
                       flex: '1 1 0%',
                       height: '54px',
@@ -712,7 +721,8 @@ export default function CommunityPageClient() {
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center justify-center text-sm font-semibold text-white transition"
+                    disabled={isSubmittingPost}
+                    className="flex items-center justify-center text-sm font-semibold text-white transition disabled:opacity-70"
                     style={{
                       flex: '2 1 0%',
                       height: '54px',
@@ -720,7 +730,7 @@ export default function CommunityPageClient() {
                       backgroundColor: '#457ae5',
                     }}
                   >
-                    글쓰기
+                    {isSubmittingPost ? '등록 중...' : '글쓰기'}
                   </button>
                 </div>
               </form>
