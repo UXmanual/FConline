@@ -4,8 +4,20 @@ import { useState } from 'react'
 
 const version = process.env.NEXT_PUBLIC_APP_VERSION
 
+const openSourceLicenses = [
+  {
+    name: '여기어때 잘난체',
+    href: 'https://gccompany.co.kr/font',
+  },
+  {
+    name: '넥슨 Open API',
+    href: 'https://openapi.nexon.com/ko/',
+  },
+]
+
 export default function MyPage() {
   const [isDarkModeEnabled, setIsDarkModeEnabled] = useState(true)
+  const [isLicenseOpen, setIsLicenseOpen] = useState(false)
 
   return (
     <div className="space-y-4 pt-5">
@@ -24,9 +36,9 @@ export default function MyPage() {
 
       <section className="rounded-lg bg-white px-5 py-4">
         <div className="flex items-center justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-sm leading-5 text-[#5f6b76]">현재 베타 테스트 중입니다.</p>
-            <p className="text-sm leading-5 text-[#5f6b76]">문의사항은 이메일로 연락해주세요.</p>
+          <div className="space-y-1">
+            <p className="text-sm leading-[1.45] text-[#5f6b76]">현재 베타 테스트 중입니다.</p>
+            <p className="text-sm leading-[1.45] text-[#5f6b76]">문의사항은 이메일로 연락해주세요.</p>
           </div>
 
           <a
@@ -44,7 +56,7 @@ export default function MyPage() {
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-[#1e2124]">다크모드</p>
-            <p className="text-sm leading-5 text-[#96a0aa]">준비 중인 기능이에요.</p>
+            <p className="text-sm leading-5 text-[#96a0aa]">준비 중인 기능이에요</p>
           </div>
 
           <button
@@ -66,8 +78,46 @@ export default function MyPage() {
 
       <section className="rounded-lg bg-white px-5 py-4">
         <p className="text-sm font-medium text-[#96a0aa]">
-          {version ? `Ver.${version} (Beta)` : 'Ver.11.13 (Beta)'}
+          {version ? `버전 ${version} (Beta)` : '버전 11.3 (Beta)'}
         </p>
+        <div className="mt-2.5 space-y-0.5">
+          <p className="text-[12px] font-medium leading-[1.35] text-[#7f8a95]">- 분석 상세 사용 선수 카드 추가</p>
+          <p className="text-[12px] font-medium leading-[1.35] text-[#7f8a95]">- 기타 버그 수정</p>
+        </div>
+      </section>
+
+      <section className="rounded-lg bg-white px-5 py-4">
+        <button
+          type="button"
+          onClick={() => setIsLicenseOpen((current) => !current)}
+          className="block w-full text-left"
+          aria-expanded={isLicenseOpen}
+        >
+          <p
+            className={`text-sm font-medium text-[#96a0aa] ${isLicenseOpen ? '' : 'underline underline-offset-2'}`}
+          >
+            오픈소스 라이선스 보기
+          </p>
+        </button>
+
+        {isLicenseOpen ? (
+          <div className="mt-3 space-y-2">
+            {openSourceLicenses.map((license) => (
+              <a
+                key={license.name}
+                href={license.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-sm font-medium text-[#5f6b76]"
+              >
+                <span aria-hidden="true" className="text-[12px] leading-none text-[#8a949e]">
+                  ↗
+                </span>
+                <span>{license.name}</span>
+              </a>
+            ))}
+          </div>
+        ) : null}
       </section>
     </div>
   )
