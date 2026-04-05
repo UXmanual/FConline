@@ -1,11 +1,44 @@
 'use client'
 
+import { useEffect, useLayoutEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
 
 export default function AppChrome() {
   const pathname = usePathname()
   const hideFooter = pathname.startsWith('/community')
+
+  useEffect(() => {
+    if (!('scrollRestoration' in window.history)) return
+
+    const previousScrollRestoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+
+    scrollToTop()
+
+    const firstFrameId = window.requestAnimationFrame(scrollToTop)
+    const secondFrameId = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(scrollToTop)
+    })
+    const timeoutId = window.setTimeout(scrollToTop, 120)
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId)
+      window.cancelAnimationFrame(secondFrameId)
+      window.clearTimeout(timeoutId)
+    }
+  }, [pathname])
 
   return (
     <>

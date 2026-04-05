@@ -5,6 +5,7 @@ import { ArrowLeft, MagnifyingGlass } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import VoltaBestStatsCard from '@/features/match-analysis/components/VoltaBestStatsCard'
 import VoltaTopRankCard from '@/features/match-analysis/components/VoltaTopRankCard'
+import PlayerImage from '@/features/player-search/components/PlayerImage'
 import {
   calcPassTotal,
   MatchData,
@@ -16,7 +17,7 @@ import {
 
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
 const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v2'
-const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v1'
+const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v3'
 const VOLTA_BEST_CACHE_KEY = 'fconline.match.volta-best-cache.v3'
 const VOLTA_TOP_CACHE_KEY = 'fconline.match.volta-top-cache.v2'
 const MATCH_LIST_LIMIT = 10
@@ -101,6 +102,19 @@ function formatControllerLabel(value: string | null | undefined) {
   const normalized = value.trim()
   if (!normalized) return '-'
   return normalized
+}
+
+function formatPlayerCardSummary(player: MatchPlayerInfo) {
+  const playerName = player.cardInfo?.playerName?.trim()
+  const enhancement = player.cardInfo?.enhancement
+  const seasonName = player.cardInfo?.seasonName?.trim()
+  const parts = [
+    playerName || null,
+    enhancement != null ? `${enhancement}강` : null,
+    seasonName || null,
+  ].filter((part): part is string => Boolean(part))
+
+  return parts.length > 0 ? parts.join(' · ') : null
 }
 
 function getControllerDisplay(value: string | null | undefined) {
@@ -310,6 +324,13 @@ function readCachedSearch(nickname: string) {
   const percentages = typeof mainPosition === 'string' ? mainPosition.match(/\d+(?:\.\d+)?%/g) ?? [] : []
 
   if (entry.exactCandidate && percentages.length < 3) {
+    return null
+  }
+
+  if (
+    entry.exactCandidate &&
+    (!('ownerSince' in entry.exactCandidate) || !('representativeTeam' in entry.exactCandidate))
+  ) {
     return null
   }
 
@@ -613,19 +634,9 @@ function buildMatchInsight(
   const otherTeammates = teammateMetrics.filter(({ player }) => player.ouid !== focusPlayer.ouid)
 
   const teammateGoalValues = teammateMetrics.map(({ metrics }) => metrics.goals)
-  const teammateShotValues = teammateMetrics.map(({ metrics }) => metrics.shots)
   const teammateEffectiveShotValues = teammateMetrics.map(({ metrics }) => metrics.effectiveShots)
   const teammateDribbleValues = teammateMetrics.map(({ metrics }) => metrics.dribble)
   const teammateRatingValues = teammateMetrics.map(({ metrics }) => metrics.rating)
-  const teammateTackleValues = teammateMetrics
-    .map(({ metrics }) => metrics.tackleRate)
-    .filter((value): value is number => value !== null)
-  const teammateBlockValues = teammateMetrics
-    .map(({ metrics }) => metrics.blockRate)
-    .filter((value): value is number => value !== null)
-  const teammatePassValues = teammateMetrics
-    .map(({ metrics }) => metrics.passRate)
-    .filter((value): value is number => value !== null)
   const teamGoalTop = Math.max(...teammateGoalValues, 0)
   const teamEffectiveShotTop = Math.max(...teammateEffectiveShotValues, 0)
   const teamDribbleTop = Math.max(...teammateDribbleValues, 0)
@@ -643,23 +654,10 @@ function buildMatchInsight(
   const teammateAvgShots = average(otherTeammates.map(({ metrics }) => metrics.shots))
 
   const teammateCount = teammateMetrics.length
-  const passRank =
-    meMetrics.passRate === null || teammatePassValues.length === 0
-      ? null
-      : rankDescending(meMetrics.passRate, teammatePassValues)
   const goalRank = rankDescending(meMetrics.goals, teammateGoalValues)
-  const shotRank = rankDescending(meMetrics.shots, teammateShotValues)
   const effectiveShotRank = rankDescending(meMetrics.effectiveShots, teammateEffectiveShotValues)
   const dribbleRank = rankDescending(meMetrics.dribble, teammateDribbleValues)
   const ratingRank = rankDescending(meMetrics.rating, teammateRatingValues)
-  const tackleRank =
-    meMetrics.tackleRate === null || teammateTackleValues.length === 0
-      ? null
-      : rankDescending(meMetrics.tackleRate, teammateTackleValues)
-  const blockRank =
-    meMetrics.blockRate === null || teammateBlockValues.length === 0
-      ? null
-      : rankDescending(meMetrics.blockRate, teammateBlockValues)
   const goalShare = perspectiveMyScore > 0 ? meMetrics.goals / perspectiveMyScore : 0
   const shotConversion =
     meMetrics.shots > 0 ? Math.round((meMetrics.goals / meMetrics.shots) * 100) : 0
@@ -678,52 +676,61 @@ function buildMatchInsight(
     observations.push({ score, tone, text })
   }
 
+  const isWin = perspectiveMyScore > perspectiveOpponentScore
+  const isLoss = perspectiveMyScore < perspectiveOpponentScore
+  const isHighScoring = perspectiveMyScore + perspectiveOpponentScore >= 5
+  const isLowScoring = perspectiveMyScore + perspectiveOpponentScore <= 2
+  const tackleCount = meMetrics.tackleSuccess ?? 0
+  const blockCount = meMetrics.blockSuccess ?? 0
+  const passAttempts = meMetrics.passTry ?? 0
+  const effectiveShots = meMetrics.effectiveShots ?? 0
+
   if (meMetrics.goals > 0) {
     if (goalShare >= 0.5) {
       addObservation(
-        98,
+        99,
         'good',
-        `${formatMetricNumber(meMetrics.goals)}골로 팀 득점의 ${Math.round(goalShare * 100)}%를 책임졌습니다. 이 경기에서 가장 확실한 공격 마무리 자원이었습니다.`,
+        `${formatMetricNumber(meMetrics.goals)}골로 팀 득점의 ${Math.round(goalShare * 100)}%를 책임졌습니다. 마무리 비중이 절대적이었고, 이런 경기에선 같은 위치를 계속 밟기보다 주변 지원을 더 받아 슈팅 수까지 늘리면 영향력이 더 커질 수 있습니다.`,
       )
     } else if (meMetrics.goals === teamGoalTop) {
       addObservation(
-        90,
+        93,
         'good',
-        `${formatMetricNumber(meMetrics.goals)}골로 팀 내 득점 ${formatRank(goalRank, teammateCount)}를 기록했습니다. 최소한 득점 책임은 상위권이었습니다.`,
+        `${formatMetricNumber(meMetrics.goals)}골로 팀 내 득점 ${formatRank(goalRank, teammateCount)}였습니다. 결정적인 장면을 살린 건 분명 강점이고, 다음 단계는 골 장면 외 빌드업 관여까지 넓혀 존재감을 경기 전체로 확장하는 것입니다.`,
       )
     } else {
       addObservation(
-        72,
+        78,
         'good',
-        `${formatMetricNumber(meMetrics.goals)}골로 공격 포인트는 만들었지만, 팀 전체 공격 비중을 주도한 수준까지는 아니었습니다.`,
+        `${formatMetricNumber(meMetrics.goals)}골로 공격 포인트는 만들었습니다. 다만 득점 비중이 압도적이진 않아, 마무리 이후의 연계나 세컨드 액션까지 같이 만들면 더 높은 평가로 이어질 수 있습니다.`,
       )
     }
   } else if (meMetrics.shots >= 4) {
     addObservation(
-      95,
+      96,
       'bad',
-      `슈팅 ${formatMetricNumber(meMetrics.shots)}회로 시도량은 ${formatRank(shotRank, teammateCount)}였는데 무득점이었습니다. 가장 아쉬운 지점은 마무리입니다.`,
+      `슈팅 ${formatMetricNumber(meMetrics.shots)}회로 시도량은 충분했지만 무득점이었습니다. 공격 위치 선정은 나쁘지 않았다는 뜻이라, 마무리 각도와 첫 터치 안정감만 보완돼도 결과가 크게 달라질 경기였습니다.`,
     )
-  } else if (meMetrics.shots <= 1 && meMetrics.passTry <= 5) {
+  } else if (meMetrics.shots <= 1 && passAttempts <= 5) {
     addObservation(
-      89,
+      90,
       'bad',
-      `슈팅 ${formatMetricNumber(meMetrics.shots)}회, 패스 시도 ${formatMetricNumber(meMetrics.passTry)}회에 그쳐 공격 전개에 깊게 관여했다고 보기 어렵습니다.`,
+      `슈팅 ${formatMetricNumber(meMetrics.shots)}회, 패스 시도 ${formatMetricNumber(passAttempts)}회에 그쳐 공격 흐름에 깊게 개입하지 못했습니다. 다음 경기에서는 최소한 볼을 받는 위치를 한 줄 더 앞으로 잡을 필요가 있습니다.`,
     )
   }
 
   if (effectiveShotRate !== null && meMetrics.shots >= 3) {
     if (effectiveShotRate >= 70 && meMetrics.effectiveShots === teamEffectiveShotTop) {
       addObservation(
-        82,
+        87,
         'good',
-        `유효슛 비율이 ${effectiveShotRate}%로 높았고, 유효슛 수 역시 팀 내 ${formatRank(effectiveShotRank, teammateCount)}였습니다. 슈팅 질은 좋은 편이었습니다.`,
+        `유효슛 비율이 ${effectiveShotRate}%로 높았고 유효슛 수 역시 팀 내 ${formatRank(effectiveShotRank, teammateCount)}였습니다. 슈팅 질은 좋았고, 같은 빈도만 유지되면 득점 기대값도 계속 올라갈 경기력이었습니다.`,
       )
     } else if (effectiveShotRate <= 35) {
       addObservation(
-        86,
+        88,
         'bad',
-        `슈팅 ${formatMetricNumber(meMetrics.shots)}회 중 유효슛은 ${formatMetricNumber(meMetrics.effectiveShots)}회뿐이라, 슈팅 정확도가 낮았습니다.`,
+        `슈팅 ${formatMetricNumber(meMetrics.shots)}회 중 유효슛이 ${formatMetricNumber(effectiveShots)}회뿐이었습니다. 무리한 각도에서 빠르게 마무리한 장면이 많았을 가능성이 높아, 한 템포 더 끌고 가는 선택이 필요합니다.`,
       )
     }
   }
@@ -731,136 +738,170 @@ function buildMatchInsight(
   if (meMetrics.goals > 0 && meMetrics.shots >= 3) {
     if (shotConversion >= 50) {
       addObservation(
-        80,
+        82,
         'good',
-        `슈팅 대비 득점 전환율이 ${shotConversion}%로 높아, 적은 기회도 득점으로 연결하는 효율은 좋았습니다.`,
+        `슈팅 대비 득점 전환율이 ${shotConversion}%로 높았습니다. 많은 찬스를 요구하지 않고 결과를 냈다는 점이 장점이고, 이런 유형은 동료와의 연계가 붙으면 더 무서워집니다.`,
       )
     } else if (shotConversion <= 25) {
       addObservation(
-        77,
+        79,
         'bad',
-        `득점은 있었지만 슈팅 대비 득점 전환율이 ${shotConversion}%에 그쳐, 시도 수에 비해 효율이 높다고 보긴 어렵습니다.`,
+        `득점은 있었지만 슈팅 대비 득점 전환율이 ${shotConversion}%에 그쳤습니다. 기록상으론 골 결정력보다 시도 누적에 가까워 보여, 마지막 선택의 정교함은 더 다듬을 여지가 있습니다.`,
       )
     }
   }
 
-  if (meMetrics.passRate !== null && meMetrics.passTry >= 8) {
+  if (meMetrics.passRate !== null && passAttempts >= 8) {
     if (teammateAvgPassRate > 0 && meMetrics.passRate >= teammateAvgPassRate + 8) {
       addObservation(
-        78,
+        81,
         'good',
-        `패스 성공률 ${meMetrics.passRate}%로 팀 평균보다 전개 안정감이 높았습니다. 연결 완성도는 ${formatRank(passRank ?? 1, teammatePassValues.length)}였습니다.`,
+        `패스 성공률 ${meMetrics.passRate}%로 팀 평균보다 연결 안정감이 높았습니다. 단순 안전 패스만 돌린 게 아니라면 빌드업 밸런서를 맡을 만한 기록이고, 전진 패스 비중만 더 붙으면 가치가 더 커집니다.`,
       )
     } else if (teammateAvgPassRate > 0 && meMetrics.passRate <= teammateAvgPassRate - 8) {
       addObservation(
-        84,
+        85,
         'bad',
-        `패스 성공률 ${meMetrics.passRate}%는 팀 평균보다 분명히 낮았습니다. 연결 단계에서 턴오버 위험을 자주 만들었습니다.`,
+        `패스 성공률 ${meMetrics.passRate}%는 팀 평균보다 확실히 낮았습니다. 볼을 오래 끌거나 무리한 찔러주기가 많았을 가능성이 있어, 리턴 패스와 방향 전환 패스를 먼저 안정화할 필요가 있습니다.`,
       )
     } else if (meMetrics.passRate < 75) {
       addObservation(
-        72,
+        74,
         'bad',
-        `패스 시도 수는 있었지만 성공률 ${meMetrics.passRate}%로 안정적인 전개를 이끌었다고 보기 어렵습니다.`,
+        `패스 참여도는 있었지만 성공률 ${meMetrics.passRate}%로 전개 완성도는 아쉬웠습니다. 같은 터치 수라도 한 번에 풀어가려 하기보다 짧게 끊어 주는 선택이 더 효율적이었을 경기입니다.`,
+      )
+    } else if (passAttempts >= 14 && passVolumeShare >= 1.3) {
+      addObservation(
+        72,
+        'good',
+        `패스 시도 ${formatMetricNumber(passAttempts)}회로 팀 평균보다 공을 더 많이 받았습니다. 전개 중심축 역할은 해냈고, 다음 단계는 그 점유를 공격 포인트로 연결하는 것입니다.`,
       )
     }
-  }
-
-  if (meMetrics.passTry >= 14 && passVolumeShare >= 1.3) {
+  } else if (passAttempts <= 4 && meMetrics.goals === 0 && meMetrics.dribble <= 1) {
     addObservation(
-      69,
-      'good',
-      `패스 시도 ${formatMetricNumber(meMetrics.passTry)}회로 팀 평균보다 볼을 더 많이 받았습니다. 빌드업 관여도 자체는 높았습니다.`,
-    )
-  } else if (meMetrics.passTry <= 4 && meMetrics.goals === 0 && meMetrics.dribble <= 1) {
-    addObservation(
-      80,
+      82,
       'bad',
-      `패스 참여와 드리블 전진 모두 적어, 공을 잡았을 때 흐름을 바꾸는 장면이 거의 없었습니다.`,
+      `패스 관여와 전진 시도가 모두 적어 경기 흐름 안으로 충분히 들어오지 못했습니다. 오프더볼 움직임으로 패스 각을 먼저 만드는 접근이 필요해 보입니다.`,
     )
   }
 
   if (meMetrics.dribble >= Math.max(4, teammateAvgDribble + 2) && meMetrics.dribble === teamDribbleTop) {
     addObservation(
-      74,
+      75,
       'good',
-      `드리블 ${formatMetricNumber(meMetrics.dribble)}회로 팀 내 ${formatRank(dribbleRank, teammateCount)}였습니다. 직접 전진해 공간을 여는 역할은 분명했습니다.`,
+      `드리블 ${formatMetricNumber(meMetrics.dribble)}회로 팀 내 ${formatRank(dribbleRank, teammateCount)}였습니다. 직접 전진해 공간을 여는 역할은 분명했고, 마지막 패스나 슈팅까지 이어졌다면 평가가 더 높아질 수 있었습니다.`,
     )
   } else if (meMetrics.dribble <= 1 && meMetrics.shots <= teammateAvgShots) {
     addObservation(
-      70,
+      71,
       'bad',
-      '드리블 돌파와 직접 전진 시도가 적어, 스스로 공격 장면을 만드는 힘은 약했습니다.',
+      `드리블 돌파와 직접 전진 시도가 적어 스스로 장면을 만드는 힘은 약했습니다. 볼을 받을 때 등을 지는 플레이보다 전방을 보고 받는 장면을 늘릴 필요가 있습니다.`,
     )
   }
 
-  if (meMetrics.tackleRate !== null && meMetrics.tackleTry >= 3) {
-    if (meMetrics.tackleRate >= 60) {
-      addObservation(
-        66,
-        'good',
-        `태클 성공률 ${formatPercent(meMetrics.tackleRate)}로 수비 경합 대응은 안정적이었습니다. 팀 내 순위도 ${formatRank(tackleRank ?? 1, teammateTackleValues.length)}였습니다.`,
-      )
-    } else if (meMetrics.tackleRate <= 35) {
-      addObservation(
-        74,
-        'bad',
-        `태클 성공률 ${formatPercent(meMetrics.tackleRate)}로 경합에서 쉽게 벗겨졌습니다. 압박 강도 대비 실속이 부족했습니다.`,
-      )
-    }
+  if (tackleCount >= 3) {
+    addObservation(
+      meMetrics.tackleRate !== null && meMetrics.tackleRate >= 55 ? 73 : 68,
+      meMetrics.tackleRate !== null && meMetrics.tackleRate >= 55 ? 'good' : 'neutral',
+      `태클 성공 ${formatMetricNumber(tackleCount)}회로 수비 경합 참여는 꾸준했습니다. 경합 빈도 자체는 장점이라, 압박 타이밍만 더 정리되면 수비 영향력을 한 단계 더 끌어올릴 수 있습니다.`,
+    )
+  } else if (meMetrics.tackleTry !== null && meMetrics.tackleTry > 0 && tackleCount === 0) {
+    addObservation(
+      76,
+      'bad',
+      `태클 시도는 있었지만 성공 기록이 남지 않았습니다. 수비 반응이 늦었다기보다 들어가는 각도가 좋지 않았을 가능성이 커, 정면 경합보다 커버 위치 조정이 우선입니다.`,
+    )
   }
 
   if (meMetrics.blockRate !== null && meMetrics.blockTry >= 2) {
     if (meMetrics.blockRate >= 60) {
       addObservation(
-        64,
+        70,
         'good',
-        `차단 성공률 ${formatPercent(meMetrics.blockRate)}로 상대 전개를 끊는 장면은 있었습니다. 팀 내 ${formatRank(blockRank ?? 1, teammateBlockValues.length)} 수준입니다.`,
+        `차단 성공률 ${formatPercent(meMetrics.blockRate)}로 상대 전개를 끊는 장면이 있었습니다. 적극적인 수비 개입이 보였고, 이후 세컨드볼 처리까지 붙으면 더 완성도 높은 수비가 됩니다.`,
       )
     } else if (meMetrics.blockRate <= 35) {
       addObservation(
-        71,
+        72,
         'bad',
-        `차단 성공률 ${formatPercent(meMetrics.blockRate)}로 압박은 들어갔지만 실제 차단으로 이어지는 비율이 낮았습니다.`,
+        `차단 성공률 ${formatPercent(meMetrics.blockRate)}로 압박은 들어갔지만 실제 차단으로 이어지는 비율이 낮았습니다. 달려들기보다 패스길 예측을 먼저 가져가는 쪽이 더 효율적일 수 있습니다.`,
       )
     }
+  } else if (blockCount >= 2) {
+    addObservation(
+      64,
+      'good',
+      `차단 성공 ${formatMetricNumber(blockCount)}회로 상대 패스 흐름을 실제로 끊어냈습니다. 수비 개입 타이밍은 나쁘지 않았고, 이후 볼 처리만 더 안정되면 역습 출발점 역할도 가능합니다.`,
+    )
   }
 
   if (meMetrics.rating >= Math.max(7.5, teammateAvgRating + 0.5)) {
     addObservation(
-      83,
+      84,
       'good',
-      `평점 ${formatMetricNumber(meMetrics.rating, 2)}로 팀 내 ${formatRank(ratingRank, teammateCount)}였습니다. 전체 영향력은 분명히 높은 편이었습니다.`,
+      `평점 ${formatMetricNumber(meMetrics.rating, 2)}로 팀 내 ${formatRank(ratingRank, teammateCount)}였습니다. 단순 수치가 아니라 경기 전반 존재감이 높았다는 뜻이라, 이 경기에서는 맡은 역할을 확실히 수행했습니다.`,
     )
   } else if (meMetrics.rating > 0 && meMetrics.rating <= Math.max(6.5, teammateAvgRating - 0.5)) {
     addObservation(
-      87,
+      88,
       'bad',
-      `평점 ${formatMetricNumber(meMetrics.rating, 2)}로 팀 내 ${formatRank(ratingRank, teammateCount)}에 머물렀습니다. 경기 전반 존재감이 낮았습니다.`,
+      `평점 ${formatMetricNumber(meMetrics.rating, 2)}로 팀 내 ${formatRank(ratingRank, teammateCount)}에 머물렀습니다. 기록 전반이 평균 이하였다는 뜻이라, 한 가지 강점 지표라도 뚜렷하게 만드는 방향이 필요합니다.`,
+    )
+  }
+
+  if (isWin && meMetrics.rating >= teammateAvgRating && meMetrics.goals === 0 && passAttempts >= 8) {
+    addObservation(
+      67,
+      'good',
+      `득점 기록이 없어도 승리 경기에서 평균 이상 평점을 받았습니다. 마무리보다 연결과 운영 기여가 있었던 유형으로 볼 수 있어, 이런 경기는 보조 역할 완성도가 장점입니다.`,
+    )
+  }
+
+  if (isLoss && meMetrics.goals > 0 && perspectiveOpponentScore - perspectiveMyScore >= 2) {
+    addObservation(
+      77,
+      'neutral',
+      `팀은 패했지만 득점 기록은 남겼습니다. 개인 마무리는 있었으나 경기 전체 흐름을 뒤집을 만큼 연결되진 못한 경기였고, 수비 전환이나 볼 소유 단계 기여가 더 필요했습니다.`,
+    )
+  }
+
+  if (isHighScoring && meMetrics.goals === 0 && meMetrics.shots <= 1) {
+    addObservation(
+      83,
+      'bad',
+      `득점이 많이 나온 경기 흐름이었는데 공격 관여는 낮았습니다. 팀이 찬스를 만들던 날에 개인 기록이 비어 있다는 점은 아쉬워, 박스 근처 진입 타이밍을 더 공격적으로 가져갈 필요가 있습니다.`,
+    )
+  }
+
+  if (isLowScoring && meMetrics.passRate !== null && meMetrics.passRate >= 85 && meMetrics.goals === 0) {
+    addObservation(
+      63,
+      'neutral',
+      `저득점 경기에서 패스 성공률 ${meMetrics.passRate}%로 실수는 적었습니다. 다만 안정감이 공격 압박으로 연결되진 않아, 다음에는 전진 패스 한두 번을 더 과감하게 시도해볼 만합니다.`,
     )
   }
 
   if (opponentGoalTop >= 2 && meMetrics.goals === 0) {
     addObservation(
-      79,
+      80,
       'bad',
-      '상대 팀에서는 다득점 선수가 나왔는데, 이쪽은 공격 포인트가 없어 맞대응 카드가 되지 못했습니다.',
+      `상대 쪽에서는 다득점 선수가 나왔는데 이쪽은 공격 포인트가 없었습니다. 맞대응 카드가 되지 못한 경기라, 최소 슈팅 수부터 늘리는 방향이 우선입니다.`,
     )
   }
 
   if (opponentShotTop >= 4 && meMetrics.shots <= 1) {
     addObservation(
-      68,
+      69,
       'bad',
-      '상대 핵심 자원은 슈팅을 꾸준히 만들었는데, 이쪽은 시도 자체가 적어 공격 존재감 차이가 있었습니다.',
+      `상대 핵심 자원은 슈팅을 계속 만들었는데 이쪽은 시도 자체가 적었습니다. 기록상 가장 큰 차이는 마무리보다 '장면 진입 횟수'였습니다.`,
     )
   }
 
   if (opponentDribbleTop >= 4 && meMetrics.dribble <= 1) {
     addObservation(
-      62,
+      64,
       'bad',
-      '상대는 전진 드리블로 경기를 흔들었지만, 이쪽은 볼 운반과 돌파 시도가 부족했습니다.',
+      `상대는 드리블로 경기 흐름을 흔들었지만 이쪽은 볼 운반이 거의 없었습니다. 압박을 받더라도 첫 터치 이후 전진 선택지를 더 만들어야 합니다.`,
     )
   }
 
@@ -870,27 +911,45 @@ function buildMatchInsight(
     meMetrics.rating <= opponentRatingTop - 1
   ) {
     addObservation(
-      82,
+      83,
       'bad',
-      '상대 핵심 자원들에 비해 존재감이 밀려, 주도권 싸움에서 우위를 만들지 못했습니다.',
+      `상대 핵심 자원들에 비해 존재감이 밀렸습니다. 다실점 경기에서 개인 영향력까지 낮으면 체감보다 기록 평가는 더 박해질 수밖에 없습니다.`,
     )
   }
 
   if (meMetrics.yellowCards > 0 || meMetrics.redCards > 0) {
-    addObservation(76, 'bad', '카드 관리는 명확한 감점 요소였습니다. 수비 리스크를 스스로 키운 경기였습니다.')
+    addObservation(
+      78,
+      'bad',
+      '카드 관리는 분명한 감점 요소였습니다. 수비 기여를 하더라도 위험한 반칙이 섞이면 전체 평가는 바로 깎이기 때문에, 압박 타이밍 조절이 필요합니다.',
+    )
   } else if (meMetrics.fouls >= 3) {
     addObservation(
-      67,
+      68,
       'bad',
-      `파울 ${formatMetricNumber(meMetrics.fouls)}회로 수비 타이밍이 거칠었습니다. 불필요한 끊김이 많았습니다.`,
+      `파울 ${formatMetricNumber(meMetrics.fouls)}회로 수비 타이밍이 거칠었습니다. 적극성은 있었지만 불필요한 끊김이 많아, 몸을 먼저 붙이기보다 공간을 먼저 막는 선택이 더 나았을 경기입니다.`,
     )
   }
 
-  if (meMetrics.goals === 0 && meMetrics.shots === 0 && meMetrics.passTry <= 3 && meMetrics.rating <= 6.5) {
+  if (meMetrics.goals === 0 && meMetrics.shots === 0 && passAttempts <= 3 && meMetrics.rating <= 6.5) {
     addObservation(
-      94,
+      95,
       'bad',
-      '득점, 슈팅, 패스 관여가 모두 낮았습니다. 기록상으로는 경기 흐름에 실질적인 흔적을 거의 남기지 못했습니다.',
+      '득점, 슈팅, 패스 관여가 모두 낮았습니다. 기록상으로는 경기 흐름에 실질적인 흔적을 거의 남기지 못한 편이고, 다음 경기에서는 한 가지 역할이라도 분명히 가져가는 게 중요합니다.',
+    )
+  }
+
+  if (
+    meMetrics.goals === 0 &&
+    meMetrics.shots >= 2 &&
+    meMetrics.passRate !== null &&
+    meMetrics.passRate >= 80 &&
+    meMetrics.rating >= 7
+  ) {
+    addObservation(
+      66,
+      'neutral',
+      `공격 포인트는 없었지만 슈팅과 패스 지표는 일정 수준 이상이었습니다. 기록만 보면 '조금만 더 정교했으면 좋은 경기'에 가까워, 세부 마무리나 마지막 선택이 성과를 가른 경우로 보입니다.`,
     )
   }
 
@@ -901,7 +960,7 @@ function buildMatchInsight(
     return picked
   }
 
-  return ['기록 대부분이 팀 평균 부근에 모여 있어, 이번 경기는 뚜렷한 강점이나 약점이 크게 드러나지 않았습니다.']
+  return ['기록 대부분이 팀 평균 부근에 모여 있어 눈에 띄는 장점과 약점이 크게 갈리진 않았습니다. 이런 경기는 한 가지 역할이라도 더 선명하게 만드는 쪽이 다음 평가를 바꿉니다.']
 }
 
 function MatchRecordCard({
@@ -931,6 +990,7 @@ function MatchRecordCard({
   const selectedSideLabel = isMyPlayer ? (teams.isDraw ? '참가자' : '내팀') : '상대팀'
   const selectedRatingValue = formatMetricNumber(selectedMetrics.rating, 2)
   const matchInsight = buildMatchInsight(teams, selectedPlayer)
+  const selectedCardSummary = formatPlayerCardSummary(selectedPlayer)
 
   return (
     <article
@@ -1024,6 +1084,27 @@ function MatchRecordCard({
                   {getControllerDisplay(selectedMetrics.controller)}
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] text-[#8a949e]">사용 카드</p>
+                <p className="mt-1 break-words text-sm font-semibold text-[#1e2124]">
+                  {selectedCardSummary ?? '정보 없음'}
+                </p>
+              </div>
+              {selectedPlayer.spId ? (
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f7f9fb]">
+                  <PlayerImage
+                    spid={selectedPlayer.spId}
+                    alt={selectedCardSummary ?? selectedPlayer.nickname}
+                    className="object-contain"
+                    sizes="56px"
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -1622,6 +1703,14 @@ export default function MatchesPageClient({ initialNickname }: Props) {
                         <InfoCard label="현재 순위" value={`#${statValue(exactCandidate.voltaRank)}`} />
                         <InfoCard label="랭킹 포인트" value={statValue(exactCandidate.voltaRankPoint)} />
                         <InfoCard
+                          label="구단주 취임일"
+                          value={statValue(exactCandidate.ownerSince)}
+                        />
+                        <InfoCard
+                          label="대표팀"
+                          value={statValue(exactCandidate.representativeTeam)}
+                        />
+                        <InfoCard
                           label="승무패"
                           value={`${statValue(exactCandidate.voltaWins)}승 ${statValue(exactCandidate.voltaDraws)}무 ${statValue(exactCandidate.voltaLosses)}패`}
                         />
@@ -1801,4 +1890,3 @@ export default function MatchesPageClient({ initialNickname }: Props) {
     </div>
   )
 }
-

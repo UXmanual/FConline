@@ -26,6 +26,8 @@ export interface MatchSearchCandidate {
   nickname: string
   nexonSn: string
   ouid?: string | null
+  ownerSince?: string | null
+  representativeTeam?: string | null
   level: number | null
   rank: number | null
   elo: number | null
@@ -62,6 +64,43 @@ export interface MatchSearchCandidate {
 export interface MatchPlayerInfo {
   ouid: string
   nickname: string
+  spId?: number | null
+  spPosition?: number | null
+  spGrade?: number | null
+  player?: Array<{
+    spId?: number | null
+    spPosition?: number | null
+    spGrade?: number | null
+    status?: {
+      shoot?: number | null
+      effectiveShoot?: number | null
+      assist?: number | null
+      goal?: number | null
+      dribble?: number | null
+      intercept?: number | null
+      defending?: number | null
+      passTry?: number | null
+      passSuccess?: number | null
+      dribbleTry?: number | null
+      dribbleSuccess?: number | null
+      ballPossesionTry?: number | null
+      ballPossesionSuccess?: number | null
+      aerialTry?: number | null
+      aerialSuccess?: number | null
+      blockTry?: number | null
+      block?: number | null
+      tackleTry?: number | null
+      tackle?: number | null
+      yellowCards?: number | null
+      redCards?: number | null
+      spRating?: number | null
+    }
+  }>
+  cardInfo?: {
+    playerName: string | null
+    seasonName: string | null
+    enhancement: number | null
+  } | null
   matchDetail: {
     seasonId: number
     matchResult: string

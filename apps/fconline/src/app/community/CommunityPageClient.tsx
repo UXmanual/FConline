@@ -214,7 +214,7 @@ function PostCard({
   )
 }
 
-export default function CommunityPageClient() {
+export default function CommunityPageClient({ initialPosts = [] }: { initialPosts?: CommunityPostSummary[] }) {
   const newestPostRef = useRef<HTMLElement | null>(null)
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
@@ -226,8 +226,8 @@ export default function CommunityPageClient() {
   const [password, setPassword] = useState('')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [posts, setPosts] = useState<CommunityPostSummary[]>([])
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
+  const [posts, setPosts] = useState<CommunityPostSummary[]>(initialPosts)
+  const [isLoadingPosts, setIsLoadingPosts] = useState(initialPosts.length === 0)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [isSubmittingPost, setIsSubmittingPost] = useState(false)
   const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
@@ -242,27 +242,36 @@ export default function CommunityPageClient() {
   const [pageWindowStart, setPageWindowStart] = useState(1)
 
   useEffect(() => {
-    let cancelled = false
+    if (initialPosts.length > 0) return
+
+    const controller = new AbortController()
+    let isUnloading = false
+
+    function handleUnload() {
+      isUnloading = true
+    }
+
+    window.addEventListener('beforeunload', handleUnload)
+    window.addEventListener('pagehide', handleUnload)
 
     async function loadPosts() {
       try {
         setIsLoadingPosts(true)
-        const response = await fetch('/api/community/posts', { cache: 'no-store' })
+        const response = await fetch('/api/community/posts', { cache: 'no-store', signal: controller.signal })
         const result = await response.json()
 
         if (!response.ok) {
           throw new Error(result.message ?? '게시글을 불러오지 못했습니다.')
         }
 
-        if (!cancelled) {
-          setPosts(result.items ?? [])
-        }
+        setPosts(result.items ?? [])
       } catch (error) {
-        if (!cancelled) {
-          window.alert(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.')
-        }
+        if (isUnloading) return
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        if (error instanceof TypeError && error.message === 'Failed to fetch') return
+        window.alert(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.')
       } finally {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setIsLoadingPosts(false)
         }
       }
@@ -271,7 +280,9 @@ export default function CommunityPageClient() {
     void loadPosts()
 
     return () => {
-      cancelled = true
+      controller.abort()
+      window.removeEventListener('beforeunload', handleUnload)
+      window.removeEventListener('pagehide', handleUnload)
     }
   }, [])
 
@@ -530,10 +541,28 @@ export default function CommunityPageClient() {
         </p>
       </header>
 
-      <div className="flex flex-wrap gap-2">
-        {BOARD_TABS.map((tab) => (
-          <BoardTabButton key={tab} label={tab} count={posts.length} active={tab === activeBoard} />
-        ))}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {BOARD_TABS.map((tab) => (
+            <BoardTabButton key={tab} label={tab} count={posts.length} active={tab === activeBoard} />
+          ))}
+        </div>
+
+        {isLoadingPosts ? (
+          <div
+            aria-hidden="true"
+            className="home-image-shimmer h-9 w-[78px] shrink-0 rounded-lg"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsComposerOpen(true)}
+            className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition"
+            style={{ backgroundColor: '#457ae5' }}
+          >
+            글쓰기
+          </button>
+        )}
       </div>
 
       <section ref={listTopRef} className="space-y-3">

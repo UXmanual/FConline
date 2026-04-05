@@ -106,6 +106,18 @@ function normalizeNickname(value: string) {
   return value.trim().toLowerCase()
 }
 
+function formatOwnerSince(value: string | null) {
+  if (!value) return null
+
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) {
+    return value.trim() || null
+  }
+
+  const [, year, month, day] = match
+  return `${year}.${month}.${day}`
+}
+
 function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact' | 'rank'): MatchSearchCandidate {
   return {
     nickname,
@@ -247,6 +259,90 @@ function parseVoltaExactCandidate(html: string, nickname: string): Partial<Match
   }
 }
 
+function extractOwnerProfileIdFromRows(html: string, nickname: string) {
+  const normalizedTarget = normalizeNickname(nickname)
+  const rows = [...html.matchAll(/<div class="tr">([\s\S]*?)<\/div>\s*<\/div>/g)]
+
+  for (const row of rows) {
+    const rowHtml = row[0]
+    const rowNickname = stripTags(
+      rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '',
+    )
+
+    if (normalizeNickname(rowNickname) !== normalizedTarget) {
+      continue
+    }
+
+    const ownerProfileId = rowHtml.match(/data-sn="(\d+)"/)?.[1] ?? null
+    if (ownerProfileId) {
+      return ownerProfileId
+    }
+  }
+
+  return null
+}
+
+async function fetchOwnerProfile(ownerProfileId: string) {
+  const html = await fetchTextWithRetry(
+    `https://fconline.nexon.com/profile/owner/popup/${ownerProfileId}`,
+    {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+      },
+      cache: 'no-store',
+    },
+    4000,
+    0,
+  )
+
+  if (!html) {
+    return { ownerSince: null, representativeTeam: null }
+  }
+
+  const representativeSection = html.match(/<div class="major">([\s\S]*?)<\/div>\s*<\/div>/i)?.[1] ?? ''
+  const representativeTeam =
+    stripTags(representativeSection.match(/<span>([^<]+)<\/span>/i)?.[0] ?? '') || null
+  const ownerSinceRaw =
+    stripTags(html.match(/<div class="since">[\s\S]*?<div class="text">([^<]+)<\/div>/i)?.[1] ?? '') || null
+
+  return {
+    ownerSince: formatOwnerSince(ownerSinceRaw),
+    representativeTeam,
+  }
+}
+
+async function resolveOwnerProfileId(nickname: string, voltaHtml: string | null) {
+  const fromVolta = voltaHtml ? extractOwnerProfileIdFromRows(voltaHtml, nickname) : null
+  if (fromVolta) {
+    return fromVolta
+  }
+
+  const encodedNickname = encodeURIComponent(nickname)
+
+  for (const mode of SEARCH_MODES) {
+    const rankHtml = await fetchTextWithRetry(
+      `https://fconline.nexon.com/datacenter/rank_inner?rt=${mode.key}&strCharacterName=${encodedNickname}&n4seasonno=0&n4pageno=1`,
+      {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        },
+        cache: 'no-store',
+      },
+      3000,
+      0,
+    )
+
+    const ownerProfileId = rankHtml ? extractOwnerProfileIdFromRows(rankHtml, nickname) : null
+    if (ownerProfileId) {
+      return ownerProfileId
+    }
+  }
+
+  return null
+}
+
 function mergeCandidate(base: MatchSearchCandidate, incoming: Partial<MatchSearchCandidate>) {
   return {
     ...base,
@@ -302,17 +398,25 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
     }
 
     const voltaCandidate = voltaHtml ? parseVoltaExactCandidate(voltaHtml, nickname) : null
+    const ownerProfileId = await resolveOwnerProfileId(nickname, voltaHtml)
+    const ownerProfile = ownerProfileId
+      ? await fetchOwnerProfile(ownerProfileId)
+      : { ownerSince: null, representativeTeam: null }
     let exactCandidate: MatchSearchCandidate | null = null
 
     if (exactData?.ouid) {
       exactCandidate = {
         ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
         ouid: exactData.ouid,
+        ownerSince: ownerProfile.ownerSince,
+        representativeTeam: ownerProfile.representativeTeam,
         modes: ['exact'],
       }
     } else if (voltaCandidate) {
       exactCandidate = {
         ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
+        ownerSince: ownerProfile.ownerSince,
+        representativeTeam: ownerProfile.representativeTeam,
         modes: ['volta'],
       }
     }

@@ -1,7 +1,7 @@
 import https from 'node:https'
 import { NextRequest } from 'next/server'
 import { MatchData } from '@/features/match-analysis/types'
-import { getNexonHeaders } from '@/lib/nexon'
+import { getNexonHeaders, getSeasonMetaItem, getSpidMetaItem } from '@/lib/nexon'
 
 const headers = getNexonHeaders()
 const FETCH_TIMEOUT_MS = 7000
@@ -94,6 +94,64 @@ async function fetchMatchDetailRaw(matchId: string) {
   }
 }
 
+async function enrichMatchDetail(detail: MatchData) {
+  const enrichedMatchInfo = await Promise.all(
+    detail.matchInfo.map(async (player) => {
+      const cardPlayer = player.player?.[0]
+      const spId =
+        typeof cardPlayer?.spId === 'number'
+          ? cardPlayer.spId
+          : typeof player.spId === 'number'
+            ? player.spId
+            : null
+      const enhancement =
+        typeof cardPlayer?.spGrade === 'number' && Number.isFinite(cardPlayer.spGrade)
+          ? cardPlayer.spGrade
+          : typeof player.spGrade === 'number' && Number.isFinite(player.spGrade)
+            ? player.spGrade
+            : null
+
+      if (!spId) {
+        return {
+          ...player,
+          spId: null,
+          spGrade: enhancement,
+          spPosition: typeof cardPlayer?.spPosition === 'number' ? cardPlayer.spPosition : null,
+          cardInfo: null,
+        }
+      }
+
+      const seasonId = Math.floor(spId / 1000000)
+      const [spidMeta, seasonMeta] = await Promise.all([
+        getSpidMetaItem(spId),
+        getSeasonMetaItem(seasonId),
+      ])
+
+      return {
+        ...player,
+        spId,
+        spGrade: enhancement,
+        spPosition:
+          typeof cardPlayer?.spPosition === 'number'
+            ? cardPlayer.spPosition
+            : typeof player.spPosition === 'number'
+              ? player.spPosition
+              : null,
+        cardInfo: {
+          playerName: spidMeta?.name ?? null,
+          seasonName: seasonMeta?.className ?? null,
+          enhancement,
+        },
+      }
+    }),
+  )
+
+  return {
+    ...detail,
+    matchInfo: enrichedMatchInfo,
+  }
+}
+
 async function fetchMatchIdsRaw(ouid: string, matchtype: string, offset: string, limit: string) {
   try {
     const raw = await fetchWithTimeout(
@@ -157,11 +215,12 @@ async function fetchMatchDetail(matchId: string) {
       const value = await fetchMatchDetailRaw(matchId)
 
       if (value) {
+        const enriched = await enrichMatchDetail(value)
         matchDetailCache.set(matchId, {
           expiresAt: Date.now() + MATCH_CACHE_TTL_MS,
-          value,
+          value: enriched,
         })
-        return value
+        return enriched
       }
 
       if (attempt < DETAIL_MAX_RETRIES) {
