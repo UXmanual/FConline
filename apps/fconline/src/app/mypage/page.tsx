@@ -17,14 +17,15 @@ const openSourceLicenses = [
 ]
 
 const releaseNotesByVersion: Record<string, string[]> = {
-  '11.5': ['홈, 분석, 선수 탭 다크모드 적용', '탭별 라이트/다크 톤 정리 및 UI 개선'],
+  '11.5': ['다크모드 추가'],
   '11.4': ['분석 상세 사용 선수 카드 추가', '기타 버그 수정'],
 }
 
 export default function MyPage() {
   const isDarkModeEnabled = useDarkModeEnabled()
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
-  const releaseNotes = releaseNotesByVersion[version ?? ''] ?? releaseNotesByVersion['11.4']
+  const resolvedVersion = version ?? '11.5'
+  const releaseNotes = releaseNotesByVersion[resolvedVersion] ?? releaseNotesByVersion['11.5']
 
   const handleDarkModeToggle = () => {
     const nextValue = !isDarkModeEnabled
@@ -48,6 +49,10 @@ export default function MyPage() {
   const surfaceTransitionStyle = {
     transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
   }
+  const darkModeLabelStyle = {
+    color: isDarkModeEnabled ? '#457ae5' : '#8a949e',
+    transition: 'color 180ms ease',
+  }
 
   return (
     <div
@@ -70,7 +75,7 @@ export default function MyPage() {
               준비중이에요
             </p>
             <span aria-hidden="true" className="text-[18px] leading-none">
-              👀
+              🤗
             </span>
           </div>
         </section>
@@ -82,7 +87,7 @@ export default function MyPage() {
                 현재 베타 테스트 중입니다.
               </p>
               <p className="text-sm leading-[1.45]" style={bodyStyle}>
-                문의사항은 이메일로 연락해 주세요.
+                문의사항은 이메일로 연락해주세요.
               </p>
             </div>
 
@@ -92,19 +97,19 @@ export default function MyPage() {
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[18px] leading-none"
               style={badgeStyle}
             >
-              ✉
+              📧
             </a>
           </div>
         </section>
 
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1">
+            <div className="flex items-center gap-1">
               <p className="text-sm font-semibold" style={titleStyle}>
                 다크모드
               </p>
-              <p className="text-sm leading-5" style={mutedStyle}>
-                더 어두운 화면 테마로 전환합니다.
+              <p className="text-sm font-semibold" style={darkModeLabelStyle}>
+                {isDarkModeEnabled ? '적용중' : '미적용'}
               </p>
             </div>
 
@@ -127,7 +132,7 @@ export default function MyPage() {
 
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <p className="text-sm font-medium" style={mutedStyle}>
-            {version ? `버전 ${version} (Beta)` : '버전 11.4 (Beta)'}
+            {`버전 ${resolvedVersion} (Beta)`}
           </p>
           <div className="mt-2.5 space-y-0.5">
             {releaseNotes.map((note) => (
@@ -165,7 +170,7 @@ export default function MyPage() {
                   style={bodyStyle}
                 >
                   <span aria-hidden="true" className="text-[12px] leading-none" style={mutedStyle}>
-                    •
+                    ↗
                   </span>
                   <span>{license.name}</span>
                 </a>
