@@ -23,6 +23,21 @@ export default function HomeControllerUsageCard({ usage }: Props) {
   const maxPercentage = Math.max(...percentages)
   const [animatedPercentages, setAnimatedPercentages] = useState(() => usage.items.map(() => 0))
 
+  const cardStyle = {
+    backgroundColor: 'var(--app-card-bg)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--app-card-border)',
+    transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
+  }
+  const softStyle = {
+    backgroundColor: 'var(--app-surface-soft)',
+    transition: 'background-color 180ms ease, color 180ms ease, border-color 180ms ease',
+  }
+  const titleStyle = { color: 'var(--app-title)' }
+  const bodyStyle = { color: 'var(--app-body-text)' }
+  const mutedStyle = { color: 'var(--app-muted-text)' }
+
   useEffect(() => {
     const target = cardRef.current
 
@@ -68,9 +83,9 @@ export default function HomeControllerUsageCard({ usage }: Props) {
   }, [percentages])
 
   return (
-    <section ref={cardRef} className="rounded-lg bg-white px-5 py-4">
+    <section ref={cardRef} className="rounded-lg px-5 py-4" style={cardStyle}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-[#111827]">
+        <div className="flex items-center gap-1.5 text-sm font-semibold" style={titleStyle}>
           <span>컨트롤러 이용 비중</span>
           <span aria-hidden="true">🎮</span>
         </div>
@@ -78,14 +93,19 @@ export default function HomeControllerUsageCard({ usage }: Props) {
           href={usage.sourceUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-[11px] font-medium leading-none text-[#86919e]"
+          className="inline-flex items-center gap-1 text-[11px] font-medium leading-none"
+          style={mutedStyle}
         >
-          <span className="shrink-0 text-[0.9em] leading-none text-[#6b7280]">↗</span>
-          <span>데이터센터</span>
+          <span className="shrink-0 text-[0.9em] leading-none" style={bodyStyle}>
+            ↗
+          </span>
+          <span>데이터셋</span>
         </a>
       </div>
 
-      <p className="mt-1 text-[12px] leading-5 text-[#86919e]">{usage.basisLabel}</p>
+      <p className="mt-1 text-[12px] leading-5" style={mutedStyle}>
+        {usage.basisLabel}
+      </p>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         {usage.items.map((item, index) => {
@@ -93,15 +113,19 @@ export default function HomeControllerUsageCard({ usage }: Props) {
           const isPrimary = numericPercentage === maxPercentage
 
           return (
-            <article key={item.label} className="rounded-lg bg-[#f7f9fb] px-4 py-4">
-              <p className="text-[13px] font-semibold text-[#58616a]">{item.label}</p>
+            <article key={item.label} className="rounded-lg px-4 py-4" style={softStyle}>
+              <p className="text-[13px] font-semibold" style={bodyStyle}>
+                {item.label}
+              </p>
               <p
                 className="mt-1 text-[22px] font-extrabold tracking-[-0.03em]"
-                style={{ color: isPrimary ? '#457ae5' : '#111827' }}
+                style={{ color: isPrimary ? '#457ae5' : 'var(--app-title)' }}
               >
                 {formatAnimatedPercentage(animatedPercentages[index] ?? 0, item.percentage)}
               </p>
-              <p className="mt-1 text-[12px] leading-5 text-[#86919e]">{item.record}</p>
+              <p className="mt-1 text-[12px] leading-5" style={mutedStyle}>
+                {item.record}
+              </p>
             </article>
           )
         })}

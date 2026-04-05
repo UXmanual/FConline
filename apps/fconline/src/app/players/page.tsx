@@ -411,13 +411,13 @@ export default function PlayersPage() {
             <button
               type="button"
               onClick={handleBackHome}
-              className="inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]"
+              className="app-player-title inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em]"
             >
               <ArrowLeft size={18} weight="bold" />
               <span>{BACK_HOME_TEXT}</span>
             </button>
           ) : (
-            <h1 className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">{TITLE_TEXT}</h1>
+            <h1 className="app-player-title text-[18px] font-bold tracking-[-0.02em]">{TITLE_TEXT}</h1>
           )}
         </div>
         <div className="mt-4">
@@ -428,7 +428,7 @@ export default function PlayersPage() {
       <div className="mt-4 space-y-3">
         {showTopPlayersPanel && (
           <>
-            <p className="text-[11px] font-medium leading-4 text-[#8a949e]">{FW_GUIDE_TEXT}</p>
+            <p className="app-player-muted text-[11px] font-medium leading-4">{FW_GUIDE_TEXT}</p>
             <PositionTopPlayersCard
               title={FW_TITLE}
               badge="FW"
@@ -454,11 +454,11 @@ export default function PlayersPage() {
         )}
 
         {showResultsPanel && (
-          <div className="rounded-lg bg-white px-5 py-4">
+          <div className="app-player-card rounded-lg px-5 py-4">
             {loading && <LoadingDots label={LOADING_LABEL} />}
 
             {!loading && players.length === 0 && (
-              <p className="py-4 text-center text-sm text-[#8a949e]">{EMPTY_RESULT_TEXT}</p>
+              <p className="app-player-muted py-4 text-center text-sm">{EMPTY_RESULT_TEXT}</p>
             )}
 
             {!loading && players.length > 0 && (
@@ -468,7 +468,8 @@ export default function PlayersPage() {
                     <select
                       value={sortBy}
                       onChange={(event) => setSortBy(event.target.value as SortBy)}
-                      className="h-10 w-full appearance-none rounded-lg border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
+                      className="h-10 w-full appearance-none rounded-lg border pl-3 pr-9 text-sm font-medium outline-none"
+                      style={{ backgroundColor: 'var(--app-player-card-bg)', borderColor: 'var(--app-player-input-border)', color: 'var(--app-player-title)' }}
                       aria-label={SORT_LABEL}
                     >
                       <option value="latest">{SORT_LATEST}</option>
@@ -478,7 +479,7 @@ export default function PlayersPage() {
                     <CaretDown
                       size={14}
                       weight="bold"
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#58616a]"
+                      className="app-player-body pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
                     />
                   </div>
 
@@ -486,7 +487,8 @@ export default function PlayersPage() {
                     <select
                       value={strongLevel}
                       onChange={(event) => setStrongLevel(Number(event.target.value))}
-                      className="h-10 appearance-none rounded-lg border border-[#e6e8ea] bg-white pl-3 pr-9 text-sm font-medium text-[#1e2124] outline-none"
+                      className="h-10 appearance-none rounded-lg border pl-3 pr-9 text-sm font-medium outline-none"
+                      style={{ backgroundColor: 'var(--app-player-card-bg)', borderColor: 'var(--app-player-input-border)', color: 'var(--app-player-title)' }}
                       aria-label={STRONG_LEVEL_LABEL}
                     >
                       {Array.from({ length: 13 }, (_, index) => index + 1).map((level) => (
@@ -498,7 +500,7 @@ export default function PlayersPage() {
                     <CaretDown
                       size={14}
                       weight="bold"
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#58616a]"
+                      className="app-player-body pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
                     />
                   </div>
                 </div>

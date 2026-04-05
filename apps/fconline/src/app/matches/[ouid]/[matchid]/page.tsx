@@ -63,9 +63,9 @@ function textOrDash(value: string | null | undefined) {
 function StatRow({ label, left, right }: { label: string; left: string | number; right: string | number }) {
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-2">
-      <span className="text-right text-sm font-semibold text-[#1e2124]">{left}</span>
-      <span className="w-24 text-center text-xs text-[#8a949e]">{label}</span>
-      <span className="text-left text-sm font-semibold text-[#1e2124]">{right}</span>
+      <span className="app-theme-title text-right text-sm font-semibold">{left}</span>
+      <span className="app-theme-muted w-24 text-center text-xs">{label}</span>
+      <span className="app-theme-title text-left text-sm font-semibold">{right}</span>
     </div>
   )
 }
@@ -79,7 +79,7 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
   if (!match) {
     return (
       <div className="pt-5">
-        <p className="py-8 text-center text-sm text-[#8a949e]">경기 정보를 불러올 수 없어요.</p>
+        <p className="app-theme-muted py-8 text-center text-sm">경기 정보를 불러올 수 없어요.</p>
       </div>
     )
   }
@@ -90,7 +90,7 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
   if (!me || !opponent) {
     return (
       <div className="pt-5">
-        <p className="py-8 text-center text-sm text-[#8a949e]">경기 정보를 불러올 수 없어요.</p>
+        <p className="app-theme-muted py-8 text-center text-sm">경기 정보를 불러올 수 없어요.</p>
       </div>
     )
   }
@@ -113,37 +113,37 @@ export default async function MatchDetailPage({ params, searchParams }: Props) {
       <div className="flex items-center gap-2">
         <Link
           href={`/matches/${ouid}?nickname=${encodeURIComponent(nickname ?? '')}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[#1e2124]"
+          className="app-theme-title flex h-8 w-8 items-center justify-center rounded-full"
         >
           <CaretLeft size={20} weight="bold" />
         </Link>
         <div>
-          <p className="text-xs text-[#8a949e]">{MATCH_TYPE_NAMES[match.matchType] ?? '경기'}</p>
-          <p className="text-xs text-[#8a949e]">{formatDate(match.matchDate)}</p>
+          <p className="app-theme-muted text-xs">{MATCH_TYPE_NAMES[match.matchType] ?? '경기'}</p>
+          <p className="app-theme-muted text-xs">{formatDate(match.matchDate)}</p>
         </div>
       </div>
 
-      <div className="mt-6 rounded-lg border border-[#e6e8ea] bg-white p-5">
+      <div className="app-theme-card mt-6 rounded-lg border p-5">
         <div className="grid grid-cols-3 items-center">
           <div className="flex flex-col items-center gap-1">
             <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${meBadgeClass}`}>{meResult}</div>
-            <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{textOrDash(me.nickname)}</p>
-            <p className="text-3xl font-bold text-[#1e2124]">{String(goalDisplay(me))}</p>
-            <p className="text-xs text-[#8a949e]">평점 {formatRating(me.matchDetail.averageRating)}</p>
+            <p className="app-theme-title max-w-[120px] truncate text-sm font-bold">{textOrDash(me.nickname)}</p>
+            <p className="app-theme-title text-3xl font-bold">{String(goalDisplay(me))}</p>
+            <p className="app-theme-muted text-xs">평점 {formatRating(me.matchDetail.averageRating)}</p>
           </div>
-          <div className="text-center text-lg font-bold text-[#c1c7cd]">VS</div>
+          <div className="app-theme-muted text-center text-lg font-bold">VS</div>
           <div className="flex flex-col items-center gap-1">
             <div className={`rounded-full px-3 py-1 text-xs font-bold text-white ${opponentBadgeClass}`}>{opponentResult}</div>
-            <p className="max-w-[120px] truncate text-sm font-bold text-[#1e2124]">{textOrDash(opponent.nickname)}</p>
-            <p className="text-3xl font-bold text-[#1e2124]">{String(goalDisplay(opponent))}</p>
-            <p className="text-xs text-[#8a949e]">평점 {formatRating(opponent.matchDetail.averageRating)}</p>
+            <p className="app-theme-title max-w-[120px] truncate text-sm font-bold">{textOrDash(opponent.nickname)}</p>
+            <p className="app-theme-title text-3xl font-bold">{String(goalDisplay(opponent))}</p>
+            <p className="app-theme-muted text-xs">평점 {formatRating(opponent.matchDetail.averageRating)}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 rounded-lg border border-[#e6e8ea] bg-white p-4">
-        <h2 className="text-sm font-semibold text-[#1e2124]">경기 통계</h2>
-        <div className="mt-3 divide-y divide-[#f4f5f6]">
+      <div className="app-theme-card mt-4 rounded-lg border p-4">
+        <h2 className="app-theme-title text-sm font-semibold">경기 통계</h2>
+        <div className="app-theme-divider mt-3 divide-y">
           <StatRow label="점유율(%)" left={valueOrDash(me.matchDetail.possession)} right={valueOrDash(opponent.matchDetail.possession)} />
           <StatRow label="슈팅" left={valueOrDash(me.shoot.shootTotal)} right={valueOrDash(opponent.shoot.shootTotal)} />
           <StatRow label="유효 슈팅" left={valueOrDash(me.shoot.effectiveShootTotal)} right={valueOrDash(opponent.shoot.effectiveShootTotal)} />

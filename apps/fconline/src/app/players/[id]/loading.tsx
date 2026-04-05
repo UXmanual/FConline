@@ -3,7 +3,11 @@ import LoadingDots from '@/components/ui/LoadingDots'
 
 function PlayerSummarySkeleton() {
   return (
-    <section className="rounded-lg bg-white px-5 py-5" aria-hidden="true">
+    <section
+      className="rounded-lg px-5 py-5"
+      aria-hidden="true"
+      style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
+    >
       <div className="flex gap-4">
         <div className="home-image-shimmer h-24 w-24 shrink-0 rounded-lg" />
 
@@ -27,7 +31,11 @@ function PlayerSummarySkeleton() {
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="rounded-lg bg-[#f7f9fb] px-4 py-3">
+          <div
+            key={index}
+            className="rounded-lg px-4 py-3"
+            style={{ backgroundColor: 'var(--app-player-soft-bg)', transition: 'background-color 180ms ease' }}
+          >
             <div className="home-image-shimmer h-3.5 w-14 rounded-full" />
             <div className="home-image-shimmer mt-2 h-5 w-18 rounded-full" />
           </div>
@@ -39,7 +47,11 @@ function PlayerSummarySkeleton() {
 
 function PlayerAbilitySkeleton() {
   return (
-    <section className="rounded-lg bg-white px-5 py-5" aria-hidden="true">
+    <section
+      className="rounded-lg px-5 py-5"
+      aria-hidden="true"
+      style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="home-image-shimmer h-5 w-20 rounded-full" />
         <div className="home-image-shimmer h-4 w-24 rounded-full" />
@@ -53,7 +65,11 @@ function PlayerAbilitySkeleton() {
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         {Array.from({ length: 8 }, (_, index) => (
-          <div key={index} className="rounded-lg bg-[#f7f9fb] px-4 py-3">
+          <div
+            key={index}
+            className="rounded-lg px-4 py-3"
+            style={{ backgroundColor: 'var(--app-player-soft-bg)', transition: 'background-color 180ms ease' }}
+          >
             <div className="home-image-shimmer h-3.5 w-16 rounded-full" />
             <div className="home-image-shimmer mt-2 h-6 w-10 rounded-full" />
           </div>
@@ -68,7 +84,7 @@ export default function Loading() {
     <div>
       <div className="pb-4 pt-5">
         <div
-          className="inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]"
+          className="app-player-title inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em]"
           aria-hidden="true"
         >
           <ArrowLeft size={18} weight="bold" />

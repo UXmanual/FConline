@@ -24,10 +24,10 @@ const MATCH_LIST_LIMIT = 10
 const MATCH_LIST_TIMEOUT_MS = 10000
 const INITIAL_VISIBLE_MATCHES = 3
 const MATCH_RESULTS_CACHE_TTL_MS = 1000 * 60 * 10
-const POSITION_BADGE_STYLES: Record<string, string> = {
-  FW: 'bg-[#fdecec] text-[#d14343]',
-  MF: 'bg-[#eaf6ee] text-[#2f8f57]',
-  DF: 'bg-[#e8f1ff] text-[#457ae5]',
+const POSITION_BADGE_STYLES: Record<string, { backgroundColor: string; color: string }> = {
+  FW: { backgroundColor: 'var(--app-position-fw-bg)', color: 'var(--app-position-fw-fg)' },
+  MF: { backgroundColor: 'var(--app-position-mf-bg)', color: 'var(--app-position-mf-fg)' },
+  DF: { backgroundColor: 'var(--app-position-df-bg)', color: 'var(--app-position-df-fg)' },
 }
 
 type MatchSearchCacheEntry = {
@@ -381,24 +381,21 @@ function updateMatchesUrl(nickname: string | null) {
 }
 
 function MutedDivider() {
-  return <span className="text-[11px] font-normal leading-none text-[#c7d0d9]">|</span>
+  return <span className="app-theme-muted text-[11px] font-normal leading-none">|</span>
 }
 
 function MainPositionValue({ value }: { value: string }) {
   const { position, primaryShare } = parseMainPositionParts(value)
-  const textClassName =
-    POSITION_BADGE_STYLES[position]?.includes('#d14343')
-      ? 'text-[#d14343]'
-      : POSITION_BADGE_STYLES[position]?.includes('#2f8f57')
-        ? 'text-[#2f8f57]'
-        : POSITION_BADGE_STYLES[position]?.includes('#457ae5')
-          ? 'text-[#457ae5]'
-          : 'text-[#58616a]'
+  const positionStyle = POSITION_BADGE_STYLES[position] ?? { color: 'var(--app-body-text)' }
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className={`text-sm font-semibold tracking-[-0.02em] ${textClassName}`}>{position}</span>
-      <span className={`text-sm font-semibold tracking-[-0.02em] ${textClassName}`}>{primaryShare}</span>
+      <span className="text-sm font-semibold tracking-[-0.02em]" style={{ color: positionStyle.color }}>
+        {position}
+      </span>
+      <span className="text-sm font-semibold tracking-[-0.02em]" style={{ color: positionStyle.color }}>
+        {primaryShare}
+      </span>
     </div>
   )
 }
@@ -447,7 +444,7 @@ function DetailValueContent({
     return {
       primary: <MainPositionValue value={value} />,
       secondary: (
-        <div className="flex items-center gap-1.5 text-[12px] leading-4 text-[#66707a]">
+        <div className="app-theme-body flex items-center gap-1.5 text-[12px] leading-4">
           <span>{secondaryParts[0]}</span>
           <MutedDivider />
           <span>{secondaryParts[1]}</span>
@@ -492,9 +489,9 @@ function DetailValueContent({
 
 function InfoCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg bg-[#f7f8fa] px-4 py-3">
-      <div className="text-[11px] text-[#8a949e]">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-[#1e2124]">{value}</div>
+    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}>
+      <div className="app-theme-muted text-[11px]">{label}</div>
+      <div className="app-theme-title mt-1 text-sm font-semibold">{value}</div>
     </div>
   )
 }
@@ -507,9 +504,9 @@ function SummaryPill({
   value: string | number
 }) {
   return (
-    <div className="rounded-lg bg-[#f7f8fa] px-4 py-3">
-      <div className="text-[11px] text-[#8a949e]">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-[#1e2124]">{value}</div>
+    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}>
+      <div className="app-theme-muted text-[11px]">{label}</div>
+      <div className="app-theme-title mt-1 text-sm font-semibold">{value}</div>
     </div>
   )
 }
@@ -523,25 +520,27 @@ function MatchMetricCard({
   value: string | number
   accent?: 'default' | 'blue' | 'red' | 'green'
 }) {
-  const accentClassName =
+  const accentColor =
     accent === 'blue'
-      ? 'text-[#256ef4]'
+      ? 'var(--app-accent-blue)'
       : accent === 'red'
-        ? 'text-[#d14343]'
+        ? 'var(--app-accent-red)'
         : accent === 'green'
-          ? 'text-[#2f8f57]'
-          : 'text-[#1e2124]'
+          ? 'var(--app-accent-green)'
+          : 'var(--app-title)'
 
   return (
-    <div className="rounded-lg bg-white px-4 py-3">
-      <p className="text-[11px] text-[#8a949e]">{label}</p>
-      <p className={`mt-1 text-sm font-semibold ${accentClassName}`}>{value}</p>
+    <div className="app-theme-card rounded-lg px-4 py-3">
+      <p className="app-theme-muted text-[11px]">{label}</p>
+      <p className="mt-1 text-sm font-semibold" style={{ color: accentColor }}>
+        {value}
+      </p>
     </div>
   )
 }
 
 function MatchSectionLabel({ children }: { children: ReactNode }) {
-  return <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a949e]">{children}</p>
+  return <p className="app-theme-muted text-[11px] font-medium uppercase tracking-[0.08em]">{children}</p>
 }
 
 function MatchPlayerSelectorButton({
@@ -557,11 +556,21 @@ function MatchPlayerSelectorButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-9 max-w-[128px] items-center rounded-[8px] border bg-white px-2 py-1.5 align-middle text-left text-[12px] font-semibold break-words shadow-[0_1px_0_rgba(17,24,39,0.02)] transition sm:min-h-7 sm:max-w-[112px] sm:py-[5px] ${
-        active
-          ? 'border-[#256ef4] text-[#256ef4] shadow-[0_0_0_1px_rgba(37,110,244,0.08)]'
-          : 'border-[#dbe3ea] text-[#58616a] hover:border-[#b8c7d8] hover:text-[#1e2124]'
+      className={`inline-flex min-h-9 max-w-[128px] items-center rounded-[8px] border px-2 py-1.5 align-middle text-left text-[12px] font-semibold break-words transition sm:min-h-7 sm:max-w-[112px] sm:py-[5px] ${
+        active ? 'border-[var(--app-accent-blue)]' : 'app-theme-body'
       }`}
+      style={
+        active
+          ? {
+              color: 'var(--app-accent-blue)',
+              backgroundColor: 'var(--app-card-bg)',
+              boxShadow: '0 0 0 1px rgba(37,110,244,0.08)',
+            }
+          : {
+              backgroundColor: 'transparent',
+              borderColor: 'var(--app-input-border)',
+            }
+      }
       title={player.nickname}
     >
       <span className="block leading-[1.2] whitespace-normal sm:translate-y-[1px] sm:leading-[1.1]">
@@ -574,7 +583,11 @@ function MatchPlayerSelectorButton({
 function MatchResultBadge({ result }: { result: string }) {
   const emoji = result === '승' ? '😆' : result === '패' ? '😭' : '😐'
   const badgeBackgroundColor =
-    result === '승' ? '#dfeeff' : result === '패' ? '#ffe6e9' : '#dde4ea'
+    result === '승'
+      ? 'var(--app-result-win-badge-soft)'
+      : result === '패'
+        ? 'var(--app-result-loss-badge-soft)'
+        : 'var(--app-result-draw-badge-soft)'
 
   return (
     <div
@@ -592,12 +605,25 @@ function MatchResultLabel({ result }: { result: string }) {
   const label = result === '승' ? '승리' : result === '패' ? '패배' : '무승부'
   const className =
     result === '승'
-      ? 'text-[#256ef4]'
+      ? ''
       : result === '패'
-        ? 'text-[#d14343]'
-        : 'text-[#66707a]'
+        ? ''
+        : 'app-theme-body'
 
-  return <span className={`text-sm font-bold ${className}`}>{label}</span>
+  return (
+    <span
+      className={`text-sm font-bold ${className}`}
+      style={
+        result === '승'
+          ? { color: 'var(--app-accent-blue)' }
+          : result === '패'
+            ? { color: 'var(--app-accent-red)' }
+            : undefined
+      }
+    >
+      {label}
+    </span>
+  )
 }
 
 function average(values: number[]) {
@@ -975,10 +1001,13 @@ function MatchRecordCard({
   const result = teams.me.matchDetail.matchResult
   const scorelineLabel = `${teams.myScore} : ${teams.opponentScore}`
   const cardTintColor =
-    result === '승' ? '#f4f8ff' : result === '패' ? '#fff5f5' : '#eef2f5'
+    result === '승'
+      ? 'var(--app-result-win-soft)'
+      : result === '패'
+        ? 'var(--app-result-loss-soft)'
+        : 'var(--app-result-draw-soft)'
   const viewButtonColor =
     result === '패' ? '#ef6b76' : result === '무' ? '#7a8793' : '#5e8fe8'
-
   const myPlayers = teams.teammates
   const opponentPlayers = teams.opponents
   const allPlayers = [...myPlayers, ...opponentPlayers].filter(
@@ -1006,12 +1035,12 @@ function MatchRecordCard({
             <div className="flex flex-wrap items-center gap-2">
               <MatchResultLabel result={result} />
               <MutedDivider />
-              <span className="text-sm font-semibold text-[#58616a]">
+              <span className="app-theme-body text-sm font-semibold">
                 볼타 공식 경기
               </span>
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-[#58616a]">
-              <span className="font-semibold text-[#1e2124]">{scorelineLabel}</span>
+            <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+              <span className="app-theme-title font-semibold">{scorelineLabel}</span>
               <MutedDivider />
               <span>{formatDate(match.matchDate)}</span>
             </div>
@@ -1037,10 +1066,10 @@ function MatchRecordCard({
 
       {expanded && (
         <div className="mt-4 space-y-3" onClick={(event) => event.stopPropagation()}>
-          <div className="rounded-lg bg-white px-4 py-4">
+          <div className="app-theme-card rounded-lg px-4 py-4">
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-semibold text-[#1e2124]">
+                <p className="app-theme-title text-sm font-semibold">
                   {teams.isDraw ? '참가자' : '내팀'}
                 </p>
                 <div className="mt-2 flex flex-wrap items-start gap-2">
@@ -1057,7 +1086,7 @@ function MatchRecordCard({
 
               {!teams.isDraw && opponentPlayers.length > 0 && (
                 <div>
-                  <p className="text-sm font-semibold text-[#1e2124]">상대팀</p>
+                  <p className="app-theme-title text-sm font-semibold">상대팀</p>
                   <div className="mt-2 flex flex-wrap items-start gap-2">
                     {opponentPlayers.map((player) => (
                       <MatchPlayerSelectorButton
@@ -1073,30 +1102,36 @@ function MatchRecordCard({
             </div>
           </div>
 
-          <div className="rounded-lg bg-white px-4 py-4">
+          <div className="app-theme-card rounded-lg px-4 py-4">
             <div className="flex min-h-[44px] flex-wrap items-center justify-between gap-2">
               <div>
                 <MatchSectionLabel>{selectedSideLabel}</MatchSectionLabel>
-                <p className="mt-1 text-sm font-semibold text-[#1e2124]">{selectedPlayer.nickname}</p>
+                <p className="app-theme-title mt-1 text-sm font-semibold">{selectedPlayer.nickname}</p>
               </div>
-              <div className="inline-flex min-h-10 items-center rounded-lg bg-[#f7f9fb] px-3 py-2 text-right">
-                <p className="text-sm leading-[1.2] font-semibold text-[#1e2124]">
+              <div
+                className="inline-flex min-h-10 items-center rounded-lg px-3 py-2 text-right"
+                style={{ backgroundColor: 'var(--app-analysis-soft-alt-bg)' }}
+              >
+                <p className="app-theme-title text-sm leading-[1.2] font-semibold">
                   {getControllerDisplay(selectedMetrics.controller)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg bg-white px-4 py-4">
+          <div className="app-theme-card rounded-lg px-4 py-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] text-[#8a949e]">사용 카드</p>
-                <p className="mt-1 break-words text-sm font-semibold text-[#1e2124]">
+                <p className="app-theme-muted text-[11px]">사용 카드</p>
+                <p className="app-theme-title mt-1 break-words text-sm font-semibold">
                   {selectedCardSummary ?? '정보 없음'}
                 </p>
               </div>
               {selectedPlayer.spId ? (
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f7f9fb]">
+                <div
+                  className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg"
+                  style={{ backgroundColor: 'var(--app-analysis-soft-alt-bg)' }}
+                >
                   <PlayerImage
                     spid={selectedPlayer.spId}
                     alt={selectedCardSummary ?? selectedPlayer.nickname}
@@ -1109,8 +1144,15 @@ function MatchRecordCard({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <MatchMetricCard label="득점" value={formatMetricNumber(selectedMetrics.goals)} accent={isMyPlayer ? 'blue' : 'red'} />
-            <MatchMetricCard label="유효슛 / 슛" value={`${formatMetricNumber(selectedMetrics.effectiveShots)} / ${formatMetricNumber(selectedMetrics.shots)}`} />
+            <MatchMetricCard
+              label="득점"
+              value={formatMetricNumber(selectedMetrics.goals)}
+              accent={isMyPlayer ? 'blue' : 'red'}
+            />
+            <MatchMetricCard
+              label="유효슛 / 슛"
+              value={`${formatMetricNumber(selectedMetrics.effectiveShots)} / ${formatMetricNumber(selectedMetrics.shots)}`}
+            />
             <MatchMetricCard
               label="패스 성공률"
               value={formatRateWithFraction(
@@ -1132,11 +1174,11 @@ function MatchRecordCard({
             <MatchMetricCard label="평점" value={selectedRatingValue} />
           </div>
 
-          <div className="rounded-lg bg-white px-4 py-4">
-            <p className="text-sm font-semibold text-[#1e2124]">경기 분석</p>
+          <div className="app-theme-card rounded-lg px-4 py-4">
+            <p className="app-theme-title text-sm font-semibold">경기 분석</p>
             <div className="mt-2 space-y-1">
               {matchInsight.map((line, index) => (
-                <p key={`${match.matchId}-insight-${index}`} className="text-sm leading-5 text-[#58616a]">
+                <p key={`${match.matchId}-insight-${index}`} className="app-theme-body text-sm leading-5">
                   {line}
                 </p>
               ))}
@@ -1158,13 +1200,13 @@ function DetailStatCard({
   const content = DetailValueContent({ label, rawValue: value })
 
   return (
-    <div className="rounded-lg bg-[#f7f8fa] px-4 py-3">
-      <p className="text-[11px] text-[#8a949e]">{label}</p>
-      <div className="mt-1 text-sm font-semibold tracking-[-0.02em] text-[#1e2124]">
+    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}>
+      <p className="app-theme-muted text-[11px]">{label}</p>
+      <div className="app-theme-title mt-1 text-sm font-semibold tracking-[-0.02em]">
         {content.primary}
       </div>
       {content.secondary ? (
-        <div className="mt-1 overflow-x-auto text-[12px] leading-4 text-[#66707a]">
+        <div className="app-theme-body mt-1 overflow-x-auto text-[12px] leading-4">
           {content.secondary}
         </div>
       ) : null}
@@ -1176,7 +1218,7 @@ function MatchRecordSkeletonList() {
   return (
     <div className="space-y-3" aria-hidden="true">
       {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="rounded-lg bg-[#f7f9fb] px-4 py-4">
+        <div key={index} className="app-theme-soft rounded-lg px-4 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <div className="home-image-shimmer h-11 w-11 shrink-0 rounded-xl" />
@@ -1200,7 +1242,7 @@ function MatchRecordSkeletonList() {
 function MatchDetailSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
-      <section className="rounded-lg bg-white px-5 py-5">
+      <section className="app-theme-card rounded-lg border px-5 py-5">
         <div className="flex items-center gap-4">
           <div className="home-image-shimmer h-14 w-14 shrink-0 rounded-lg" />
           <div className="min-w-0 flex-1">
@@ -1211,7 +1253,7 @@ function MatchDetailSkeleton() {
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="rounded-lg bg-[#f7f8fa] px-4 py-3">
+            <div key={index} className="app-theme-soft rounded-lg px-4 py-3">
               <div className="home-image-shimmer h-3 w-16 rounded-full" />
               <div className="home-image-shimmer mt-2 h-4 w-20 rounded-full" />
             </div>
@@ -1219,11 +1261,11 @@ function MatchDetailSkeleton() {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-5 py-5">
+      <section className="app-theme-card rounded-lg border px-5 py-5">
         <div className="home-image-shimmer h-5 w-20 rounded-full" />
         <div className="mt-4 grid grid-cols-2 gap-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="rounded-lg bg-[#f7f8fa] px-4 py-3">
+            <div key={index} className="app-theme-soft rounded-lg px-4 py-3">
               <div className="home-image-shimmer h-3 w-18 rounded-full" />
               <div className="home-image-shimmer mt-2 h-4 w-16 rounded-full" />
             </div>
@@ -1231,7 +1273,7 @@ function MatchDetailSkeleton() {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-5 py-5">
+      <section className="app-theme-card rounded-lg border px-5 py-5">
         <div className="home-image-shimmer mb-3 h-5 w-32 rounded-full" />
         <MatchRecordSkeletonList />
       </section>
@@ -1242,43 +1284,43 @@ function MatchDetailSkeleton() {
 function MatchNoResultState({ nickname }: { nickname: string }) {
   return (
     <div className="space-y-4">
-      <section className="rounded-lg bg-white px-5 py-5">
+      <section className="app-theme-card rounded-lg border px-5 py-5">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#f0f3f5] text-lg font-bold text-[#66707a]">
+          <div className="app-theme-soft app-theme-body flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-lg font-bold">
             ?
           </div>
 
           <div className="min-w-0">
-            <h2 className="text-[20px] font-bold tracking-[-0.03em] text-[#1e2124]">
+            <h2 className="app-theme-title text-[20px] font-bold tracking-[-0.03em]">
               검색 결과가 없어요
             </h2>
-            <p className="mt-1 text-sm leading-5 text-[#66707a]">
-              <span className="font-semibold text-[#1e2124]">{nickname}</span>
+            <p className="app-theme-body mt-1 text-sm leading-5">
+              <span className="app-theme-title font-semibold">{nickname}</span>
               {' 닉네임으로 조회되는 볼타 분석 데이터를 찾지 못했어요.'}
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg bg-[#f7f8fa] px-4 py-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8a949e]">
+        <div className="app-theme-soft mt-4 rounded-lg px-4 py-4">
+          <p className="app-theme-muted text-[11px] font-medium uppercase tracking-[0.08em]">
             확인해 보세요
           </p>
           <div className="mt-3 grid gap-3">
-            <div className="rounded-lg bg-white px-4 py-3">
-              <p className="text-[11px] text-[#8a949e]">닉네임 입력</p>
-              <p className="mt-1 text-sm font-semibold text-[#1e2124]">
+            <div className="app-theme-card rounded-lg border px-4 py-3">
+              <p className="app-theme-muted text-[11px]">닉네임 입력</p>
+              <p className="app-theme-title mt-1 text-sm font-semibold">
                 띄어쓰기와 특수문자까지 정확한지 확인해 주세요.
               </p>
             </div>
-            <div className="rounded-lg bg-white px-4 py-3">
-              <p className="text-[11px] text-[#8a949e]">공개 데이터</p>
-              <p className="mt-1 text-sm font-semibold text-[#1e2124]">
+            <div className="app-theme-card rounded-lg border px-4 py-3">
+              <p className="app-theme-muted text-[11px]">공개 데이터</p>
+              <p className="app-theme-title mt-1 text-sm font-semibold">
                 랭킹/전적 정보가 없는 계정은 분석 결과가 보이지 않을 수 있어요.
               </p>
             </div>
-            <div className="rounded-lg bg-white px-4 py-3">
-              <p className="text-[11px] text-[#8a949e]">다시 검색</p>
-              <p className="mt-1 text-sm font-semibold text-[#1e2124]">
+            <div className="app-theme-card rounded-lg border px-4 py-3">
+              <p className="app-theme-muted text-[11px]">다시 검색</p>
+              <p className="app-theme-title mt-1 text-sm font-semibold">
                 다른 닉네임이나 정확한 철자로 다시 검색해 보세요.
               </p>
             </div>
@@ -1612,13 +1654,13 @@ export default function MatchesPageClient({ initialNickname }: Props) {
           <button
             type="button"
             onClick={handleBackHome}
-            className="inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]"
+            className="app-theme-title inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em]"
           >
             <ArrowLeft size={18} weight="bold" />
             <span>{resultsTitle}</span>
           </button>
         ) : (
-          <h1 className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">
+          <h1 className="app-theme-title text-[18px] font-bold tracking-[-0.02em]">
             내 볼타 분석을 찾아볼까요?
           </h1>
         )}
@@ -1626,7 +1668,11 @@ export default function MatchesPageClient({ initialNickname }: Props) {
 
       {!showResultsPanel && (
         <div
-          className="mt-4 flex h-14 items-center gap-2 rounded-lg border border-[#e6e8ea] bg-white px-4 focus-within:border-2 focus-within:border-[#457ae5]"
+          className="mt-4 flex h-14 items-center gap-2 rounded-lg border px-4 focus-within:border-2 focus-within:border-[#457ae5]"
+          style={{
+            backgroundColor: 'var(--app-card-bg)',
+            borderColor: 'var(--app-input-border)',
+          }}
           onClick={handleSearchContainerClick}
         >
           <input
@@ -1636,22 +1682,23 @@ export default function MatchesPageClient({ initialNickname }: Props) {
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="닉네임을 입력해 주세요"
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
+            className="min-w-0 flex-1 bg-transparent text-[15px] outline-none"
+            style={{ color: 'var(--app-title)' }}
           />
           <button
             type="button"
             onClick={() => void handleSearch()}
             disabled={searchLoading}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg active:bg-[#f0f3f5] disabled:opacity-50"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg disabled:opacity-50"
           >
-            <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
+            <MagnifyingGlass size={24} className="app-theme-body" weight="bold" />
           </button>
         </div>
       )}
 
       <div className="mt-4">
         {searchLoading && (
-          <div className="rounded-lg bg-white px-5 py-4">
+          <div className="app-theme-card rounded-lg border px-5 py-4">
             <LoadingDots label="닉네임을 찾는 중이에요" />
           </div>
         )}
@@ -1666,7 +1713,7 @@ export default function MatchesPageClient({ initialNickname }: Props) {
 
             {exactCandidate && (
               <div className="space-y-4">
-                <section className="rounded-lg bg-white px-5 py-5">
+                <section className="app-theme-card rounded-lg border px-5 py-5">
                   <div className="flex items-center gap-4">
                     {exactCandidate.voltaRankIconUrl ? (
                       <img
@@ -1675,16 +1722,16 @@ export default function MatchesPageClient({ initialNickname }: Props) {
                         className="h-14 w-14 shrink-0 object-contain"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#f0f3f5] text-xs font-semibold text-[#58616a]">
+                      <div className="app-theme-soft app-theme-body flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
                         볼타
                       </div>
                     )}
 
                     <div className="min-w-0">
-                      <h2 className="truncate text-2xl font-bold tracking-[-0.03em] text-[#1e2124]">
+                      <h2 className="app-theme-title truncate text-2xl font-bold tracking-[-0.03em]">
                         {exactCandidate.nickname}
                       </h2>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-[#58616a]">
+                      <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
                         <span>평점 {formatDecimal(exactCandidate.voltaAverageRating, 2)}</span>
                         <MutedDivider />
                         <span>
@@ -1735,7 +1782,7 @@ export default function MatchesPageClient({ initialNickname }: Props) {
 
                     </>
                   ) : (
-                    <div className="mt-4 rounded-lg bg-[#f0f3f5] px-4 py-3 text-sm text-[#58616a]">
+                    <div className="app-theme-soft app-theme-body mt-4 rounded-lg px-4 py-3 text-sm">
                       볼타 랭킹 1만위 밖 유저거나 공개 랭킹 정보가 없어요.
                     </div>
                   )}
@@ -1755,8 +1802,8 @@ export default function MatchesPageClient({ initialNickname }: Props) {
                 </section>
 
                 {hasVoltaRank && (
-                  <section className="rounded-lg bg-white px-5 py-5">
-                    <h2 className="text-base font-semibold text-[#1e2124]">상세 정보</h2>
+                  <section className="app-theme-card rounded-lg border px-5 py-5">
+                    <h2 className="app-theme-title text-base font-semibold">상세 정보</h2>
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <DetailStatCard
                         label="태클 성공률"
@@ -1786,17 +1833,17 @@ export default function MatchesPageClient({ initialNickname }: Props) {
                   </section>
                 )}
 
-                <section className="rounded-lg bg-white px-5 py-5">
-                  <h2 className="mb-3 text-base font-semibold text-[#1e2124]">볼타 공식 최근 10경기</h2>
+                <section className="app-theme-card rounded-lg border px-5 py-5">
+                  <h2 className="app-theme-title mb-3 text-base font-semibold">볼타 공식 최근 10경기</h2>
 
                   {matchLoading && <MatchRecordSkeletonList />}
 
                   {!matchLoading && matchesError && (
-                    <p className="py-4 text-sm text-[#8a949e]">{matchesError}</p>
+                    <p className="app-theme-muted py-4 text-sm">{matchesError}</p>
                   )}
 
                   {!matchLoading && !matchesError && matches.length === 0 && (
-                    <p className="py-4 text-sm text-[#8a949e]">볼타 공식 경기 기록이 없어요.</p>
+                    <p className="app-theme-muted py-4 text-sm">볼타 공식 경기 기록이 없어요.</p>
                   )}
 
                   {!matchLoading && !matchesError && (
@@ -1816,7 +1863,11 @@ export default function MatchesPageClient({ initialNickname }: Props) {
                         <button
                           type="button"
                           onClick={() => setVisibleMatchCount(matches.length)}
-                          className="flex w-full items-center justify-center rounded-lg border border-[#dbe3ea] bg-white px-4 py-3 text-sm font-semibold text-[#1e2124]"
+                          className="app-theme-title flex w-full items-center justify-center rounded-lg border px-4 py-3 text-sm font-semibold"
+                          style={{
+                            backgroundColor: 'var(--app-card-bg)',
+                            borderColor: 'var(--app-input-border)',
+                          }}
                         >
                           더보기
                         </button>
@@ -1829,29 +1880,29 @@ export default function MatchesPageClient({ initialNickname }: Props) {
 
             {!exactCandidate && candidates.length > 0 && (
               <div className="space-y-2">
-                <p className="pb-1 text-xs font-semibold text-[#8a949e]">랭킹 후보</p>
+                <p className="app-theme-muted pb-1 text-xs font-semibold">랭킹 후보</p>
                 {candidates.map((candidate) => (
                   <div
                     key={`${candidate.nexonSn}-${candidate.nickname}`}
-                    className="block w-full rounded-lg border border-[#e6e8ea] bg-white px-4 py-3 text-left"
+                    className="app-theme-card block w-full rounded-lg border px-4 py-3 text-left"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-bold">{candidate.nickname}</div>
-                        <div className="mt-1 text-xs text-[#8a949e]">{candidate.modes.join(' · ')}</div>
+                        <div className="app-theme-muted mt-1 text-xs">{candidate.modes.join(' · ')}</div>
                       </div>
                       {candidate.voltaRank !== null ? (
-                        <span className="rounded-full bg-[#f0f3f5] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
+                        <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
                           볼타 #{candidate.voltaRank}
                         </span>
                       ) : candidate.rank !== null ? (
-                        <span className="rounded-full bg-[#f0f3f5] px-2.5 py-1 text-[11px] font-semibold text-[#58616a]">
+                        <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
                           공식 {candidate.rank}위
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#58616a]">
+                    <div className="app-theme-body mt-3 grid grid-cols-2 gap-2 text-xs">
                       <span>볼타 포인트 {statValue(candidate.voltaRankPoint)}</span>
                       <span>승률 {candidate.voltaWinRate !== null ? `${candidate.voltaWinRate}%` : '-'}</span>
                       <span>
@@ -1868,7 +1919,7 @@ export default function MatchesPageClient({ initialNickname }: Props) {
             {showHomePanels && (
               <>
                 <section className="mt-4 space-y-3">
-                  <p className="text-[11px] font-medium leading-4 text-[#8a949e]">
+                  <p className="app-theme-muted text-[11px] font-medium leading-4">
                     • 현재 시즌 볼타 라이브 공식 랭킹 기준
                   </p>
 

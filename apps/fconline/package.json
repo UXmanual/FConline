@@ -1,9 +1,9 @@
 {
   "name": "fconlinemanual",
-  "version": "11.4",
+  "version": "11.5",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname localhost --port 3001",
+    "dev": "next dev --hostname 0.0.0.0 --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

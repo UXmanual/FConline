@@ -30,8 +30,8 @@ export default async function PlayerDetailPage({ params, searchParams }: Props) 
   if (!player) {
     return (
       <div className="flex h-64 flex-col items-center justify-center">
-        <p className="text-sm text-[#8a949e]">선수 정보를 찾을 수 없어요</p>
-        <Link href="/players" className="mt-4 text-sm text-[#256ef4]">
+        <p className="app-player-muted text-sm">선수 정보를 찾을 수 없어요</p>
+        <Link href="/players" className="mt-4 text-sm" style={{ color: 'var(--app-accent-blue)' }}>
           선수 홈으로 돌아가기
         </Link>
       </div>
@@ -43,7 +43,7 @@ export default async function PlayerDetailPage({ params, searchParams }: Props) 
       <div className="pb-4 pt-5">
         <Link
           href="/players"
-          className="inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]"
+          className="app-player-title inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em]"
         >
           <ArrowLeft size={18} weight="bold" />
           <span>{player.name}</span>

@@ -29,11 +29,23 @@ export default function BottomNav() {
     <>
       <div className="h-[70px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
 
+      <div
+        aria-hidden="true"
+        className="fixed bottom-0 left-1/2 z-40 w-full -translate-x-1/2 sm:max-w-[480px]"
+        style={{
+          height: `calc(70px + env(safe-area-inset-bottom))`,
+          backgroundColor: 'var(--app-nav-shell-bg)',
+          transition: 'background-color 180ms ease',
+        }}
+      />
+
       <nav
-        className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[24px] bg-white sm:max-w-[480px]"
+        className="fixed bottom-0 left-1/2 z-50 w-full -translate-x-1/2 rounded-t-[24px] sm:max-w-[480px]"
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
-          borderTop: '1px solid #f0f3f5',
+          backgroundColor: 'var(--app-nav-bg)',
+          borderTop: '1px solid var(--app-nav-border)',
+          transition: 'background-color 180ms ease, border-color 180ms ease',
         }}
       >
         <div className="flex h-[70px] items-center justify-around px-1">
@@ -57,10 +69,19 @@ export default function BottomNav() {
                   }}
                   className="flex h-full w-full flex-col items-center justify-center gap-2"
                 >
-                  <Icon size={22} className={isActive ? 'text-[#343e4d]' : 'text-[#ced3d9]'} />
+                  <Icon
+                    size={22}
+                    className={
+                      isActive
+                        ? 'text-[var(--app-nav-active)]'
+                        : 'text-[var(--app-nav-icon)]'
+                    }
+                  />
                   <span
                     className={`text-[11px] font-semibold leading-none ${
-                      isActive ? 'text-[#343e4d]' : 'text-[#86919e]'
+                      isActive
+                        ? 'text-[var(--app-nav-active)]'
+                        : 'text-[var(--app-nav-label)]'
                     }`}
                   >
                     {label}

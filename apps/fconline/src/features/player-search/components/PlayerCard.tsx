@@ -58,9 +58,13 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
       onClick={() => {
         sessionStorage.setItem(PRESERVE_KEY, '1')
       }}
-      className={`flex gap-3 py-3 active:bg-[#f0f3f5] ${isLast ? '' : 'border-b border-[#e6e8ea]'}`}
+      className={`flex gap-3 py-3 ${isLast ? '' : 'border-b'}`}
+      style={{ borderColor: isLast ? undefined : 'var(--app-player-divider)' }}
     >
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f0f3f5]">
+      <div
+        className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg"
+        style={{ backgroundColor: 'var(--app-player-soft-strong)' }}
+      >
         <PlayerImage spid={player.id} alt={player.name} className="object-contain" sizes="64px" />
       </div>
 
@@ -78,7 +82,7 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
                 />
               </div>
             )}
-            <span className="truncate text-sm font-semibold text-[#1e2124]">{player.name}</span>
+            <span className="app-player-title truncate text-sm font-semibold">{player.name}</span>
           </div>
 
           {detail?.skillMove != null && (
@@ -103,25 +107,25 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
         </div>
 
         {detail && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4 text-[#58616a]">
+          <div className="app-player-body mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4">
             {detailItems.map((item, index) => (
               <span key={`${player.id}-${index}`} className="flex items-center gap-1.5">
-                {index > 0 && <span className="text-[#c1c7cd]">|</span>}
+                {index > 0 && <span className="app-player-muted">|</span>}
                 {item.emphasize === null ? (
-                  <span className="text-[#464c53]">{item.label}</span>
+                  <span className="app-player-body">{item.label}</span>
                 ) : item.emphasize === true ? (
-                  <span className="text-[#464c53]">
+                  <span className="app-player-body">
                     {item.label}{' '}
                     <span style={{ color: EMPHASIS_COLOR }} className="font-semibold">
                       {item.value}
                     </span>
                   </span>
                 ) : (
-                  <span className="text-[#464c53]">
+                  <span className="app-player-body">
                     {item.label} {item.value}
                   </span>
                 )}
-                {item.right && <span className="text-[#464c53]">{item.right}</span>}
+                {item.right && <span className="app-player-body">{item.right}</span>}
               </span>
             ))}
           </div>

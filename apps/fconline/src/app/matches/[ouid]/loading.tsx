@@ -17,7 +17,11 @@ function MatchListLoadingSkeleton() {
 
       <div className="mt-4 space-y-1">
         {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="flex items-center gap-3 border-b border-[#e6e8ea] py-3.5">
+          <div
+            key={index}
+            className="flex items-center gap-3 border-b py-3.5"
+            style={{ borderColor: 'var(--app-divider)', transition: 'border-color 180ms ease' }}
+          >
             <div className="home-image-shimmer h-10 w-10 shrink-0 rounded-lg" />
             <div className="min-w-0 flex-1">
               <div className="home-image-shimmer h-4 w-[72%] rounded-full" />

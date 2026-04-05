@@ -37,7 +37,11 @@ export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
 
   return (
     <div
-      className="flex h-14 items-center gap-2 rounded-lg border border-[#e6e8ea] bg-white px-4 focus-within:border-2 focus-within:border-[#457ae5]"
+      className="flex h-14 items-center gap-2 rounded-lg border px-4 focus-within:border-2 focus-within:border-[#457ae5]"
+      style={{
+        backgroundColor: 'var(--app-player-card-bg)',
+        borderColor: 'var(--app-player-input-border)',
+      }}
       onClick={handleContainerClick}
     >
       <input
@@ -47,15 +51,16 @@ export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="선수 이름을 입력해주세요"
-        className="min-w-0 flex-1 bg-transparent text-[15px] text-[#1e2124] outline-none placeholder:text-[#8a949e]"
+        className="min-w-0 flex-1 bg-transparent text-[15px] outline-none"
+        style={{ color: 'var(--app-player-title)' }}
       />
 
       <button
         type="button"
         onClick={runSearch}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg active:bg-[#f0f3f5]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
       >
-        <MagnifyingGlass size={24} className="text-[#464c53]" weight="bold" />
+        <MagnifyingGlass size={24} className="app-player-body" weight="bold" />
       </button>
     </div>
   )

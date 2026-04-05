@@ -50,6 +50,73 @@
 
 :root {
   --background: #f0f3f5;
+  --app-theme-transition: 180ms ease;
+  --app-body-bg: #f0f3f5;
+  --app-shell-bg: #f0f3f5;
+  --app-page-bg: #f0f3f5;
+  --app-card-bg: #ffffff;
+  --app-card-border: #f0f3f5;
+  --app-surface-soft: #f3f6f8;
+  --app-surface-strong: #eef2f6;
+  --app-title: #1e2124;
+  --app-body-text: #5f6b76;
+  --app-muted-text: #96a0aa;
+  --app-divider: #eef2f6;
+  --app-input-bg: #f9fbfc;
+  --app-input-border: #dbe3ea;
+  --app-input-placeholder: #a0a9b3;
+  --app-modal-bg: #ffffff;
+  --app-overlay-bg: rgba(15, 23, 42, 0.42);
+  --app-badge-bg: #f3f6f8;
+  --app-badge-fg: inherit;
+  --app-action-badge-bg: #e8f1ff;
+  --app-action-badge-fg: #457ae5;
+  --app-result-win-soft: #f4f8ff;
+  --app-result-loss-soft: #fff5f5;
+  --app-result-draw-soft: #eef2f5;
+  --app-result-win-badge-soft: #dfeeff;
+  --app-result-loss-badge-soft: #ffe6e9;
+  --app-result-draw-badge-soft: #dde4ea;
+  --app-volta-accent-bg: #f0eaff;
+  --app-volta-accent-fg: #7a4ce3;
+  --app-accent-blue: #256ef4;
+  --app-accent-red: #d14343;
+  --app-accent-green: #2f8f57;
+  --app-position-fw-bg: #fdecec;
+  --app-position-fw-fg: #d14343;
+  --app-position-mf-bg: #eaf6ee;
+  --app-position-mf-fg: #2f8f57;
+  --app-position-df-bg: #e8f1ff;
+  --app-position-df-fg: #457ae5;
+  --app-analysis-soft-bg: #f7f8fa;
+  --app-analysis-soft-alt-bg: #f7f9fb;
+  --app-player-soft-bg: #f7f9fb;
+  --app-player-soft-strong: #f0f3f5;
+  --app-player-card-bg: #ffffff;
+  --app-player-title: #1e2124;
+  --app-player-body: #58616a;
+  --app-player-muted: #8a949e;
+  --app-player-chip-bg: #ffffff;
+  --app-player-chip-border: #e6e8ea;
+  --app-player-input-border: #e6e8ea;
+  --app-player-divider: #e6e8ea;
+  --app-player-overlay-grad: rgba(255, 255, 255, 0.92);
+  --app-player-pos-fw-bg: #fdecec;
+  --app-player-pos-fw-fg: #d14343;
+  --app-player-pos-mf-bg: #e9f7ef;
+  --app-player-pos-mf-fg: #2f8f57;
+  --app-player-pos-df-bg: #eef3ff;
+  --app-player-pos-df-fg: #457ae5;
+  --app-footer-text: #b5bec8;
+  --app-nav-shell-bg: #f0f3f5;
+  --app-nav-bg: #ffffff;
+  --app-nav-border: #f0f3f5;
+  --app-nav-active: #343e4d;
+  --app-nav-icon: #ced3d9;
+  --app-nav-label: #86919e;
+  --app-skeleton-start: rgba(238, 242, 246, 0.96);
+  --app-skeleton-mid: rgba(248, 250, 252, 0.98);
+  --app-skeleton-end: rgba(238, 242, 246, 0.96);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -81,6 +148,75 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+html.app-dark-mode {
+  --app-body-bg: #121318;
+  --app-shell-bg: #121318;
+  --app-page-bg: #121318;
+  --app-card-bg: #1a1b21;
+  --app-card-border: #24252d;
+  --app-surface-soft: #202229;
+  --app-surface-strong: #23262d;
+  --app-title: #f3f4f6;
+  --app-body-text: #b2b5be;
+  --app-muted-text: #8d919c;
+  --app-divider: #2a2d36;
+  --app-input-bg: #17191f;
+  --app-input-border: #2a2d36;
+  --app-input-placeholder: #6f7380;
+  --app-modal-bg: #1a1b21;
+  --app-overlay-bg: rgba(7, 9, 14, 0.7);
+  --app-badge-bg: #262833;
+  --app-badge-fg: #e4e7ee;
+  --app-action-badge-bg: #163768;
+  --app-action-badge-fg: #5e9cff;
+  --app-result-win-soft: #182231;
+  --app-result-loss-soft: #2b1b20;
+  --app-result-draw-soft: #23262d;
+  --app-result-win-badge-soft: #1f3552;
+  --app-result-loss-badge-soft: #4a2228;
+  --app-result-draw-badge-soft: #30353d;
+  --app-volta-accent-bg: #221f33;
+  --app-volta-accent-fg: #bda2ff;
+  --app-accent-blue: #6ea2ff;
+  --app-accent-red: #ff8e97;
+  --app-accent-green: #7dd8a0;
+  --app-position-fw-bg: #26191d;
+  --app-position-fw-fg: #ff9aa3;
+  --app-position-mf-bg: #18241d;
+  --app-position-mf-fg: #86dba6;
+  --app-position-df-bg: #172132;
+  --app-position-df-fg: #93bcff;
+  --app-analysis-soft-bg: #202229;
+  --app-analysis-soft-alt-bg: #202229;
+  --app-player-soft-bg: #202229;
+  --app-player-soft-strong: #23262d;
+  --app-player-card-bg: #1a1b21;
+  --app-player-title: #f3f4f6;
+  --app-player-body: #b2b5be;
+  --app-player-muted: #8d919c;
+  --app-player-chip-bg: #1a1c22;
+  --app-player-chip-border: #2a2d36;
+  --app-player-input-border: #2a2d36;
+  --app-player-divider: #2a2d36;
+  --app-player-overlay-grad: rgba(26, 27, 33, 0.92);
+  --app-player-pos-fw-bg: #26191d;
+  --app-player-pos-fw-fg: #ff9aa3;
+  --app-player-pos-mf-bg: #18241d;
+  --app-player-pos-mf-fg: #86dba6;
+  --app-player-pos-df-bg: #172132;
+  --app-player-pos-df-fg: #93bcff;
+  --app-footer-text: #6f7380;
+  --app-nav-shell-bg: #101116;
+  --app-nav-bg: #17181e;
+  --app-nav-border: #262730;
+  --app-nav-active: #f1f3f6;
+  --app-nav-icon: #6f7380;
+  --app-nav-label: #777b87;
+  --app-skeleton-start: rgba(33, 36, 44, 0.92);
+  --app-skeleton-mid: rgba(48, 52, 63, 0.96);
+  --app-skeleton-end: rgba(33, 36, 44, 0.92);
 }
 
 .dark {
@@ -126,6 +262,151 @@
   }
   html {
     @apply font-sans;
+  }
+
+  body,
+  main {
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+}
+
+@layer utilities {
+  .app-theme-page {
+    background-color: var(--app-page-bg);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-card {
+    background-color: var(--app-card-bg);
+    border-color: var(--app-card-border);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-title {
+    color: var(--app-title);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-theme-body {
+    color: var(--app-body-text);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-theme-muted {
+    color: var(--app-muted-text);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-theme-badge {
+    background-color: var(--app-badge-bg);
+    color: var(--app-badge-fg);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition);
+  }
+
+  .app-theme-soft {
+    background-color: var(--app-surface-soft);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-strong {
+    background-color: var(--app-surface-strong);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-divider {
+    border-color: var(--app-divider);
+    transition: border-color var(--app-theme-transition);
+  }
+
+  .app-theme-input {
+    background-color: var(--app-input-bg);
+    border-color: var(--app-input-border);
+    color: var(--app-title);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-modal {
+    background-color: var(--app-modal-bg);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-footer {
+    background-color: var(--app-page-bg);
+    color: var(--app-footer-text);
+    transition:
+      background-color var(--app-theme-transition),
+      color var(--app-theme-transition);
+  }
+
+  .app-theme-nav-shell {
+    background-color: var(--app-nav-shell-bg);
+    transition: background-color var(--app-theme-transition);
+  }
+
+  .app-theme-nav {
+    background-color: var(--app-nav-bg);
+    border-color: var(--app-nav-border);
+    transition:
+      background-color var(--app-theme-transition),
+      border-color var(--app-theme-transition);
+  }
+
+  .app-theme-nav-active {
+    color: var(--app-nav-active);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-theme-nav-icon {
+    color: var(--app-nav-icon);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-theme-nav-label {
+    color: var(--app-nav-label);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-player-card {
+    background-color: var(--app-player-card-bg);
+    transition: background-color var(--app-theme-transition);
+  }
+
+  .app-player-title {
+    color: var(--app-player-title);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-player-body {
+    color: var(--app-player-body);
+    transition: color var(--app-theme-transition);
+  }
+
+  .app-player-muted {
+    color: var(--app-player-muted);
+    transition: color var(--app-theme-transition);
   }
 }
 
@@ -514,9 +795,9 @@
 .home-image-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(238, 242, 246, 0.96) 0%,
-    rgba(248, 250, 252, 0.98) 48%,
-    rgba(238, 242, 246, 0.96) 100%
+    var(--app-skeleton-start) 0%,
+    var(--app-skeleton-mid) 48%,
+    var(--app-skeleton-end) 100%
   );
   background-size: 200% 100%;
   animation: home-image-shimmer 1.2s linear infinite;

@@ -2,11 +2,13 @@
 
 import { FormEvent, type PointerEvent as ReactPointerEvent, type RefObject, useEffect, useRef, useState } from 'react'
 import { COMMUNITY_CATEGORIES, type CommunityCategory, type CommunityCommentItem, type CommunityPostSummary } from '@/lib/community'
+import { useDarkModeEnabled } from '@/lib/darkMode'
 
 const BOARD_TABS = ['자유게시판'] as const
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
+const URL_PART_PATTERN = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/
 
 type BoardTab = (typeof BOARD_TABS)[number]
 
@@ -14,12 +16,11 @@ function LinkifiedText({ text, className }: { text: string; className?: string }
   const parts = text.split(URL_PATTERN)
 
   return (
-    <p className={className}>
+    <p className={className} style={{ color: 'var(--app-body-text)' }}>
       {parts.map((part, index) => {
         if (!part) return null
 
-        const isUrl = URL_PATTERN.test(part)
-        URL_PATTERN.lastIndex = 0
+        const isUrl = URL_PART_PATTERN.test(part)
 
         if (!isUrl) {
           return <span key={`${part}-${index}`}>{part}</span>
@@ -48,18 +49,29 @@ function BoardTabButton({
   active,
   label,
   count,
+  isDarkModeEnabled,
 }: {
   active: boolean
   label: BoardTab
   count: number
+  isDarkModeEnabled: boolean
 }) {
   return (
     <button
       type="button"
       className="inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-semibold transition"
       style={{
-        backgroundColor: active ? '#1f2937' : '#eef2f6',
-        color: active ? '#ffffff' : '#5f6b76',
+        backgroundColor: active
+          ? 'var(--app-card-bg)'
+          : 'var(--app-surface-strong)',
+        border: active
+          ? '1px solid var(--app-card-border)'
+          : '1px solid transparent',
+        color: active
+          ? isDarkModeEnabled
+            ? '#f3f4f6'
+            : '#111827'
+          : 'var(--app-body-text)',
       }}
     >
       <span>{label}</span>
@@ -83,8 +95,8 @@ function CategoryChip({
       onClick={onClick}
       className="inline-flex h-8 items-center justify-center rounded-lg px-3 text-[12px] font-semibold transition"
       style={{
-        backgroundColor: active ? '#457ae5' : '#f3f6f8',
-        color: active ? '#ffffff' : '#6b7682',
+        backgroundColor: active ? '#457ae5' : 'var(--app-surface-soft)',
+        color: active ? '#ffffff' : 'var(--app-body-text)',
       }}
     >
       {label}
@@ -96,7 +108,11 @@ function CommunityPostSkeletonList({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-3" aria-hidden="true">
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="rounded-lg bg-white px-5 py-4">
+        <div
+          key={index}
+          className="rounded-lg px-5 py-4"
+          style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
+        >
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="home-image-shimmer h-7 w-14 rounded-lg" />
@@ -150,7 +166,12 @@ function PostCard({
   return (
     <article
       ref={cardRef}
-      className="rounded-lg bg-white px-5 py-4"
+      className="rounded-lg px-5 py-4"
+      style={{
+        backgroundColor: 'var(--app-card-bg)',
+        border: '1px solid var(--app-card-border)',
+        transition: 'background-color 180ms ease, border-color 180ms ease',
+      }}
       onClick={() => setExpanded((current) => !current)}
     >
       <div className="min-w-0">
@@ -158,13 +179,13 @@ function PostCard({
           <div className="flex flex-wrap items-center gap-2">
             <span
               className="inline-flex h-7 items-center rounded-lg px-3 text-[12px] font-semibold"
-              style={{ backgroundColor: '#f3f6f8', color: '#5f6b76' }}
+              style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
             >
               {post.category}
             </span>
-            <span className="text-[12px] font-semibold leading-none text-[#5f6b76]">{post.nickname}</span>
-            <span className="text-[12px] font-medium leading-none text-[#96a0aa]">·</span>
-            <span className="text-[12px] font-medium leading-none text-[#96a0aa]">{post.createdAtLabel}</span>
+            <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>{post.nickname}</span>
+            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
           </div>
 
           {expanded ? (
@@ -175,7 +196,8 @@ function PostCard({
                 event.stopPropagation()
                 onDelete(post)
               }}
-              className="shrink-0 text-[12px] font-medium leading-none text-[#96a0aa] transition"
+              className="shrink-0 text-[12px] font-medium leading-none transition"
+              style={{ color: 'var(--app-muted-text)' }}
             >
               삭제
             </button>
@@ -183,14 +205,15 @@ function PostCard({
         </div>
 
         <h2
-          className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] text-[#1e2124] ${
+          className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${
             expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'
           }`}
+          style={{ color: 'var(--app-title)' }}
         >
           {post.title}
         </h2>
 
-        {expanded ? <LinkifiedText text={post.content} className="mt-3 text-sm leading-6 text-[#58616a]" /> : null}
+        {expanded ? <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" /> : null}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
@@ -202,12 +225,12 @@ function PostCard({
           }}
           className="inline-flex items-center gap-1 text-[12px] font-medium transition"
         >
-          <span className="text-[#1e2124]">댓글</span>
+          <span style={{ color: 'var(--app-title)' }}>댓글</span>
           <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
         </button>
 
         {post.ipPrefix ? (
-          <span className="shrink-0 text-[12px] font-medium text-[#96a0aa]">{post.ipPrefix}</span>
+          <span className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{post.ipPrefix}</span>
         ) : null}
       </div>
     </article>
@@ -215,6 +238,7 @@ function PostCard({
 }
 
 export default function CommunityPageClient({ initialPosts = [] }: { initialPosts?: CommunityPostSummary[] }) {
+  const isDarkModeEnabled = useDarkModeEnabled()
   const newestPostRef = useRef<HTMLElement | null>(null)
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
@@ -236,6 +260,7 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
   const [commentNickname, setCommentNickname] = useState('')
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
+  const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
   const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -284,7 +309,7 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
       window.removeEventListener('beforeunload', handleUnload)
       window.removeEventListener('pagehide', handleUnload)
     }
-  }, [])
+  }, [initialPosts.length])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -303,6 +328,23 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
     newestPostRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     setHighlightedPostId(null)
   }, [highlightedPostId, posts])
+
+  useEffect(() => {
+    if (!activeCommentPost) {
+      return
+    }
+
+    setCommentSheetOffsetY(0)
+    setIsCommentSheetVisible(false)
+
+    const frameId = window.requestAnimationFrame(() => {
+      setIsCommentSheetVisible(true)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [activeCommentPost])
 
   const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE))
   const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
@@ -324,14 +366,19 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function closeCommentSheet() {
+  function resetCommentSheetState() {
     setActiveCommentPost(null)
     setComments([])
     setCommentNickname('')
     setCommentDraft('')
     setCommentSheetOffsetY(0)
     setIsDraggingCommentSheet(false)
+    setIsCommentSheetVisible(false)
     dragPointerIdRef.current = null
+  }
+
+  function closeCommentSheet() {
+    resetCommentSheetState()
   }
 
   function handleCommentSheetDragStart(event: ReactPointerEvent<HTMLElement>) {
@@ -363,7 +410,7 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
       setIsDraggingCommentSheet(false)
 
       if (commentSheetOffsetY > 96) {
-        closeCommentSheet()
+        resetCommentSheetState()
         return
       }
 
@@ -384,7 +431,6 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
   async function loadComments(post: CommunityPostSummary) {
     try {
       setIsLoadingComments(true)
-      setActiveCommentPost(post)
       const response = await fetch(`/api/community/comments?postId=${post.id}`, { cache: 'no-store' })
       const result = await response.json()
 
@@ -393,11 +439,10 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
       }
 
       setComments(result.items ?? [])
+      setActiveCommentPost(post)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 불러오지 못했습니다.')
-      setActiveCommentPost(null)
-      setComments([])
-      setCommentNickname('')
+      resetCommentSheetState()
     } finally {
       setIsLoadingComments(false)
     }
@@ -476,9 +521,7 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
       setPosts((current) => current.filter((post) => post.id !== targetPost.id))
 
       if (activeCommentPost?.id === targetPost.id) {
-        setActiveCommentPost(null)
-        setComments([])
-        setCommentDraft('')
+        closeCommentSheet()
       }
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 삭제하지 못했습니다.')
@@ -532,9 +575,9 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
     <div className="space-y-4 pt-5">
       <header className="space-y-2">
         <div className="flex h-6 items-center">
-          <h1 className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">커뮤니티</h1>
+          <h1 className="text-[18px] font-bold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>커뮤니티</h1>
         </div>
-        <p className="text-sm text-[#86919e]">
+        <p className="text-sm" style={{ color: 'var(--app-nav-label)' }}>
           여기는 누구나 글을 쓸 수 있는 공간이에요
           <br />
           서로를 배려하는 한 마디가 모두를 더 편안하게 만들어요 🙂
@@ -544,7 +587,13 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {BOARD_TABS.map((tab) => (
-            <BoardTabButton key={tab} label={tab} count={posts.length} active={tab === activeBoard} />
+            <BoardTabButton
+              key={tab}
+              label={tab}
+              count={posts.length}
+              active={tab === activeBoard}
+              isDarkModeEnabled={isDarkModeEnabled}
+            />
           ))}
         </div>
 
@@ -579,10 +628,27 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
             />
           ))
         ) : (
-          <div className="rounded-lg bg-white px-5 py-8 text-center text-sm text-[#96a0aa]">아직 게시글이 없습니다.</div>
+          <div
+            className="rounded-lg px-5 py-8 text-center text-sm"
+            style={{
+              backgroundColor: 'var(--app-card-bg)',
+              border: '1px solid var(--app-card-border)',
+              color: 'var(--app-muted-text)',
+              transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
+            }}
+          >
+            아직 게시글이 없습니다.
+          </div>
         )}
 
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3">
+        <div
+          className="flex items-center justify-center gap-2 rounded-lg px-4 py-3"
+          style={{
+            backgroundColor: 'var(--app-card-bg)',
+            border: '1px solid var(--app-card-border)',
+            transition: 'background-color 180ms ease, border-color 180ms ease',
+          }}
+        >
           <button
             type="button"
             onClick={() => {
@@ -593,7 +659,7 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
             }}
             disabled={safeCurrentPage === 1}
             className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40"
-            style={{ backgroundColor: '#f3f6f8', color: '#5f6b76' }}
+            style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
           >
             이전
           </button>
@@ -619,8 +685,8 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
                 }}
                 className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition"
                 style={{
-                  backgroundColor: page === safeCurrentPage ? '#457ae5' : '#f3f6f8',
-                  color: page === safeCurrentPage ? '#ffffff' : '#5f6b76',
+                  backgroundColor: page === safeCurrentPage ? '#457ae5' : 'var(--app-surface-soft)',
+                  color: page === safeCurrentPage ? '#ffffff' : 'var(--app-body-text)',
                 }}
               >
                 {page}
@@ -638,7 +704,7 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
             }}
             disabled={safeCurrentPage === totalPages}
             className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40"
-            style={{ backgroundColor: '#f3f6f8', color: '#5f6b76' }}
+            style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
           >
             다음
           </button>
@@ -665,14 +731,21 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
             type="button"
             aria-label="글쓰기 닫기"
             className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(15, 23, 42, 0.42)' }}
+            style={{
+              backgroundColor: isDarkModeEnabled ? 'rgba(46, 68, 108, 0.68)' : 'rgba(15, 23, 42, 0.42)',
+              transition: 'background-color 180ms ease',
+            }}
             onClick={() => setIsComposerOpen(false)}
           />
 
           <div className="absolute inset-0 z-10 flex items-center justify-center px-8 py-6 sm:px-7">
             <section
-              className="max-h-[calc(100vh-48px)] w-full max-w-[340px] overflow-y-auto bg-white px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[380px] sm:px-6 sm:py-6"
-              style={{ borderRadius: '24px' }}
+              className="max-h-[calc(100vh-48px)] w-full max-w-[340px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[380px] sm:px-6 sm:py-6"
+              style={{
+                borderRadius: '24px',
+                backgroundColor: 'var(--app-modal-bg, #ffffff)',
+                transition: 'background-color 180ms ease',
+              }}
             >
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="pt-3">
@@ -690,54 +763,70 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
 
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="text-sm font-semibold text-[#1e2124]">닉네임</span>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>닉네임</span>
                     <input
                       required
                       maxLength={10}
                       value={nickname}
                       onChange={(event) => setNickname(event.target.value.slice(0, 10))}
                       placeholder="닉네임"
-                      className="mt-2 h-11 w-full rounded-lg border px-3 text-sm text-[#1e2124] outline-none transition placeholder:text-[#a0a9b3] focus:bg-white"
-                      style={{ backgroundColor: '#f9fbfc', borderColor: '#dbe3ea' }}
+                      className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                      style={{
+                        backgroundColor: 'var(--app-input-bg)',
+                        borderColor: 'var(--app-input-border)',
+                        color: 'var(--app-title)',
+                      }}
                     />
                   </label>
 
                   <label className="block">
-                    <span className="text-sm font-semibold text-[#1e2124]">패스워드</span>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>패스워드</span>
                     <input
                       type="password"
                       required
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       placeholder="패스워드"
-                      className="mt-2 h-11 w-full rounded-lg border px-3 text-sm text-[#1e2124] outline-none transition placeholder:text-[#a0a9b3] focus:bg-white"
-                      style={{ backgroundColor: '#f9fbfc', borderColor: '#dbe3ea' }}
+                      className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                      style={{
+                        backgroundColor: 'var(--app-input-bg)',
+                        borderColor: 'var(--app-input-border)',
+                        color: 'var(--app-title)',
+                      }}
                     />
                   </label>
                 </div>
 
                 <label className="block">
-                  <span className="text-sm font-semibold text-[#1e2124]">제목</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>제목</span>
                   <input
                     required
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     placeholder="제목을 입력해 주세요"
-                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm text-[#1e2124] outline-none transition placeholder:text-[#a0a9b3] focus:bg-white"
-                    style={{ backgroundColor: '#f9fbfc', borderColor: '#dbe3ea' }}
+                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
                   />
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold text-[#1e2124]">내용</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>내용</span>
                   <textarea
                     required
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
                     placeholder="자유롭게 내용을 작성해 주세요"
                     rows={6}
-                    className="mt-2 w-full rounded-lg border px-3 py-3 text-sm leading-6 text-[#1e2124] outline-none transition placeholder:text-[#a0a9b3] focus:bg-white"
-                    style={{ backgroundColor: '#f9fbfc', borderColor: '#dbe3ea' }}
+                    className="mt-2 w-full rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition focus:bg-transparent"
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
                   />
                 </label>
 
@@ -751,9 +840,9 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
                       flex: '1 1 0%',
                       height: '54px',
                       borderRadius: '14px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #d5dbe3',
-                      color: '#7b8794',
+                      backgroundColor: 'var(--app-card-bg)',
+                      border: '1px solid var(--app-input-border)',
+                      color: 'var(--app-muted-text)',
                     }}
                   >
                     취소
@@ -780,35 +869,61 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
 
       {activeCommentPost ? (
         <div className="fixed inset-0 z-[70]">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              backgroundColor: isDarkModeEnabled ? 'rgba(46, 68, 108, 0.68)' : 'rgba(15, 23, 42, 0.42)',
+            }}
+          />
           <button
             type="button"
             aria-label="댓글 바텀시트 닫기"
             className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(15, 23, 42, 0.42)' }}
             onClick={closeCommentSheet}
           />
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
             <section
-              className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-12px_32px_rgba(15,23,42,0.16)] sm:max-h-[42vh] sm:max-w-[440px]"
+              className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] sm:max-h-[42vh] sm:max-w-[440px]"
               style={{
                 paddingBottom: 'env(safe-area-inset-bottom)',
-                transform: `translateY(${commentSheetOffsetY}px)`,
-                transition: isDraggingCommentSheet ? 'none' : 'transform 180ms ease',
+                transform: isDraggingCommentSheet
+                  ? `translateY(${commentSheetOffsetY}px)`
+                  : isCommentSheetVisible
+                    ? `translateY(${commentSheetOffsetY}px)`
+                    : 'translateY(calc(100dvh + env(safe-area-inset-bottom)))',
+                backgroundColor: 'var(--app-modal-bg)',
+                boxShadow: isDarkModeEnabled
+                  ? '0 -16px 40px rgba(0, 0, 0, 0.42)'
+                  : '0 -12px 32px rgba(15, 23, 42, 0.16)',
+                willChange: 'transform',
+                transition: isDraggingCommentSheet
+                  ? 'none'
+                  : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease',
               }}
             >
               <div
                 className="flex cursor-grab justify-center pt-3 active:cursor-grabbing"
+                style={{
+                  backgroundColor: 'var(--app-modal-bg, #ffffff)',
+                  transition: 'background-color 180ms ease',
+                }}
                 onPointerDown={handleCommentSheetDragStart}
               >
-                <span className="h-1.5 w-12 rounded-full bg-[#dbe3ea]" />
+                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'var(--app-input-border, #dbe3ea)', transition: 'background-color 180ms ease' }} />
               </div>
 
               <div
-                className="cursor-grab border-b border-[#eef2f6] px-5 py-4 active:cursor-grabbing"
+                className="cursor-grab border-b px-5 py-4 active:cursor-grabbing"
+                style={{
+                  backgroundColor: 'var(--app-modal-bg, #ffffff)',
+                  borderColor: 'var(--app-divider, #eef2f6)',
+                  transition: 'background-color 180ms ease, border-color 180ms ease',
+                }}
                 onPointerDown={handleCommentSheetDragStart}
               >
-                <p className="text-sm font-semibold text-[#1e2124]">
+                <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
                   댓글 <span className="font-[600] text-[#457ae5]">{activeCommentPost.commentCount}</span>
                 </p>
               </div>
@@ -816,6 +931,10 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
               <div
                 ref={commentsScrollRef}
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
+                style={{
+                  backgroundColor: 'var(--app-modal-bg, #ffffff)',
+                  transition: 'background-color 180ms ease',
+                }}
               >
                 {isLoadingComments ? (
                   <CommentSheetSkeleton />
@@ -825,43 +944,57 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
                       <article key={comment.id} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className="text-sm font-semibold text-[#1e2124]">{comment.nickname}</span>
-                            <span className="text-[12px] font-medium text-[#96a0aa]">{comment.createdAtLabel}</span>
+                            <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
+                            <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
                           </div>
                           {comment.ipPrefix ? (
-                            <span className="shrink-0 text-[12px] font-medium text-[#96a0aa]">
+                            <span className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
                               {comment.ipPrefix}
                             </span>
                           ) : null}
                         </div>
-                        <LinkifiedText text={comment.content} className="text-sm leading-6 text-[#58616a]" />
+                        <LinkifiedText text={comment.content} className="text-sm leading-6" />
                       </article>
                     ))}
                   </div>
                 ) : (
-                  <p className="py-10 text-center text-sm text-[#96a0aa]">첫 댓글을 남겨보세요.</p>
+                  <p className="py-10 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>첫 댓글을 남겨보세요.</p>
                 )}
               </div>
 
-              <form onSubmit={handleCommentSubmit} className="border-t border-[#eef2f6] px-5 py-4">
+              <form
+                onSubmit={handleCommentSubmit}
+                className="border-t px-5 py-4"
+                style={{
+                  backgroundColor: 'var(--app-modal-bg, #ffffff)',
+                  borderColor: 'var(--app-divider, #eef2f6)',
+                  transition: 'background-color 180ms ease, border-color 180ms ease',
+                }}
+              >
                 <div className="flex items-center gap-3">
                   <div
                     className="flex h-11 min-w-0 flex-1 items-center rounded-full border pr-2"
-                    style={{ backgroundColor: '#f9fbfc', borderColor: '#dbe3ea' }}
+                    style={{
+                      backgroundColor: 'var(--app-input-bg, #f9fbfc)',
+                      borderColor: 'var(--app-input-border, #dbe3ea)',
+                      transition: 'background-color 180ms ease, border-color 180ms ease',
+                    }}
                   >
                     <input
                       value={commentNickname}
                       onChange={(event) => setCommentNickname(event.target.value.slice(0, 10))}
                       placeholder="닉네임"
                       maxLength={10}
-                      className="h-full w-[78px] bg-transparent px-4 text-sm text-[#1e2124] outline-none placeholder:text-[#a0a9b3]"
+                      className="h-full w-[78px] bg-transparent px-4 text-sm outline-none"
+                      style={{ color: 'var(--app-title)' }}
                     />
-                    <span className="h-5 w-px shrink-0 bg-[#dbe3ea]" />
+                    <span className="h-5 w-px shrink-0" style={{ backgroundColor: 'var(--app-input-border, #dbe3ea)', transition: 'background-color 180ms ease' }} />
                     <input
                       value={commentDraft}
                       onChange={(event) => setCommentDraft(event.target.value)}
                       placeholder="댓글 올리기"
-                      className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm text-[#1e2124] outline-none placeholder:text-[#a0a9b3]"
+                      className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none"
+                      style={{ color: 'var(--app-title)' }}
                     />
                   </div>
                   <button

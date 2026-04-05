@@ -71,14 +71,14 @@ export default function MatchListPage() {
   return (
     <div className="pt-5">
       <div className="flex items-center gap-2">
-        <Link href="/matches" className="flex h-8 w-8 items-center justify-center rounded-full text-[#1e2124]">
+        <Link href="/matches" className="app-theme-title flex h-8 w-8 items-center justify-center rounded-full">
           <CaretLeft size={20} weight="bold" />
         </Link>
         <div>
-          <h1 className="text-lg font-bold tracking-[-0.02em] text-[#1e2124]">
+          <h1 className="app-theme-title text-lg font-bold tracking-[-0.02em]">
             {nickname ?? ouid.slice(0, 8)}
           </h1>
-          <p className="text-xs text-[#8a949e]">경기 기록</p>
+          <p className="app-theme-muted text-xs">경기 기록</p>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export default function MatchListPage() {
             className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
               matchType === t.type
                 ? 'border-[#1e2124] bg-[#1e2124] text-white'
-                : 'border-[#e6e8ea] bg-white text-[#58616a]'
+                : 'app-theme-card app-theme-body border'
             }`}
           >
             {t.label}
@@ -103,7 +103,7 @@ export default function MatchListPage() {
         {loading && <LoadingDots label="경기 기록을 불러오는 중이에요" />}
 
         {!loading && matches.length === 0 && (
-          <p className="py-8 text-center text-sm text-[#8a949e]">
+          <p className="app-theme-muted py-8 text-center text-sm">
             해당 모드의 경기 기록이 없어요.
           </p>
         )}
@@ -118,7 +118,7 @@ export default function MatchListPage() {
             <Link
               key={match.matchId}
               href={`/matches/${ouid}/${match.matchId}?nickname=${encodeURIComponent(nickname ?? '')}`}
-              className="flex items-center gap-3 border-b border-[#e6e8ea] py-3.5 active:bg-[#f0f3f5]"
+              className="app-theme-divider flex items-center gap-3 border-b py-3.5"
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
@@ -129,22 +129,22 @@ export default function MatchListPage() {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[#1e2124]">
+                  <span className="app-theme-title text-sm font-semibold">
                     {me?.nickname ?? '-'}
-                    <span className="mx-1.5 font-bold text-[#1e2124]">
+                    <span className="app-theme-title mx-1.5 font-bold">
                       {me?.shoot.goalTotal ?? 0} : {opponent?.shoot.goalTotal ?? 0}
                     </span>
                     {opponent?.nickname ?? '-'}
                   </span>
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#8a949e]">
+                <div className="app-theme-muted mt-0.5 flex items-center gap-2 text-[11px]">
                   <span>{MATCH_TYPE_NAMES[match.matchType] ?? match.matchType}</span>
-                  <span className="text-[#c1c7cd]">|</span>
+                  <span className="app-theme-muted">|</span>
                   <span>{formatDate(match.matchDate)}</span>
                 </div>
               </div>
 
-              <CaretLeft size={14} className="shrink-0 rotate-180 text-[#c1c7cd]" />
+              <CaretLeft size={14} className="app-theme-muted shrink-0 rotate-180" />
             </Link>
           )
         })}

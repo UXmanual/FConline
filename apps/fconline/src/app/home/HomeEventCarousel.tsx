@@ -36,6 +36,11 @@ export default function HomeEventCarousel({ events }: Props) {
   const suppressClickRef = useRef(false)
   const isDraggingRef = useRef(false)
   const isAnimatingRef = useRef(false)
+  const bodyStyle = { color: 'var(--app-body-text)' }
+  const softStyle = {
+    backgroundColor: 'var(--app-surface-soft)',
+    transition: 'background-color 180ms ease, color 180ms ease, border-color 180ms ease',
+  }
 
   const loopedEvents = useMemo(
     () => (events.length > 1 ? [events[events.length - 1], ...events, events[0]] : events),
@@ -467,7 +472,7 @@ export default function HomeEventCarousel({ events }: Props) {
   if (events.length === 0) {
     return (
       <section className="rounded-lg">
-        <p className="text-sm text-[#6b7280]">{EMPTY_DESC}</p>
+        <p className="text-sm" style={bodyStyle}>{EMPTY_DESC}</p>
       </section>
     )
   }
@@ -549,7 +554,7 @@ export default function HomeEventCarousel({ events }: Props) {
                         onError={() => markImageLoaded(imageKey)}
                       />
                     ) : (
-                      <div className="h-full w-full bg-[#eef2f6]" />
+                      <div className="h-full w-full" style={softStyle} />
                     )}
                   </div>
                 </a>

@@ -280,11 +280,12 @@ export default function PlayerDetailPanel({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg bg-white px-5 py-5">
+      <section className="app-player-card rounded-lg px-5 py-5">
         <div className="flex gap-4">
           <div
-            className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f7f9fb]"
+            className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg"
             style={{
+              backgroundColor: 'var(--app-player-soft-bg)',
               width: PLAYER_THUMBNAIL_SIZE,
               height: PLAYER_THUMBNAIL_SIZE,
               minWidth: PLAYER_THUMBNAIL_SIZE,
@@ -327,23 +328,23 @@ export default function PlayerDetailPanel({
                   className="block h-5 w-auto shrink-0 object-contain object-left"
                 />
               )}
-              <h1 className="truncate text-[22px] font-bold tracking-[-0.03em] text-[#1e2124]">
+              <h1 className="app-player-title truncate text-[22px] font-bold tracking-[-0.03em]">
                 {playerName}
               </h1>
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {detail.position && <PositionBadge position={detail.position} />}
-              <span className="text-[18px] font-bold tracking-[-0.02em] text-[#1e2124]">
+              <span className="app-player-title text-[18px] font-bold tracking-[-0.02em]">
                 {currentOverall != null ? `${currentOverall}` : '-'}
               </span>
             </div>
 
-            <p className="mt-1 text-sm font-medium text-[#58616a]">
+            <p className="app-player-body mt-1 text-sm font-medium">
               {seasonName ?? '카드 타입 정보 없음'}
             </p>
 
-            <p className="mt-1 text-sm text-[#8a949e]">{detail.birthDate ?? '출생 정보 없음'}</p>
+            <p className="app-player-muted mt-1 text-sm">{detail.birthDate ?? '출생 정보 없음'}</p>
           </div>
         </div>
 
@@ -357,11 +358,11 @@ export default function PlayerDetailPanel({
         </div>
 
         {detail.nationName && (
-          <div className="mt-4 rounded-lg bg-[#f7f9fb] px-4 py-3">
+          <div className="mt-4 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-[#8a949e]">국적</p>
-                <p className="truncate text-sm font-semibold text-[#1e2124]">{detail.nationName}</p>
+                <p className="app-player-muted text-xs font-medium">국적</p>
+                <p className="app-player-title truncate text-sm font-semibold">{detail.nationName}</p>
               </div>
               {detail.nationLogo && (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -376,13 +377,14 @@ export default function PlayerDetailPanel({
         )}
 
         {detail.traits.length > 0 && (
-          <div className="mt-4 rounded-lg bg-[#f7f9fb] px-4 py-3">
-            <p className="text-xs font-medium text-[#8a949e]">특성</p>
+          <div className="mt-4 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+            <p className="app-player-muted text-xs font-medium">특성</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {detail.traits.map((trait, index) => (
                 <span
                   key={`${trait.name}-${index}`}
-                  className="inline-flex rounded-full border border-[#e6e8ea] bg-white px-3 py-1.5 text-xs font-medium text-[#464c53]"
+                  className="app-player-body inline-flex rounded-full border px-3 py-1.5 text-xs font-medium"
+                  style={{ backgroundColor: 'var(--app-player-chip-bg)', borderColor: 'var(--app-player-chip-border)' }}
                 >
                   {trait.name}
                 </span>
@@ -392,11 +394,11 @@ export default function PlayerDetailPanel({
         )}
       </section>
 
-      <section className="rounded-lg bg-white px-5 py-5">
+      <section className="app-player-card rounded-lg px-5 py-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-[#1e2124]">능력치</h2>
+          <h2 className="app-player-title text-base font-semibold">능력치</h2>
           {adjustedTotalAbility != null && (
-            <span className="text-sm font-bold text-[#1e2124]">
+            <span className="app-player-title text-sm font-bold">
               총 능력치{' '}
               <span
                 style={{
@@ -413,11 +415,11 @@ export default function PlayerDetailPanel({
 
         <div className="relative mt-4">
           {showLeftFade && (
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-white via-white/92 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r to-transparent" style={{ ['--tw-gradient-from' as string]: 'var(--app-card-bg)', ['--tw-gradient-stops' as string]: 'var(--tw-gradient-from), var(--app-player-overlay-grad), transparent' }} />
           )}
 
           {showRightFade && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-white via-white/92 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l to-transparent" style={{ ['--tw-gradient-from' as string]: 'var(--app-card-bg)', ['--tw-gradient-stops' as string]: 'var(--tw-gradient-from), var(--app-player-overlay-grad), transparent' }} />
           )}
 
           <div
@@ -437,8 +439,13 @@ export default function PlayerDetailPanel({
                   className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${
                     strongLevel === level
                       ? 'border-[#256ef4] bg-[#256ef4] text-white'
-                      : 'border-[#e6e8ea] bg-white text-[#58616a]'
+                      : 'app-player-body'
                   }`}
+                  style={
+                    strongLevel === level
+                      ? undefined
+                      : { backgroundColor: 'var(--app-player-chip-bg)', borderColor: 'var(--app-player-chip-border)' }
+                  }
                 >
                   {level}카
                 </button>
@@ -448,8 +455,8 @@ export default function PlayerDetailPanel({
         </div>
 
         {detail.skillMove != null && (
-          <div className="mt-4 flex items-center justify-between rounded-lg bg-[#f7f9fb] px-4 py-3">
-            <p className="text-xs font-medium text-[#8a949e]">개인기</p>
+          <div className="mt-4 flex items-center justify-between rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+            <p className="app-player-muted text-xs font-medium">개인기</p>
             <div className="flex gap-0.5">
               {Array.from({ length: 6 }, (_, index) => (
                 <svg
@@ -482,22 +489,23 @@ export default function PlayerDetailPanel({
       </section>
 
       {detail.clubHistory.length > 0 && (
-        <section className="rounded-lg bg-white px-5 py-5">
-          <h2 className="text-base font-semibold text-[#1e2124]">소속 정보</h2>
+        <section className="app-player-card rounded-lg px-5 py-5">
+          <h2 className="app-player-title text-base font-semibold">소속 정보</h2>
           <div className="mt-4">
-            <p className="text-xs font-medium text-[#8a949e]">이전 소속팀</p>
+            <p className="app-player-muted text-xs font-medium">이전 소속팀</p>
             <div className="mt-3 space-y-2">
               {detail.clubHistory.map((club, index) => (
                 <div
                   key={`${club.year}-${club.club}-${index}`}
-                  className="flex items-start justify-between gap-3 rounded-lg bg-[#f7f9fb] px-4 py-3"
+                  className="flex items-start justify-between gap-3 rounded-lg px-4 py-3"
+                  style={{ backgroundColor: 'var(--app-player-soft-bg)' }}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#1e2124]">{club.club}</p>
-                    <p className="mt-1 text-xs text-[#8a949e]">{club.year}</p>
+                    <p className="app-player-title text-sm font-semibold">{club.club}</p>
+                    <p className="app-player-muted mt-1 text-xs">{club.year}</p>
                   </div>
                   {club.rent && (
-                    <span className="shrink-0 text-xs font-medium text-[#58616a]">{club.rent}</span>
+                    <span className="app-player-body shrink-0 text-xs font-medium">{club.rent}</span>
                   )}
                 </div>
               ))}
@@ -513,13 +521,22 @@ function PositionBadge({ position }: { position: string }) {
   const upper = position.toUpperCase()
   const style =
     upper === 'ST' || upper === 'CF' || upper === 'LW' || upper === 'RW'
-      ? 'bg-[#fdecec] text-[#d14343]'
+      ? ''
       : upper === 'CM' || upper === 'CAM' || upper === 'CDM' || upper === 'LM' || upper === 'RM'
-        ? 'bg-[#e9f7ef] text-[#2f8f57]'
-        : 'bg-[#eef3ff] text-[#457ae5]'
+        ? ''
+        : ''
 
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}>
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}
+      style={
+        upper === 'ST' || upper === 'CF' || upper === 'LW' || upper === 'RW'
+          ? { backgroundColor: 'var(--app-player-pos-fw-bg)', color: 'var(--app-player-pos-fw-fg)' }
+          : upper === 'CM' || upper === 'CAM' || upper === 'CDM' || upper === 'LM' || upper === 'RM'
+            ? { backgroundColor: 'var(--app-player-pos-mf-bg)', color: 'var(--app-player-pos-mf-fg)' }
+            : { backgroundColor: 'var(--app-player-pos-df-bg)', color: 'var(--app-player-pos-df-fg)' }
+      }
+    >
       {position}
     </span>
   )
@@ -527,9 +544,9 @@ function PositionBadge({ position }: { position: string }) {
 
 function InfoCard({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="rounded-lg bg-[#f7f9fb] px-4 py-3">
-      <p className="text-xs font-medium text-[#8a949e]">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-[#1e2124]">{value ?? '-'}</p>
+    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+      <p className="app-player-muted text-xs font-medium">{label}</p>
+      <p className="app-player-title mt-1 break-words text-sm font-semibold">{value ?? '-'}</p>
     </div>
   )
 }
@@ -542,9 +559,9 @@ function FootInfoCard({
   rightFoot: number | null
 }) {
   return (
-    <div className="rounded-lg bg-[#f7f9fb] px-4 py-3">
-      <p className="text-xs font-medium text-[#8a949e]">주발</p>
-      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm font-semibold text-[#1e2124]">
+    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+      <p className="app-player-muted text-xs font-medium">주발</p>
+      <div className="app-player-title mt-1 flex flex-wrap items-center gap-3 text-sm font-semibold">
         <span>
           왼발{' '}
           <span>
@@ -566,8 +583,8 @@ function FootInfoCard({
 function AbilityCard({ stat }: { stat: AbilityStat }) {
   const color = getAbilityValueColor(stat.value)
   return (
-    <div className="rounded-lg bg-[#f7f9fb] px-4 py-3">
-      <p className="text-xs font-medium text-[#8a949e]">{stat.name}</p>
+    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+      <p className="app-player-muted text-xs font-medium">{stat.name}</p>
       <span className="mt-1 block text-[18px] font-bold tracking-[-0.02em]" style={{ color }}>
         {stat.value}
       </span>

@@ -82,10 +82,35 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" className={`${pretendard.variable} h-full antialiased`}>
-      <body className="min-h-full bg-[#f0f3f5]">
-        <div className="relative mx-auto min-h-[100dvh] w-full bg-[#f0f3f5] pt-[env(safe-area-inset-top)] sm:max-w-[480px]">
-          <main className="px-5 pb-6">{children}</main>
+    <html
+      lang="ko"
+      className={`${pretendard.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';document.documentElement.classList.toggle('app-dark-mode',isDarkModeEnabled);}catch(_error){}})();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full" style={{ backgroundColor: 'var(--app-body-bg)' }}>
+        <div
+          className="relative mx-auto min-h-[100dvh] w-full pt-[env(safe-area-inset-top)] sm:max-w-[480px]"
+          style={{
+            backgroundColor: 'var(--app-shell-bg)',
+            transition: 'background-color 180ms ease',
+          }}
+        >
+          <main
+            className="px-5 pb-6"
+            style={{
+              backgroundColor: 'var(--app-page-bg)',
+              transition: 'background-color 180ms ease',
+            }}
+          >
+            {children}
+          </main>
           <AppChrome />
         </div>
       </body>

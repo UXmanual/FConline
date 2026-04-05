@@ -9,8 +9,13 @@ function MatchesHeaderSkeleton() {
 function MatchesSearchSkeleton() {
   return (
     <div
-      className="mt-4 rounded-lg border border-[#e6e8ea] bg-white px-4 py-4"
+      className="mt-4 rounded-lg border px-4 py-4"
       aria-hidden="true"
+      style={{
+        backgroundColor: 'var(--app-card-bg)',
+        borderColor: 'var(--app-input-border)',
+        transition: 'background-color 180ms ease, border-color 180ms ease',
+      }}
     >
       <div className="flex items-center gap-3">
         <div className="home-image-shimmer h-5 flex-1 rounded-full" />
@@ -30,7 +35,11 @@ function RankingNoticeSkeleton() {
 
 function RankingCardSkeleton() {
   return (
-    <section className="rounded-lg bg-white px-5 py-4" aria-hidden="true">
+    <section
+      className="rounded-lg px-5 py-4"
+      aria-hidden="true"
+      style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-2">
           <div className="home-image-shimmer h-4 w-32 rounded-full" />
@@ -44,8 +53,9 @@ function RankingCardSkeleton() {
           <div
             key={index}
             className={`flex items-center justify-between gap-3 py-3 ${
-              index === 4 ? 'pb-0' : 'border-b border-[#e6e8ea]'
+              index === 4 ? 'pb-0' : 'border-b'
             }`}
+            style={index === 4 ? undefined : { borderColor: 'var(--app-divider)', transition: 'border-color 180ms ease' }}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="home-image-shimmer h-11 w-11 shrink-0 rounded-lg" />
@@ -64,7 +74,11 @@ function RankingCardSkeleton() {
 
 function BestStatsCardSkeleton() {
   return (
-    <section className="rounded-lg bg-white px-5 py-4" aria-hidden="true">
+    <section
+      className="rounded-lg px-5 py-4"
+      aria-hidden="true"
+      style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-2">
           <div className="home-image-shimmer h-4 w-28 rounded-full" />
@@ -78,8 +92,9 @@ function BestStatsCardSkeleton() {
           <div
             key={index}
             className={`flex items-center justify-between gap-3 py-3 ${
-              index === 6 ? 'pb-0' : 'border-b border-[#e6e8ea]'
+              index === 6 ? 'pb-0' : 'border-b'
             }`}
+            style={index === 6 ? undefined : { borderColor: 'var(--app-divider)', transition: 'border-color 180ms ease' }}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="home-image-shimmer h-11 w-11 shrink-0 rounded-lg" />

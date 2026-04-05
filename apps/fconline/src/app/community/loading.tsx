@@ -25,7 +25,11 @@ function CommunityTabsSkeleton() {
 
 function CommunityPostCardSkeleton() {
   return (
-    <div className="rounded-lg bg-white px-5 py-4" aria-hidden="true">
+    <div
+      className="rounded-lg px-5 py-4"
+      aria-hidden="true"
+      style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="home-image-shimmer h-7 w-14 rounded-lg" />
@@ -53,8 +57,9 @@ function CommunityPostCardSkeleton() {
 function CommunityPaginationSkeleton() {
   return (
     <div
-      className="flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3"
+      className="flex items-center justify-center gap-2 rounded-lg px-4 py-3"
       aria-hidden="true"
+      style={{ backgroundColor: 'var(--app-card-bg)', transition: 'background-color 180ms ease' }}
     >
       <div className="home-image-shimmer h-9 w-14 rounded-lg" />
       <div className="flex items-center gap-1.5">

@@ -123,6 +123,15 @@ function getSeasonCardContent(today: Date) {
 export default async function HomeStatusPanel() {
   const notices = await getLatestNotices()
   const { seasonLabel, seasonPeriod, seasonCountdownDays } = getSeasonCardContent(getKstToday())
+  const cardStyle = {
+    backgroundColor: 'var(--app-card-bg)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--app-card-border)',
+    transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
+  }
+  const titleStyle = { color: 'var(--app-title)' }
+  const bodyStyle = { color: 'var(--app-body-text)' }
 
   return (
     <section className="space-y-3">
@@ -137,7 +146,7 @@ export default async function HomeStatusPanel() {
         <HomeQuickActions />
       </div>
 
-      <div className="rounded-lg bg-white px-5 py-4">
+      <div className="rounded-lg px-5 py-4" style={cardStyle}>
         {notices.length > 0 ? (
           <div>
             {notices.map((notice) => (
@@ -148,18 +157,18 @@ export default async function HomeStatusPanel() {
                 rel="noreferrer"
                 className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
               >
-                <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium leading-6 text-[#111827]">
-                  <span className="shrink-0 text-[0.9em] leading-none text-[#6b7280]">
+                <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium leading-6" style={titleStyle}>
+                  <span className="shrink-0 text-[0.9em] leading-none" style={bodyStyle}>
                     {'\u2197'}
                   </span>
                   <span className="min-w-0">{notice.title}</span>
                 </p>
-                <span className="shrink-0 text-xs text-[#6b7280]">{notice.date}</span>
+                <span className="shrink-0 text-xs" style={bodyStyle}>{notice.date}</span>
               </a>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-[#6b7280]">{NOTICE_FALLBACK}</p>
+          <p className="text-sm" style={bodyStyle}>{NOTICE_FALLBACK}</p>
         )}
       </div>
     </section>

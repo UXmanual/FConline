@@ -1,11 +1,10 @@
-import Image from 'next/image'
-import logo from '@/components/icons/logo.svg'
 import HomeStatusPanel from './HomeStatusPanel'
 import HomeEventCarousel from './HomeEventCarousel'
 import HomeTipsSection from './HomeTipsSection'
 import HomeControllerUsageCard from './HomeControllerUsageCard'
 import HomeCommunityCard from './HomeCommunityCard'
 import HomeSettingsCard from './HomeSettingsCard'
+import HomeLogo from './HomeLogo'
 import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
 const version = process.env.NEXT_PUBLIC_APP_VERSION
@@ -37,19 +36,15 @@ export default async function HomePage() {
     getHomeControllerUsage(),
   ])
   const todayLabel = getKoreaDateLabel()
+  const bodyStyle = { color: 'var(--app-body-text)' }
 
   return (
     <div className="space-y-4 pt-5">
       <header className="flex items-center justify-between gap-3">
         <div className="flex h-6 items-center gap-3">
-          <Image
-            src={logo}
-            alt="FCO manual"
-            priority
-            className="h-6 w-auto"
-          />
+          <HomeLogo />
         </div>
-        <span className="text-[13px] font-medium text-[#6b7280]">{todayLabel}</span>
+        <span className="text-[13px] font-medium" style={bodyStyle}>{todayLabel}</span>
       </header>
 
       <main className="space-y-3">

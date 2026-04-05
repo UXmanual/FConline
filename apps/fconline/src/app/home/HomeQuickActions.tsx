@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { AnalysisIcon, PlayerIcon } from '@/components/icons/NavIcons'
+import { useDarkModeEnabled } from '@/lib/darkMode'
 
 const quickActions = [
   {
@@ -20,13 +21,25 @@ const quickActions = [
 ] as const
 
 export default function HomeQuickActions() {
+  const isDarkModeEnabled = useDarkModeEnabled()
+  const cardStyle = {
+    backgroundColor: 'var(--app-card-bg)',
+    color: 'var(--app-title)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--app-card-border)',
+    transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
+    ['--tw-ring-offset-color' as '--tw-ring-offset-color']: 'var(--app-card-bg)',
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3">
       {quickActions.map(({ href, title, subtitle, Icon }) => (
         <motion.div key={href} whileTap={{ scale: 0.985 }} transition={{ duration: 0.14 }}>
           <Link
             href={href}
-            className="flex min-h-[88px] items-center justify-between gap-3 rounded-lg bg-white px-4 py-5 text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C93FF] focus-visible:ring-offset-2"
+            className="flex min-h-[88px] items-center justify-between gap-3 rounded-lg px-4 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C93FF] focus-visible:ring-offset-2"
+            style={cardStyle}
           >
             <div className="flex min-w-0 flex-1 flex-col items-start text-left">
               <span className="text-[15px] font-semibold leading-[1.2] tracking-[-0.02em]">
@@ -37,7 +50,7 @@ export default function HomeQuickActions() {
               </span>
             </div>
 
-            <Icon />
+            <Icon isDarkModeEnabled={isDarkModeEnabled} />
           </Link>
         </motion.div>
       ))}
@@ -45,11 +58,16 @@ export default function HomeQuickActions() {
   )
 }
 
-function PlayerActionIcon() {
+function PlayerActionIcon({ isDarkModeEnabled }: { isDarkModeEnabled: boolean }) {
+  const glowBase = isDarkModeEnabled ? 'rgba(255, 196, 64, 0.16)' : 'rgba(255, 196, 64, 0.24)'
+  const glowStrong = isDarkModeEnabled ? 'rgba(255, 214, 102, 0.22)' : 'rgba(255, 224, 100, 0.55)'
+  const glowSoft = isDarkModeEnabled ? 'rgba(255, 224, 100, 0.12)' : 'rgba(255, 224, 100, 0.25)'
+
   return (
     <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center" style={{ perspective: 220 }}>
       <motion.span
-        className="absolute bottom-[3px] left-1/2 h-3.5 w-9 -translate-x-1/2 rounded-full bg-[#f4c542]/24 blur-[6px]"
+        className="absolute bottom-[3px] left-1/2 h-3.5 w-9 -translate-x-1/2 rounded-full blur-[6px]"
+        style={{ backgroundColor: glowBase }}
         animate={{
           opacity: [0.18, 0.32, 0.2, 0.28, 0.18],
           scaleX: [0.84, 1.06, 0.9, 1, 0.84],
@@ -59,22 +77,31 @@ function PlayerActionIcon() {
         transition={{ duration: 4.8, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
       />
       <motion.span
-        className="absolute inset-1 rounded-full bg-[#FFE678]"
+        className="absolute inset-1 rounded-full"
+        style={{ backgroundColor: isDarkModeEnabled ? '#7a6520' : '#FFE678' }}
         animate={{
           opacity: [0.16, 0.32, 0.2, 0.16],
           scale: [0.92, 1.1, 0.98, 0.92],
           boxShadow: [
             '0 0 0 rgba(255, 224, 100, 0.00)',
-            '0 0 24px rgba(255, 224, 100, 0.55)',
-            '0 0 12px rgba(255, 224, 100, 0.25)',
+            `0 0 24px ${glowStrong}`,
+            `0 0 12px ${glowSoft}`,
             '0 0 0 rgba(255, 224, 100, 0.00)',
           ],
         }}
         transition={{ duration: 2.8, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
       />
       <motion.span
-        className="absolute left-0 top-1/2 h-10 w-3 -translate-y-1/2 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.95)_48%,rgba(255,255,255,0)_100%)] blur-[1px]"
-        animate={{ x: [-8, 34, -8], opacity: [0, 0.95, 0] }}
+        className="absolute left-0 top-1/2 h-10 w-3 -translate-y-1/2 rounded-full blur-[1px]"
+        style={{
+          background: isDarkModeEnabled
+            ? 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,228,168,0.1) 48%, rgba(255,255,255,0) 100%)'
+            : 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 48%, rgba(255,255,255,0) 100%)',
+        }}
+        animate={{
+          x: [-8, 34, -8],
+          opacity: isDarkModeEnabled ? [0, 0.16, 0] : [0, 0.95, 0],
+        }}
         transition={{
           duration: 2.2,
           repeat: Number.POSITIVE_INFINITY,
@@ -83,7 +110,8 @@ function PlayerActionIcon() {
         }}
       />
       <motion.span
-        className="absolute bottom-[7px] h-3 w-8 rounded-full bg-[#CE9C1A]/25 blur-[3px]"
+        className="absolute bottom-[7px] h-3 w-8 rounded-full blur-[3px]"
+        style={{ backgroundColor: isDarkModeEnabled ? 'rgba(206, 156, 26, 0.14)' : 'rgba(206, 156, 26, 0.25)' }}
         animate={{
           opacity: [0.14, 0.26, 0.12, 0.2, 0.14],
           scaleX: [0.78, 1.08, 0.72, 0.98, 0.78],
@@ -92,8 +120,11 @@ function PlayerActionIcon() {
         transition={{ duration: 4.8, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
       />
       <motion.div
-        className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[#fff9d9]"
-        style={{ transformStyle: 'preserve-3d' }}
+        className="relative flex h-12 w-12 items-center justify-center rounded-full"
+        style={{
+          transformStyle: 'preserve-3d',
+          backgroundColor: isDarkModeEnabled ? '#4f4318' : '#fff9d9',
+        }}
         animate={{
           rotateY: [18, -34, -16, 26, 18],
           rotateX: [-10, 6, 12, -8, -10],
@@ -103,13 +134,16 @@ function PlayerActionIcon() {
         }}
         transition={{ duration: 4.8, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
       >
-        <PlayerIcon size={28} className="text-[#F3B400] drop-shadow-[0_0_8px_rgba(255,202,40,0.45)]" />
+        <PlayerIcon
+          size={28}
+          className={isDarkModeEnabled ? 'text-[#ffd24f] drop-shadow-[0_0_8px_rgba(255,202,40,0.2)]' : 'text-[#F3B400] drop-shadow-[0_0_8px_rgba(255,202,40,0.45)]'}
+        />
       </motion.div>
     </div>
   )
 }
 
-function AnalysisActionIcon() {
+function AnalysisActionIcon({ isDarkModeEnabled }: { isDarkModeEnabled: boolean }) {
   const sharedTransition = {
     duration: 6.2,
     repeat: Number.POSITIVE_INFINITY,
@@ -197,7 +231,8 @@ function AnalysisActionIcon() {
   return (
     <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center">
       <motion.span
-        className="absolute bottom-[3px] left-1/2 h-3.5 w-9 -translate-x-1/2 rounded-full bg-[#49b36f]/22 blur-[6px]"
+        className="absolute bottom-[3px] left-1/2 h-3.5 w-9 -translate-x-1/2 rounded-full blur-[6px]"
+        style={{ backgroundColor: isDarkModeEnabled ? 'rgba(73, 179, 111, 0.12)' : 'rgba(73, 179, 111, 0.22)' }}
         animate={{
           opacity: [0.14, 0.26, 0.18, 0.24, 0.14],
           scaleX: [0.86, 1.03, 0.92, 1, 0.86],
@@ -207,16 +242,20 @@ function AnalysisActionIcon() {
         transition={{ duration: 4.6, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
       />
       <motion.span
-        className="absolute inset-[4px] rounded-full bg-[#dffbe6]"
+        className="absolute inset-[4px] rounded-full"
+        style={{ backgroundColor: isDarkModeEnabled ? '#173725' : '#dffbe6' }}
         animate={{
           opacity: [0.18, 0.3, 0.22, 0.28, 0.18],
           scale: [0.94, 1.05, 0.96, 1.02, 0.94],
         }}
         transition={{ duration: 3.8, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
       />
-      <div className="absolute inset-0 rounded-full bg-[#D6FFDF]/34 blur-[10px]" />
+      <div
+        className="absolute inset-0 rounded-full blur-[10px]"
+        style={{ backgroundColor: isDarkModeEnabled ? 'rgba(97, 214, 145, 0.12)' : 'rgba(214, 255, 223, 0.34)' }}
+      />
       <div className="relative flex h-12 w-12 items-center justify-center">
-        <AnalysisIcon size={40} className="text-[#3FA86A]" />
+        <AnalysisIcon size={40} className={isDarkModeEnabled ? 'text-[#67d58f]' : 'text-[#3FA86A]'} />
         <svg
           viewBox="0 0 30 30"
           className="pointer-events-none absolute inset-0 h-full w-full"

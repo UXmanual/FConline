@@ -17,17 +17,6 @@ type Props = {
   onSelectPlayer?: (name: string) => void
 }
 
-const POSITION_BADGE_STYLES: Record<string, string> = {
-  FW: 'bg-[#fdecec] text-[#d14343]',
-  MF: 'bg-[#eaf6ee] text-[#2f8f57]',
-  DF: 'bg-[#e8f1ff] text-[#457ae5]',
-}
-const POSITION_METRIC_STYLES: Record<string, string> = {
-  FW: 'text-[#d14343]',
-  MF: 'text-[#2f8f57]',
-  DF: 'text-[#457ae5]',
-}
-
 export default function PositionTopPlayersCard({
   title,
   badge,
@@ -35,19 +24,32 @@ export default function PositionTopPlayersCard({
   isLoading = false,
   onSelectPlayer,
 }: Props) {
-  const badgeClassName = POSITION_BADGE_STYLES[badge] ?? 'bg-[#eef2f6] text-[#58616a]'
-  const metricClassName = POSITION_METRIC_STYLES[badge] ?? 'text-[#58616a]'
-  const titleColorClassName = POSITION_METRIC_STYLES[badge] ?? 'text-[#111827]'
+  const badgeStyle =
+    badge === 'FW'
+      ? { backgroundColor: 'var(--app-player-pos-fw-bg)', color: 'var(--app-player-pos-fw-fg)' }
+      : badge === 'MF'
+        ? { backgroundColor: 'var(--app-player-pos-mf-bg)', color: 'var(--app-player-pos-mf-fg)' }
+        : badge === 'DF'
+          ? { backgroundColor: 'var(--app-player-pos-df-bg)', color: 'var(--app-player-pos-df-fg)' }
+          : { backgroundColor: 'var(--app-badge-bg)', color: 'var(--app-badge-fg)' }
+  const metricStyle =
+    badge === 'FW'
+      ? { color: 'var(--app-player-pos-fw-fg)' }
+      : badge === 'MF'
+        ? { color: 'var(--app-player-pos-mf-fg)' }
+        : badge === 'DF'
+          ? { color: 'var(--app-player-pos-df-fg)' }
+          : { color: 'var(--app-body-text)' }
   const titleSuffix = title.startsWith(`${badge} `) ? title.slice(badge.length + 1) : title
 
   return (
-    <section className="rounded-lg bg-white px-5 py-4">
+    <section className="app-player-card rounded-lg px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[#111827]">
+          <h2 className="app-player-title text-sm font-semibold">
             {title.startsWith(`${badge} `) ? (
               <>
-                <span className={titleColorClassName}>{badge}</span>
+                <span style={metricStyle}>{badge}</span>
                 <span>{` ${titleSuffix}`}</span>
               </>
             ) : (
@@ -55,9 +57,7 @@ export default function PositionTopPlayersCard({
             )}
           </h2>
         </div>
-        <span
-          className={`inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none ${badgeClassName}`}
-        >
+        <span className="inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none" style={badgeStyle}>
           {badge}
         </span>
       </div>
@@ -71,11 +71,12 @@ export default function PositionTopPlayersCard({
               key={`${title}-${item.rank}-${item.name}`}
               type="button"
               onClick={() => onSelectPlayer?.(item.name)}
-              className={`flex w-full items-center justify-between gap-3 py-3 text-left ${index === items.length - 1 ? 'pb-0' : 'border-b border-[#e6e8ea]'}`}
+              className={`flex w-full items-center justify-between gap-3 py-3 text-left ${index === items.length - 1 ? 'pb-0' : 'border-b'}`}
+              style={{ borderColor: index === items.length - 1 ? undefined : 'var(--app-player-divider)' }}
             >
               <div className="flex min-w-0 items-center gap-3">
                 {item.imageUrl ? (
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -84,13 +85,13 @@ export default function PositionTopPlayersCard({
                     />
                   </div>
                 ) : (
-                  <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f4f7fb] text-[13px] font-bold text-[#457ae5]">
+                  <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold" style={{ backgroundColor: 'var(--app-player-soft-bg)', color: 'var(--app-player-pos-df-fg)' }}>
                     {item.rank}
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#111827]">{item.name}</p>
-                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-[#8a949e]">
+                  <p className="app-player-title truncate text-sm font-semibold">{item.name}</p>
+                  <div className="app-player-muted mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4">
                     {item.seasonBadgeUrl ? (
                       <img
                         src={item.seasonBadgeUrl}
@@ -105,7 +106,7 @@ export default function PositionTopPlayersCard({
                 </div>
               </div>
 
-              <span className={`shrink-0 text-right text-[13px] font-semibold ${metricClassName}`}>
+              <span className="shrink-0 text-right text-[13px] font-semibold" style={metricStyle}>
                 {item.metric}
               </span>
             </button>
