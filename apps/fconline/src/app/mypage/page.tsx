@@ -78,7 +78,7 @@ export default function MyPage() {
 
       <section className="rounded-lg bg-white px-5 py-4">
         <p className="text-sm font-medium text-[#96a0aa]">
-          {version ? `버전 ${version} (Beta)` : '버전 11.3 (Beta)'}
+          {version ? `버전 ${version} (Beta)` : '버전 11.4 (Beta)'}
         </p>
         <div className="mt-2.5 space-y-0.5">
           <p className="text-[12px] font-medium leading-[1.35] text-[#7f8a95]">- 분석 상세 사용 선수 카드 추가</p>
