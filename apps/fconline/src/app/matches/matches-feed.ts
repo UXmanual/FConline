@@ -96,7 +96,7 @@ export const getVoltaBestStats = unstable_cache(
     return parseVoltaBestStats(await response.text())
   },
   ['volta-best-stats-v5'],
-  { revalidate: 60 * 30 },
+  { revalidate: 60 * 5 },
 )
 
 export const getVoltaTopRanks = unstable_cache(
@@ -106,5 +106,5 @@ export const getVoltaTopRanks = unstable_cache(
     return parseVoltaTopRanks(await response.text())
   },
   ['volta-top-rank-v4'],
-  { revalidate: 60 * 30 },
+  { revalidate: 60 * 5 },
 )

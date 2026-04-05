@@ -430,6 +430,10 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
 
   async function loadComments(post: CommunityPostSummary) {
     try {
+      setActiveCommentPost(post)
+      setComments([])
+      setCommentNickname('')
+      setCommentDraft('')
       setIsLoadingComments(true)
       const response = await fetch(`/api/community/comments?postId=${post.id}`, { cache: 'no-store' })
       const result = await response.json()
@@ -439,7 +443,6 @@ export default function CommunityPageClient({ initialPosts = [] }: { initialPost
       }
 
       setComments(result.items ?? [])
-      setActiveCommentPost(post)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 불러오지 못했습니다.')
       resetCommentSheetState()

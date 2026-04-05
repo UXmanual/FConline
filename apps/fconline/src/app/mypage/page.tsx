@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
-
-const version = process.env.NEXT_PUBLIC_APP_VERSION
 
 const openSourceLicenses = [
   {
@@ -16,16 +15,10 @@ const openSourceLicenses = [
   },
 ]
 
-const releaseNotesByVersion: Record<string, string[]> = {
-  '11.5': ['다크모드 추가'],
-  '11.4': ['분석 상세 사용 선수 카드 추가', '기타 버그 수정'],
-}
-
 export default function MyPage() {
   const isDarkModeEnabled = useDarkModeEnabled()
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
-  const resolvedVersion = version ?? '11.5'
-  const releaseNotes = releaseNotesByVersion[resolvedVersion] ?? releaseNotesByVersion['11.5']
+  const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
 
   const handleDarkModeToggle = () => {
     const nextValue = !isDarkModeEnabled
@@ -87,7 +80,7 @@ export default function MyPage() {
                 현재 베타 테스트 중입니다.
               </p>
               <p className="text-sm leading-[1.45]" style={bodyStyle}>
-                문의사항은 이메일로 연락해주세요.
+                문의사항은 이메일로 연락해 주세요.
               </p>
             </div>
 
@@ -132,7 +125,7 @@ export default function MyPage() {
 
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <p className="text-sm font-medium" style={mutedStyle}>
-            {`버전 ${resolvedVersion} (Beta)`}
+            {`버전 ${APP_VERSION} (Beta)`}
           </p>
           <div className="mt-2.5 space-y-0.5">
             {releaseNotes.map((note) => (
