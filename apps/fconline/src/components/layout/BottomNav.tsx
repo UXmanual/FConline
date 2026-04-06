@@ -34,8 +34,7 @@ export default function BottomNav() {
         className="fixed bottom-0 left-1/2 z-40 w-full -translate-x-1/2 sm:max-w-[480px]"
         style={{
           height: `calc(70px + env(safe-area-inset-bottom))`,
-          backgroundColor: 'var(--app-nav-shell-bg)',
-          transition: 'background-color 180ms ease',
+          backgroundColor: 'var(--app-page-bg)',
         }}
       />
 
