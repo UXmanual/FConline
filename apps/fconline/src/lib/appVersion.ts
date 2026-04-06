@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '13.0': [
+    '커뮤니티 모달/바텀시트 오픈 시 스크롤 잠금 방식을 조정해 팝업 하단 버튼 터치 문제 완화',
+  ],
   '12.9': [
     '커뮤니티 글쓰기 모달 모바일 폭을 더 줄여 실제 크기 체감 반영',
     '커뮤니티 글쓰기 모달 오픈 시 하단 영역 버튼 터치가 막히는 현상 완화',
