@@ -28,12 +28,16 @@ const metadataBase = (() => {
   return new URL(normalizedUrl)
 })()
 
+const siteTitle = 'FCO Ground'
+const siteName = 'FCO Ground'
+const siteDescription =
+  'FCO Ground는 FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 한곳에서 확인할 수 있는 서비스입니다.'
+
 export const metadata: Metadata = {
   metadataBase,
-  title: 'FConline Ground',
-  applicationName: 'FC온라인 그라운드',
-  description:
-    'FConline Ground는 FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 한곳에서 확인할 수 있는 서비스입니다.',
+  title: siteTitle,
+  applicationName: siteName,
+  description: siteDescription,
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -45,25 +49,23 @@ export const metadata: Metadata = {
     shortcut: ['/favicon.ico'],
   },
   openGraph: {
-    title: 'FConline Ground',
-    siteName: 'FC온라인 그라운드',
+    title: siteTitle,
+    siteName,
     locale: 'ko_KR',
     type: 'website',
-    description:
-      'FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 제공하는 FConline Ground.',
+    description: siteDescription,
     images: [{ url: '/og-image.png' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FConline Ground',
-    description:
-      'FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 제공하는 FConline Ground.',
+    title: siteTitle,
+    description: siteDescription,
     images: ['/og-image.png'],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'FConline Ground',
+    title: siteTitle,
   },
 }
 

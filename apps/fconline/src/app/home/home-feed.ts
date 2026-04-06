@@ -31,6 +31,7 @@ const TEXT_NEW = '\uC0C8 \uAE00'
 const STATUS_ONGOING = '\uC9C4\uD589'
 const STATUS_PENDING = '\uC900\uBE44 \uC911'
 const STATUS_ENDED = '\uC885\uB8CC'
+const FETCH_TIMEOUT_MS = 5000
 
 function decodeHtml(value: string) {
   return value
@@ -152,6 +153,7 @@ function parseNoticeTimestamp(input: string) {
 async function fetchHtml(url: string) {
   const res = await fetch(url, {
     next: { revalidate: 1800 },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: {
       'user-agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',

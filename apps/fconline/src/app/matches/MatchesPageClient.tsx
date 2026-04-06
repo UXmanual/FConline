@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react'
-import { ArrowLeft, MagnifyingGlass } from '@phosphor-icons/react'
+import { ArrowLeft, LinkSimple, MagnifyingGlass, XLogo } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import VoltaBestStatsCard from '@/features/match-analysis/components/VoltaBestStatsCard'
 import VoltaTopRankCard from '@/features/match-analysis/components/VoltaTopRankCard'
@@ -29,6 +29,11 @@ const POSITION_BADGE_STYLES: Record<string, { backgroundColor: string; color: st
   MF: { backgroundColor: 'var(--app-position-mf-bg)', color: 'var(--app-position-mf-fg)' },
   DF: { backgroundColor: 'var(--app-position-df-bg)', color: 'var(--app-position-df-fg)' },
 }
+
+const SHARE_CHANNELS = [
+  { label: 'X 공유', icon: XLogo, key: 'x' },
+  { label: '링크 복사', icon: LinkSimple, key: 'copy' },
+] as const
 
 type MatchSearchCacheEntry = {
   exactCandidate: MatchSearchCandidate | null
@@ -366,9 +371,8 @@ function writeCachedMatches(ouid: string, matches: MatchData[]) {
   writeJsonStorage(MATCH_RESULTS_CACHE_KEY, parsed)
 }
 
-function updateMatchesUrl(nickname: string | null) {
+function buildMatchesUrl(nickname: string | null, matchId?: string | null) {
   if (typeof window === 'undefined') return
-
   const url = new URL(window.location.href)
 
   if (nickname?.trim()) {
@@ -377,7 +381,20 @@ function updateMatchesUrl(nickname: string | null) {
     url.searchParams.delete('nickname')
   }
 
-  window.history.replaceState({}, '', `${url.pathname}${url.search}`)
+  if (matchId?.trim()) {
+    url.searchParams.set('matchId', matchId.trim())
+  } else {
+    url.searchParams.delete('matchId')
+  }
+
+  return `${url.pathname}${url.search}`
+}
+
+function updateMatchesUrl(nickname: string | null, matchId?: string | null) {
+  if (typeof window === 'undefined') return
+  const nextUrl = buildMatchesUrl(nickname, matchId)
+  if (!nextUrl) return
+  window.history.replaceState({}, '', nextUrl)
 }
 
 function MutedDivider() {
@@ -992,10 +1009,17 @@ function buildMatchInsight(
 function MatchRecordCard({
   match,
   teams,
+  shareNickname,
+  shouldExpand,
+  onExpandedChange,
 }: {
   match: MatchData
   teams: NonNullable<ReturnType<typeof buildVoltaTeams>>
+  shareNickname: string
+  shouldExpand: boolean
+  onExpandedChange: (matchId: string | null) => void
 }) {
+  const cardRef = useRef<HTMLElement | null>(null)
   const [selectedPlayerOuid, setSelectedPlayerOuid] = useState(teams.me.ouid)
   const [expanded, setExpanded] = useState(false)
   const result = teams.me.matchDetail.matchResult
@@ -1021,11 +1045,49 @@ function MatchRecordCard({
   const matchInsight = buildMatchInsight(teams, selectedPlayer)
   const selectedCardSummary = formatPlayerCardSummary(selectedPlayer)
 
+  useEffect(() => {
+    if (shouldExpand) {
+      setExpanded(true)
+      const timeoutId = window.setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+      return () => window.clearTimeout(timeoutId)
+    }
+  }, [shouldExpand])
+
+  const handleShare = async (type: 'x' | 'copy') => {
+    if (typeof window === 'undefined') return
+
+    const relativeUrl = buildMatchesUrl(shareNickname, match.matchId)
+    const shareUrl = relativeUrl ? new URL(relativeUrl, window.location.origin).toString() : window.location.href
+    const shareText = `${selectedPlayer.nickname} 경기 분석 ${scorelineLabel}`
+
+    if (type === 'copy') {
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        window.alert('링크가 복사되었습니다.')
+      } catch {
+        window.alert('링크 복사에 실패했습니다.')
+      }
+      return
+    }
+
+    const xIntentUrl = new URL('https://twitter.com/intent/tweet')
+    xIntentUrl.searchParams.set('text', shareText)
+    xIntentUrl.searchParams.set('url', shareUrl)
+    window.open(xIntentUrl.toString(), '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <article
+      ref={cardRef}
       className="rounded-lg px-4 py-4"
       style={{ backgroundColor: cardTintColor }}
-      onClick={() => setExpanded((current) => !current)}
+      onClick={() => {
+        const nextExpanded = !expanded
+        setExpanded(nextExpanded)
+        onExpandedChange(nextExpanded ? match.matchId : null)
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
@@ -1054,6 +1116,7 @@ function MatchRecordCard({
               onClick={(event) => {
                 event.stopPropagation()
                 setExpanded(true)
+                onExpandedChange(match.matchId)
               }}
               className="inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none whitespace-nowrap text-white"
               style={{ backgroundColor: viewButtonColor }}
@@ -1184,10 +1247,49 @@ function MatchRecordCard({
               ))}
             </div>
           </div>
+
+          <div className="app-theme-card rounded-lg px-4 py-4">
+            <p className="app-theme-title text-sm font-semibold">상세 분석 공유하기</p>
+            <div className="mt-2.5 flex items-center gap-2">
+              {SHARE_CHANNELS.map((channel) => {
+                const Icon = channel.icon
+                return (
+                  <button
+                    key={`${match.matchId}-${channel.label}`}
+                    type="button"
+                    aria-label={`${channel.label} 공유`}
+                    onClick={() => void handleShare(channel.key)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border transition"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
+                  >
+                    <Icon size={20} weight="bold" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
     </article>
   )
+}
+
+async function copyOwnerPageLink(nickname: string) {
+  if (typeof window === 'undefined') return
+
+  const relativeUrl = buildMatchesUrl(nickname, null)
+  const shareUrl = relativeUrl ? new URL(relativeUrl, window.location.origin).toString() : window.location.href
+
+  try {
+    await navigator.clipboard.writeText(shareUrl)
+    window.alert('구단주 페이지가 복사되었습니다.')
+  } catch {
+    window.alert('링크 복사에 실패했습니다.')
+  }
 }
 
 function DetailStatCard({
@@ -1333,9 +1435,10 @@ function MatchNoResultState({ nickname }: { nickname: string }) {
 
 type Props = {
   initialNickname: string
+  initialMatchId: string
 }
 
-export default function MatchesPageClient({ initialNickname }: Props) {
+export default function MatchesPageClient({ initialNickname, initialMatchId }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
 
@@ -1353,6 +1456,7 @@ export default function MatchesPageClient({ initialNickname }: Props) {
   const [voltaTopLoading, setVoltaTopLoading] = useState(true)
   const [matchesError, setMatchesError] = useState('')
   const [visibleMatchCount, setVisibleMatchCount] = useState(INITIAL_VISIBLE_MATCHES)
+  const [activeMatchId, setActiveMatchId] = useState(initialMatchId)
 
   useEffect(() => {
     let cancelled = false
@@ -1509,18 +1613,19 @@ export default function MatchesPageClient({ initialNickname }: Props) {
     return ouid
   }
 
-  const runSearch = async (nickname: string, shouldUpdateUrl = true) => {
+  const runSearch = async (nickname: string, shouldUpdateUrl = true, matchIdToKeep?: string | null) => {
     const trimmed = nickname.trim()
     if (!trimmed) return
 
     if (shouldUpdateUrl) {
-      updateMatchesUrl(trimmed)
+      updateMatchesUrl(trimmed, matchIdToKeep ?? null)
     }
 
     const requestId = ++requestIdRef.current
     setSearchLoading(true)
     setMatchLoading(false)
     setActiveSearchQuery(trimmed)
+    setActiveMatchId(matchIdToKeep?.trim() ?? '')
     setExactCandidate(null)
     setCandidates([])
     setMatches([])
@@ -1581,8 +1686,8 @@ export default function MatchesPageClient({ initialNickname }: Props) {
     await runSearch(query)
   }
 
-  const runInitialSearch = useEffectEvent((nickname: string) => {
-    void runSearch(nickname, false)
+  const runInitialSearch = useEffectEvent((nickname: string, matchId?: string) => {
+    void runSearch(nickname, false, matchId)
   })
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1602,13 +1707,14 @@ export default function MatchesPageClient({ initialNickname }: Props) {
   }
 
   const handleBackHome = () => {
-    updateMatchesUrl(null)
+    updateMatchesUrl(null, null)
     setHasPendingRouteSearch(false)
     setQuery('')
     setActiveSearchQuery('')
     setExactCandidate(null)
     setCandidates([])
     setMatches([])
+    setActiveMatchId('')
     setSearchLoading(false)
     setMatchLoading(false)
     setMatchesError('')
@@ -1620,8 +1726,15 @@ export default function MatchesPageClient({ initialNickname }: Props) {
       return
     }
 
-    runInitialSearch(initialNickname)
-  }, [initialNickname])
+    runInitialSearch(initialNickname, initialMatchId)
+  }, [initialMatchId, initialNickname])
+
+  useEffect(() => {
+    if (!activeMatchId || matches.length === 0) return
+    const matchIndex = matches.findIndex((match) => match.matchId === activeMatchId)
+    if (matchIndex < 0) return
+    setVisibleMatchCount((current) => Math.max(current, matchIndex + 1))
+  }, [activeMatchId, matches])
 
   const voltaSummary = summarizeMatches(matches, exactCandidate?.ouid)
   const recentMatchesLabel = '최근 10경기'
@@ -1646,6 +1759,7 @@ export default function MatchesPageClient({ initialNickname }: Props) {
   const showResultsPanel = hasResultContext
   const showHomePanels = !hasResultContext
   const resultsTitle = exactCandidate?.nickname || activeSearchQuery || query.trim() || '분석 홈'
+  const shareNickname = exactCandidate?.nickname || activeSearchQuery || query.trim()
 
   return (
     <div className="pt-5">
@@ -1681,7 +1795,7 @@ export default function MatchesPageClient({ initialNickname }: Props) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="닉네임을 입력해 주세요"
+            placeholder="구단주명을 입력해 주세요"
             className="min-w-0 flex-1 bg-transparent text-[15px] outline-none"
             style={{ color: 'var(--app-title)' }}
           />
@@ -1714,23 +1828,38 @@ export default function MatchesPageClient({ initialNickname }: Props) {
             {exactCandidate && (
               <div className="space-y-4">
                 <section className="app-theme-card rounded-lg border px-5 py-5">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-start gap-4">
                     {exactCandidate.voltaRankIconUrl ? (
                       <img
                         src={exactCandidate.voltaRankIconUrl}
                         alt="볼타 등급"
-                        className="h-14 w-14 shrink-0 object-contain"
+                        className="mt-0.5 h-10 w-10 shrink-0 object-contain"
                       />
                     ) : (
-                      <div className="app-theme-soft app-theme-body flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
+                      <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
                         볼타
                       </div>
                     )}
 
-                    <div className="min-w-0">
-                      <h2 className="app-theme-title truncate text-2xl font-bold tracking-[-0.03em]">
-                        {exactCandidate.nickname}
-                      </h2>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className="app-theme-title truncate text-2xl font-bold tracking-[-0.03em]">
+                          {exactCandidate.nickname}
+                        </h2>
+                        <button
+                          type="button"
+                          aria-label="구단주 페이지 링크 복사"
+                          onClick={() => void copyOwnerPageLink(exactCandidate.nickname)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
+                          style={{
+                            backgroundColor: 'transparent',
+                            borderColor: 'var(--app-input-border)',
+                            color: 'var(--app-title)',
+                          }}
+                        >
+                          <LinkSimple size={16} weight="bold" />
+                        </button>
+                      </div>
                       <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
                         <span>평점 {formatDecimal(exactCandidate.voltaAverageRating, 2)}</span>
                         <MutedDivider />
@@ -1855,7 +1984,17 @@ export default function MatchesPageClient({ initialNickname }: Props) {
                         }
 
                         return (
-                          <MatchRecordCard key={match.matchId} match={match} teams={teams} />
+                          <MatchRecordCard
+                            key={match.matchId}
+                            match={match}
+                            teams={teams}
+                            shareNickname={shareNickname}
+                            shouldExpand={activeMatchId === match.matchId}
+                            onExpandedChange={(matchId) => {
+                              setActiveMatchId(matchId ?? '')
+                              updateMatchesUrl(shareNickname || null, matchId ?? null)
+                            }}
+                          />
                         )
                       })}
 

@@ -1,6 +1,6 @@
 {
   "name": "FC온라인 그라운드",
-  "short_name": "FConline Ground",
+  "short_name": "FCO Ground",
   "description": "FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 제공하는 서비스",
   "start_url": "/",
   "display": "standalone",

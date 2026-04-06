@@ -4,6 +4,9 @@ import CommunityPageClient from './CommunityPageClient'
 
 export const dynamic = 'force-dynamic'
 
+const INITIAL_PAGE = 1
+const POSTS_PER_PAGE = 5
+
 type PostRow = {
   id: string
   category: string
@@ -18,22 +21,37 @@ type CommentCountRow = {
   post_id: string
 }
 
-async function fetchInitialPosts(): Promise<CommunityPostSummary[]> {
+type InitialCommunityData = {
+  items: CommunityPostSummary[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
+async function fetchInitialPosts(): Promise<InitialCommunityData> {
   try {
     const supabase = createSupabaseAdminClient()
-    const [{ data: posts, error: postsError }, { data: commentRows, error: commentsError }] = await Promise.all([
-      supabase.from('community_posts').select('id, category, nickname, ip_prefix, title, content, created_at').order('created_at', { ascending: false }),
-      supabase.from('community_comments').select('post_id'),
-    ])
+    const { data: posts, error: postsError, count } = await supabase
+      .from('community_posts')
+      .select('id, category, nickname, ip_prefix, title, content, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(0, POSTS_PER_PAGE - 1)
 
-    if (postsError || commentsError || !posts) return []
+    if (postsError || !posts) {
+      return { items: [], totalCount: 0, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
+    }
+
+    const postIds = (posts as unknown as PostRow[]).map((post) => post.id)
+    const { data: commentRows } = postIds.length
+      ? await supabase.from('community_comments').select('post_id').in('post_id', postIds)
+      : { data: [] as CommentCountRow[] }
 
     const commentCountMap = new Map<string, number>()
     for (const row of (commentRows ?? []) as CommentCountRow[]) {
       commentCountMap.set(row.post_id, (commentCountMap.get(row.post_id) ?? 0) + 1)
     }
 
-    return (posts as unknown as PostRow[]).map((post) => ({
+    const items = (posts as unknown as PostRow[]).map((post) => ({
       id: post.id,
       category: post.category as CommunityPostSummary['category'],
       nickname: post.nickname,
@@ -44,12 +62,19 @@ async function fetchInitialPosts(): Promise<CommunityPostSummary[]> {
       createdAtLabel: formatRelativeTime(post.created_at),
       commentCount: commentCountMap.get(post.id) ?? 0,
     }))
+
+    return {
+      items,
+      totalCount: count ?? 0,
+      page: INITIAL_PAGE,
+      pageSize: POSTS_PER_PAGE,
+    }
   } catch {
-    return []
+    return { items: [], totalCount: 0, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
   }
 }
 
 export default async function CommunityPage() {
-  const initialPosts = await fetchInitialPosts()
-  return <CommunityPageClient initialPosts={initialPosts} />
+  const initialData = await fetchInitialPosts()
+  return <CommunityPageClient initialData={initialData} />
 }
