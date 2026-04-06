@@ -19,7 +19,7 @@ const navItems = [
   { href: '/players', icon: PlayerIcon, label: '\uC120\uC218' },
   { href: '/matches', icon: AnalysisIcon, label: '\uBD84\uC11D' },
   { href: '/community', icon: CommunityIcon, label: '\uCEE4\uBBA4\uB2C8\uD2F0' },
-  { href: '/mypage', icon: MypageIcon, label: '\uB354\uBCF4\uAE30' },
+  { href: '/mypage', icon: MypageIcon, label: '\uB9C8\uC774' },
 ]
 
 export default function BottomNav() {

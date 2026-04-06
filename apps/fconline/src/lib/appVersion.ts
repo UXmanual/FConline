@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '12.1': ['하단 네비 더보기 탭명을 마이로 변경', '하단 네비 마이 아이콘 모양 업데이트'],
   '12.0': ['다크모드 전환 시 하단 네비 아래 safe-area 배경 전환 톤 동기화'],
   '11.10': [
     '커뮤니티 댓글 바텀시트 상단 그림자와 경계 표현 보강',
