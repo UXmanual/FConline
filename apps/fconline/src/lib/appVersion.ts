@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '12.7': [
+    '커뮤니티 글쓰기 모달 딤 톤 조정 및 창 너비 360으로 축소',
+    '커뮤니티 댓글 바텀시트와 글쓰기 모달 오픈 시 iOS 배경 스크롤 잠금 방식 보강',
+  ],
   '12.6': ['12.5에서 과하게 적용된 다크모드 배경 스냅 처리를 제거하고 12.4 수준으로 복구'],
   '12.4': ['실기기 하단 주소창 배경 전환 충돌 완화를 위해 중복 theme-color 설정 제거 및 body 배경 전환 복원'],
   '12.3': [

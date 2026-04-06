@@ -155,10 +155,32 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 
   useEffect(() => {
+    const isOverlayOpen = isComposerOpen || activeCommentPost !== null
     const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = isComposerOpen || activeCommentPost !== null ? 'hidden' : previousOverflow
+    const previousPosition = document.body.style.position
+    const previousTop = document.body.style.top
+    const previousWidth = document.body.style.width
+    const previousTouchAction = document.body.style.touchAction
+    const scrollY = window.scrollY
+
+    if (isOverlayOpen) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.touchAction = 'none'
+    }
+
     return () => {
       document.body.style.overflow = previousOverflow
+      document.body.style.position = previousPosition
+      document.body.style.top = previousTop
+      document.body.style.width = previousWidth
+      document.body.style.touchAction = previousTouchAction
+
+      if (isOverlayOpen) {
+        window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' })
+      }
     }
   }, [activeCommentPost, isComposerOpen])
 
@@ -475,9 +497,9 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
 
       {isComposerOpen ? (
         <div className="fixed inset-0 z-[60]">
-          <button type="button" aria-label="글쓰기 닫기" className="absolute inset-0" style={{ backgroundColor: isDarkModeEnabled ? 'rgba(46, 68, 108, 0.68)' : 'rgba(15, 23, 42, 0.42)' }} onClick={() => setIsComposerOpen(false)} />
+          <button type="button" aria-label="글쓰기 닫기" className="absolute inset-0" style={{ backgroundColor: 'rgba(37, 52, 82, 0.58)' }} onClick={() => setIsComposerOpen(false)} />
           <div className="absolute inset-0 z-10 flex items-center justify-center px-8 py-6 sm:px-7">
-            <section className="max-h-[calc(100vh-48px)] w-full max-w-[340px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[380px] sm:px-6 sm:py-6" style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}>
+            <section className="max-h-[calc(100vh-48px)] w-full max-w-[340px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[360px] sm:px-6 sm:py-6" style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}>
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="pt-3">
                   <div className="flex flex-wrap gap-2">
