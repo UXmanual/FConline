@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '12.4': ['실기기 하단 주소창 배경 전환 충돌 완화를 위해 중복 theme-color 설정 제거 및 body 배경 전환 복원'],
   '12.3': [
     '실기기 다크모드 전환 시 브라우저 하단 주소창 배경 깜빡임 완화를 위해 theme-color와 body 배경 전환 동기화',
   ],

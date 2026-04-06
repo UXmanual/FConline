@@ -264,6 +264,7 @@ html.app-dark-mode {
     @apply font-sans;
   }
 
+  body,
   main {
     transition:
       background-color var(--app-theme-transition),
