@@ -90,9 +90,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta name="theme-color" content="#f0f3f5" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';document.documentElement.classList.toggle('app-dark-mode',isDarkModeEnabled);}catch(_error){}})();`,
+            __html: `(function(){try{var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';document.documentElement.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',isDarkModeEnabled?'#121318':'#f0f3f5');}}catch(_error){}})();`,
           }}
         />
       </head>

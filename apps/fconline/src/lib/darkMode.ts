@@ -5,6 +5,8 @@ import { useEffect, useSyncExternalStore } from 'react'
 const DARK_MODE_KEY = 'app-dark-mode'
 const DARK_MODE_EVENT = 'app-dark-mode-change'
 const DARK_MODE_CLASS = 'app-dark-mode'
+const LIGHT_THEME_COLOR = '#f0f3f5'
+const DARK_THEME_COLOR = '#121318'
 
 function applyDarkModeClass(enabled: boolean) {
   if (typeof document === 'undefined') {
@@ -12,6 +14,11 @@ function applyDarkModeClass(enabled: boolean) {
   }
 
   document.documentElement.classList.toggle(DARK_MODE_CLASS, enabled)
+
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]')
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', enabled ? DARK_THEME_COLOR : LIGHT_THEME_COLOR)
+  }
 }
 
 function getSnapshot() {
