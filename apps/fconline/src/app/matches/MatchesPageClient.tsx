@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowLeft, LinkSimple, MagnifyingGlass, XLogo } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import VoltaBestStatsCard from '@/features/match-analysis/components/VoltaBestStatsCard'
+import VoltaPopularCoachCard from '@/features/match-analysis/components/VoltaPopularCoachCard'
 import VoltaTopRankCard from '@/features/match-analysis/components/VoltaTopRankCard'
 import PlayerImage from '@/features/player-search/components/PlayerImage'
 import {
@@ -2071,6 +2072,10 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
                   {voltaBestLoading || voltaBestItems.length > 0 ? (
                     <VoltaBestStatsCard items={voltaBestItems} isLoading={voltaBestLoading} />
                   ) : null}
+                </section>
+
+                <section className="mt-4">
+                  <VoltaPopularCoachCard />
                 </section>
               </>
             )}

@@ -20,6 +20,12 @@ export default function AppChrome() {
   }, [])
 
   useLayoutEffect(() => {
+    const currentSearchParams = new URLSearchParams(window.location.search)
+    const hasMatchDeepLink = pathname.startsWith('/matches') && currentSearchParams.get('matchId')
+    if (hasMatchDeepLink) {
+      return
+    }
+
     const scrollToTop = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
       document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
