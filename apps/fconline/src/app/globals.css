@@ -51,6 +51,7 @@
 :root {
   --background: #f0f3f5;
   --app-theme-transition: 180ms ease;
+  --app-theme-bg-transition: 0ms linear;
   --app-body-bg: #f0f3f5;
   --app-shell-bg: #f0f3f5;
   --app-page-bg: #f0f3f5;
@@ -267,7 +268,7 @@ html.app-dark-mode {
   body,
   main {
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -277,7 +278,7 @@ html.app-dark-mode {
   .app-theme-page {
     background-color: var(--app-page-bg);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -286,7 +287,7 @@ html.app-dark-mode {
     background-color: var(--app-card-bg);
     border-color: var(--app-card-border);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -310,14 +311,14 @@ html.app-dark-mode {
     background-color: var(--app-badge-bg);
     color: var(--app-badge-fg);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition);
   }
 
   .app-theme-soft {
     background-color: var(--app-surface-soft);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -325,7 +326,7 @@ html.app-dark-mode {
   .app-theme-strong {
     background-color: var(--app-surface-strong);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -340,7 +341,7 @@ html.app-dark-mode {
     border-color: var(--app-input-border);
     color: var(--app-title);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -348,7 +349,7 @@ html.app-dark-mode {
   .app-theme-modal {
     background-color: var(--app-modal-bg);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition),
       border-color var(--app-theme-transition);
   }
@@ -357,20 +358,20 @@ html.app-dark-mode {
     background-color: var(--app-page-bg);
     color: var(--app-footer-text);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       color var(--app-theme-transition);
   }
 
   .app-theme-nav-shell {
     background-color: var(--app-nav-shell-bg);
-    transition: background-color var(--app-theme-transition);
+    transition: background-color var(--app-theme-bg-transition);
   }
 
   .app-theme-nav {
     background-color: var(--app-nav-bg);
     border-color: var(--app-nav-border);
     transition:
-      background-color var(--app-theme-transition),
+      background-color var(--app-theme-bg-transition),
       border-color var(--app-theme-transition);
   }
 
@@ -391,7 +392,7 @@ html.app-dark-mode {
 
   .app-player-card {
     background-color: var(--app-player-card-bg);
-    transition: background-color var(--app-theme-transition);
+    transition: background-color var(--app-theme-bg-transition);
   }
 
   .app-player-title {

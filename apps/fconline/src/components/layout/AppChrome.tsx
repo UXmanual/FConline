@@ -49,7 +49,7 @@ export default function AppChrome() {
             style={{
               backgroundColor: 'var(--app-page-bg)',
               color: 'var(--app-footer-text)',
-              transition: 'background-color 180ms ease, color 180ms ease',
+              transition: 'background-color 0ms linear, color 180ms ease',
             }}
           >
             게임 배너, 이미지, 선수 정보의 저작권은 NEXON Korea Corporation에 있습니다.
@@ -59,7 +59,7 @@ export default function AppChrome() {
             style={{
               backgroundColor: 'var(--app-page-bg)',
               color: 'var(--app-footer-text)',
-              transition: 'background-color 180ms ease, color 180ms ease',
+              transition: 'background-color 0ms linear, color 180ms ease',
             }}
           >
             {'\u00A9uxdmanual'}
