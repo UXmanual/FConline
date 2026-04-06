@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '11.10': [
+    '커뮤니티 댓글 바텀시트 상단 그림자와 경계 표현 보강',
+    '커뮤니티 댓글 입력 영역 톤과 플레이스홀더 문구 개선',
+  ],
   '11.9': [
     '분석 상세 상단 구단주 페이지 링크 복사 버튼 추가',
     '경기 상세 공유 링크에 matchId 연동 및 자동 펼침/스크롤 적용',
