@@ -35,7 +35,7 @@ export default function BottomNav() {
         style={{
           height: `calc(70px + env(safe-area-inset-bottom))`,
           backgroundColor: 'var(--app-nav-shell-bg)',
-          transition: 'background-color 0ms linear',
+          transition: 'background-color 180ms ease',
         }}
       />
 
@@ -45,7 +45,7 @@ export default function BottomNav() {
           paddingBottom: 'env(safe-area-inset-bottom)',
           backgroundColor: 'var(--app-nav-bg)',
           borderTop: '1px solid var(--app-nav-border)',
-          transition: 'background-color 0ms linear, border-color 180ms ease',
+          transition: 'background-color 180ms ease, border-color 180ms ease',
         }}
       >
         <div className="flex h-[70px] items-center justify-around px-1">

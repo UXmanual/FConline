@@ -101,14 +101,14 @@ export default function RootLayout({
           className="relative mx-auto min-h-[100dvh] w-full pt-[env(safe-area-inset-top)] sm:max-w-[480px]"
           style={{
             backgroundColor: 'var(--app-shell-bg)',
-            transition: 'background-color 0ms linear',
+            transition: 'background-color 180ms ease',
           }}
         >
           <main
             className="px-5 pb-6"
             style={{
               backgroundColor: 'var(--app-page-bg)',
-              transition: 'background-color 0ms linear',
+              transition: 'background-color 180ms ease',
             }}
           >
             {children}
