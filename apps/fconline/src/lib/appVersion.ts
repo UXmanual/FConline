@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '12.9': [
+    '커뮤니티 글쓰기 모달 모바일 폭을 더 줄여 실제 크기 체감 반영',
+    '커뮤니티 글쓰기 모달 오픈 시 하단 영역 버튼 터치가 막히는 현상 완화',
+  ],
   '12.8': ['하단 네비 배경용 고정 레이어가 터치를 막지 않도록 pointer events 처리'],
   '12.7': [
     '커뮤니티 글쓰기 모달 딤 톤 조정 및 창 너비 360으로 축소',

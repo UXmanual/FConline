@@ -160,7 +160,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     const previousPosition = document.body.style.position
     const previousTop = document.body.style.top
     const previousWidth = document.body.style.width
-    const previousTouchAction = document.body.style.touchAction
     const scrollY = window.scrollY
 
     if (isOverlayOpen) {
@@ -168,7 +167,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
-      document.body.style.touchAction = 'none'
     }
 
     return () => {
@@ -176,7 +174,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       document.body.style.position = previousPosition
       document.body.style.top = previousTop
       document.body.style.width = previousWidth
-      document.body.style.touchAction = previousTouchAction
 
       if (isOverlayOpen) {
         window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' })
@@ -499,7 +496,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         <div className="fixed inset-0 z-[60]">
           <button type="button" aria-label="글쓰기 닫기" className="absolute inset-0" style={{ backgroundColor: 'rgba(37, 52, 82, 0.58)' }} onClick={() => setIsComposerOpen(false)} />
           <div className="absolute inset-0 z-10 flex items-center justify-center px-8 py-6 sm:px-7">
-            <section className="max-h-[calc(100vh-48px)] w-full max-w-[340px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[360px] sm:px-6 sm:py-6" style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}>
+            <section className="max-h-[calc(100vh-48px)] w-full max-w-[320px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[360px] sm:px-6 sm:py-6" style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}>
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="pt-3">
                   <div className="flex flex-wrap gap-2">
