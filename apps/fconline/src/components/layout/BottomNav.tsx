@@ -36,6 +36,7 @@ export default function BottomNav() {
           height: `calc(70px + env(safe-area-inset-bottom))`,
           backgroundColor: 'var(--app-nav-shell-bg)',
           transition: 'background-color 180ms ease',
+          pointerEvents: 'none',
         }}
       />
 
