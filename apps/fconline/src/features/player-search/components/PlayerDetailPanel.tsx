@@ -440,11 +440,23 @@ export default function PlayerDetailPanel({
 
         <div className="relative mt-4">
           {showLeftFade && (
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r to-transparent" style={{ ['--tw-gradient-from' as string]: 'var(--app-card-bg)', ['--tw-gradient-stops' as string]: 'var(--tw-gradient-from), var(--app-player-overlay-grad), transparent' }} />
+            <div
+              className="pointer-events-none absolute bottom-1 left-0 top-0 z-10 w-10"
+              style={{
+                background:
+                  'linear-gradient(to right, var(--app-player-card-bg) 0%, var(--app-player-overlay-grad) 38%, color-mix(in srgb, var(--app-player-card-bg) 0%, transparent) 100%)',
+              }}
+            />
           )}
 
           {showRightFade && (
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l to-transparent" style={{ ['--tw-gradient-from' as string]: 'var(--app-card-bg)', ['--tw-gradient-stops' as string]: 'var(--tw-gradient-from), var(--app-player-overlay-grad), transparent' }} />
+            <div
+              className="pointer-events-none absolute bottom-1 right-0 top-0 z-10 w-10"
+              style={{
+                background:
+                  'linear-gradient(to left, var(--app-player-card-bg) 0%, var(--app-player-overlay-grad) 38%, color-mix(in srgb, var(--app-player-card-bg) 0%, transparent) 100%)',
+              }}
+            />
           )}
 
           <div
@@ -454,14 +466,14 @@ export default function PlayerDetailPanel({
             onWheel={handleWheel}
             style={{ cursor: 'grab', touchAction: 'pan-x pan-y' }}
           >
-            <div className="flex min-w-max gap-2 whitespace-nowrap pb-1">
+            <div className="flex min-w-max gap-2 whitespace-nowrap px-1 pb-1">
               {STRONG_LEVELS.map((level) => (
                 <button
                   key={level}
                   data-strong-level={level}
                   type="button"
                   onClick={() => handleLevelClick(level)}
-                  className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                  className={`shrink-0 rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
                     strongLevel === level
                       ? 'border-[#256ef4] bg-[#256ef4] text-white'
                       : 'app-player-body'

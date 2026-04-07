@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.8': [
+    '선수 상세 능력치 보조 수치의 라이트 모드 컬러를 더 차분하게 조정하고 강화 단계 스크롤 버튼 영역의 페이드와 여백을 다듬음',
+  ],
   '14.7': [
     '선수 상세 특성 영역에 아이콘을 함께 노출하고 텍스트 구분 방식을 정리해 실기기에서 보기 쉽게 조정',
   ],
