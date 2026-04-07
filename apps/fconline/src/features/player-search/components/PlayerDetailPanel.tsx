@@ -44,6 +44,7 @@ export default function PlayerDetailPanel({
   initialStrongLevel = 1,
 }: Props) {
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
+  const [isChemistryApplied, setIsChemistryApplied] = useState(false)
   const [imageSrcIndex, setImageSrcIndex] = useState(0)
   const [showLeftFade, setShowLeftFade] = useState(false)
   const [showRightFade, setShowRightFade] = useState(false)
@@ -70,26 +71,31 @@ export default function PlayerDetailPanel({
 
   const currentPrice = formatPriceWithKoreanUnits(detail.prices[strongLevel])
 
+  const abilityBoost = useMemo(
+    () => getStrongPoint(strongLevel) - getStrongPoint(1),
+    [strongLevel],
+  )
+  const chemistryBoost = isChemistryApplied ? 4 : 0
+  const totalStatBoost = abilityBoost + chemistryBoost
+
   const adjustedAbilities = useMemo(() => {
     if (detail.abilities.length === 0) {
       return []
     }
 
-    const boost = getStrongPoint(strongLevel) - getStrongPoint(1)
     return detail.abilities.map((ability) => ({
       ...ability,
-      value: ability.value + boost,
+      value: ability.value + totalStatBoost,
     }))
-  }, [detail.abilities, strongLevel])
+  }, [detail.abilities, totalStatBoost])
 
   const adjustedTotalAbility = useMemo(() => {
     if (detail.totalAbility == null) {
       return null
     }
 
-    const boost = getStrongPoint(strongLevel) - getStrongPoint(1)
-    return detail.totalAbility + boost * detail.abilities.length
-  }, [detail.totalAbility, detail.abilities.length, strongLevel])
+    return detail.totalAbility + totalStatBoost * detail.abilities.length
+  }, [detail.totalAbility, detail.abilities.length, totalStatBoost])
 
   const orderedAbilities = useMemo(() => {
     const abilityOrder = ABILITY_GROUPS.flat() as string[]
@@ -454,6 +460,36 @@ export default function PlayerDetailPanel({
           </div>
         </div>
 
+        <div
+          className="mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-3"
+          style={{ backgroundColor: 'var(--app-player-soft-bg)' }}
+        >
+          <div className="flex items-center gap-1">
+            <p className="app-player-title text-sm font-semibold">적응도</p>
+            <p
+              className="text-sm font-semibold transition-colors"
+              style={{ color: isChemistryApplied ? '#457ae5' : 'var(--app-player-muted)' }}
+            >
+              {isChemistryApplied ? '적용중' : '미적용'}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="적응도 토글"
+            aria-pressed={isChemistryApplied}
+            onClick={() => setIsChemistryApplied((current) => !current)}
+            className="relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full transition-colors"
+            style={{ backgroundColor: isChemistryApplied ? '#457ae5' : '#d5dbe3' }}
+          >
+            <span
+              className="absolute h-6 w-6 rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+              style={{ transform: `translateX(${isChemistryApplied ? '24px' : '4px'})` }}
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+
         {detail.skillMove != null && (
           <div className="mt-4 flex items-center justify-between rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
             <p className="app-player-muted text-xs font-medium">개인기</p>
@@ -483,7 +519,12 @@ export default function PlayerDetailPanel({
 
         <div className="mt-5 grid grid-cols-2 gap-3">
           {orderedAbilities.map((ability) => (
-            <AbilityCard key={ability.name} stat={ability} />
+            <AbilityCard
+              key={ability.name}
+              stat={ability}
+              abilityBoost={abilityBoost}
+              chemistryBoost={chemistryBoost}
+            />
           ))}
         </div>
       </section>
@@ -580,14 +621,50 @@ function FootInfoCard({
 }
 
 
-function AbilityCard({ stat }: { stat: AbilityStat }) {
+function AbilityCard({
+  stat,
+  abilityBoost,
+  chemistryBoost,
+}: {
+  stat: AbilityStat
+  abilityBoost: number
+  chemistryBoost: number
+}) {
   const color = getAbilityValueColor(stat.value)
+  const showAbilityBoost = abilityBoost > 0
+  const showChemistryBoost = chemistryBoost > 0
+
   return (
     <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
       <p className="app-player-muted text-xs font-medium">{stat.name}</p>
-      <span className="mt-1 block text-[18px] font-bold tracking-[-0.02em]" style={{ color }}>
-        {stat.value}
-      </span>
+      <div className="mt-1 flex items-end gap-1.5">
+        <span className="block text-[18px] font-bold leading-none tracking-[-0.02em]" style={{ color }}>
+          {stat.value}
+        </span>
+        {(showAbilityBoost || showChemistryBoost) && (
+          <span className="flex items-end gap-1 pb-0.5 text-[12px] leading-none tracking-[-0.01em]">
+            {showAbilityBoost && (
+              <span className="font-semibold" style={{ color: 'var(--app-player-boost)' }}>
+                +{abilityBoost}
+              </span>
+            )}
+            {showAbilityBoost && showChemistryBoost && (
+              <span
+                aria-hidden="true"
+                className="font-medium"
+                style={{ color: 'color-mix(in srgb, var(--app-player-muted) 34%, transparent)' }}
+              >
+                |
+              </span>
+            )}
+            {showChemistryBoost && (
+              <span className="font-semibold" style={{ color: 'var(--app-player-boost)' }}>
+                +{chemistryBoost}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

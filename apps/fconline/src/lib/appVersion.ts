@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.1': [
+    '선수 상세 능력치에 카드 단계 상승 수치와 적응도 적용 수치를 분리 표기하고, 적응도 +4 토글을 추가해 라이트/다크 모드 모두에서 보기 쉽게 조정',
+  ],
   '14.0': [
     '모바일 선수 검색에서 상세 정보가 비어 보이는 현상을 줄이기 위해 검색 캐시를 5분 기준으로 재검증하고 불완전한 결과는 캐시에 남기지 않도록 조정',
   ],
