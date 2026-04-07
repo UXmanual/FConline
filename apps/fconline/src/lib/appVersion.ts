@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.5': [
+    '선수 상세 적응도 보조 수치의 다크모드 블루 톤을 추가로 낮춰 실기기에서 덜 튀도록 조정',
+  ],
   '14.4': [
     '선수 상세 적응도 보조 수치의 라이트/다크 모드 컬러 톤을 조정해 실기기 가독성을 점검하기 쉽게 정리',
   ],
