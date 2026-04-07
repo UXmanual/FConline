@@ -530,8 +530,8 @@ export default function PlayerDetailPanel({
         </div>
 
         {detail.skillMove != null && (
-          <div className="mt-4 flex items-center justify-between rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
-            <p className="app-player-muted text-xs font-medium">개인기</p>
+          <div className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+            <p className="app-player-muted text-sm font-medium">개인기</p>
             <div className="flex gap-0.5">
               {Array.from({ length: 6 }, (_, index) => (
                 <svg

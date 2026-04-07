@@ -91,7 +91,7 @@ export default function PositionTopPlayersCard({
                 )}
                 <div className="min-w-0">
                   <p className="app-player-title truncate text-sm font-semibold">{item.name}</p>
-                  <div className="app-player-muted mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4">
+                  <div className="app-player-body mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4">
                     {item.seasonBadgeUrl ? (
                       <img
                         src={item.seasonBadgeUrl}
@@ -101,7 +101,7 @@ export default function PositionTopPlayersCard({
                         draggable={false}
                       />
                     ) : null}
-                    <p className="truncate">{item.summary}</p>
+                    <p className="truncate font-medium">{item.summary}</p>
                   </div>
                 </div>
               </div>

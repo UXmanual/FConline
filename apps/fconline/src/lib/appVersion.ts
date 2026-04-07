@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.9': [
+    '선수탭 홈 인기 선수 카드의 포지션·오버롤·급여 정보 가독성을 높이고 선수 상세의 개인기/강화 단계 영역 레이아웃을 다듬음',
+  ],
   '14.8': [
     '선수 상세 능력치 보조 수치의 라이트 모드 컬러를 더 차분하게 조정하고 강화 단계 스크롤 버튼 영역의 페이드와 여백을 다듬음',
   ],
