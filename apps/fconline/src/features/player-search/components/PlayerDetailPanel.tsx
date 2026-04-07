@@ -461,14 +461,18 @@ export default function PlayerDetailPanel({
         </div>
 
         <div
-          className="mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-3"
+          className="mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-2.5"
           style={{ backgroundColor: 'var(--app-player-soft-bg)' }}
         >
           <div className="flex items-center gap-1">
             <p className="app-player-title text-sm font-semibold">적응도</p>
             <p
               className="text-sm font-semibold transition-colors"
-              style={{ color: isChemistryApplied ? '#457ae5' : 'var(--app-player-muted)' }}
+              style={{
+                color: isChemistryApplied
+                  ? 'var(--app-player-toggle-on)'
+                  : 'var(--app-player-muted)',
+              }}
             >
               {isChemistryApplied ? '적용중' : '미적용'}
             </p>
@@ -479,12 +483,16 @@ export default function PlayerDetailPanel({
             aria-label="적응도 토글"
             aria-pressed={isChemistryApplied}
             onClick={() => setIsChemistryApplied((current) => !current)}
-            className="relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full transition-colors"
-            style={{ backgroundColor: isChemistryApplied ? '#457ae5' : '#d5dbe3' }}
+            className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
+            style={{
+              backgroundColor: isChemistryApplied
+                ? 'var(--app-player-toggle-on)'
+                : 'var(--app-player-toggle-off)',
+            }}
           >
             <span
-              className="absolute h-6 w-6 rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
-              style={{ transform: `translateX(${isChemistryApplied ? '24px' : '4px'})` }}
+              className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+              style={{ transform: `translateX(${isChemistryApplied ? '24px' : '0px'})` }}
               aria-hidden="true"
             />
           </button>

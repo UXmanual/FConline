@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.3': [
+    '선수 상세 적응도 토글을 와이드 스위치 스타일로 다듬고 활성/보조 수치 컬러 톤을 정리해 보기 쉽게 조정',
+  ],
   '14.2': [
     '선수 상세 상단 오버롤 숫자에도 적응도 적용 시 +4가 함께 반영되도록 조정',
   ],
