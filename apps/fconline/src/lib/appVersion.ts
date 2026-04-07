@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '13.9': [
+    '홈 오늘의 팁을 하루 1개만 노출하도록 유지하고 한국시간 자정 기준으로 매일 교체되게 조정',
+  ],
   '13.8': [
     '마이페이지 최신 버전 노트 문구를 정리하고 배포 문서 흐름을 정비',
   ],

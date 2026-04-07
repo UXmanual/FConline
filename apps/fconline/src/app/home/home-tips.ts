@@ -141,9 +141,9 @@ export const HOME_TIPS: HomeTipItem[] = [
     content: '짧은 거리까지 계속 질주하면 후반에 판단이 무너집니다. 필요할 때만 강하게 뛰고, 나머지는 위치 선정으로 해결하는 리듬이 중요해요.',
   },
   {
-    id: 'third-man-run',
+    id: 'give-and-move',
     label: '연계',
-    content: '패스를 준 선수가 다시 받는 것만 보지 말고 세 번째 선수를 활용해 보세요. 한 명을 더 거치면 수비가 따라오기 훨씬 어려워집니다.',
+    content: '패스 후 멈추지 말고 한 칸 더 움직여 보세요. 다시 받을 길이 생기면 공격이 훨씬 부드러워집니다.',
   },
   {
     id: 'loss-review',
@@ -157,15 +157,28 @@ export const HOME_TIPS: HomeTipItem[] = [
   },
 ]
 
+function getKoreaDayKey() {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const parts = formatter.formatToParts(new Date())
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000'
+  const month = parts.find((part) => part.type === 'month')?.value ?? '01'
+  const day = parts.find((part) => part.type === 'day')?.value ?? '01'
+
+  return Number(`${year}${month}${day}`)
+}
+
 export function getTodayTips(count = 4) {
   if (HOME_TIPS.length === 0 || count <= 0) {
     return []
   }
 
-  const now = new Date()
-  const dayKey = Number(
-    `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`,
-  )
+  const dayKey = getKoreaDayKey()
   const startIndex = dayKey % HOME_TIPS.length
 
   return Array.from({ length: Math.min(count, HOME_TIPS.length) }, (_, index) => {
