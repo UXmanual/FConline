@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.7': [
+    '선수 상세 특성 영역에 아이콘을 함께 노출하고 텍스트 구분 방식을 정리해 실기기에서 보기 쉽게 조정',
+  ],
   '14.6': [
     '마이페이지 다크모드 토글은 와이드 스위치 디자인을 유지하면서 기존 메인 블루 컬러로 다시 맞춤',
   ],

@@ -18,6 +18,7 @@ export interface AbilityStat {
 
 export interface Trait {
   name: string
+  iconSrc?: string | null
 }
 
 export interface PlayerDetail {

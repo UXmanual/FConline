@@ -114,12 +114,13 @@ function extractFootStats(html: string) {
 }
 
 function extractTraits(html: string) {
-  const traits: Array<{ name: string }> = []
+  const traits: Array<{ name: string; iconSrc: string | null }> = []
 
-  for (const match of html.matchAll(/<img[^>]*src="[^"]*trait_icon_[^"]*"[^>]*alt="([^"]*)"[^>]*>/g)) {
-    const name = decodeHtml(match[1])
+  for (const match of html.matchAll(/<img[^>]*src="([^"]*trait_icon_[^"]*)"[^>]*alt="([^"]*)"[^>]*>/g)) {
+    const iconSrc = match[1] ? decodeHtml(match[1]) : null
+    const name = decodeHtml(match[2])
     if (name && !traits.find((trait) => trait.name === name)) {
-      traits.push({ name })
+      traits.push({ name, iconSrc })
     }
   }
 
@@ -232,7 +233,7 @@ async function getPlayerDetailRaw(spid: string): Promise<PlayerDetail | null> {
 
 export const getPlayerDetail = unstable_cache(
   async (spid: string) => getPlayerDetailRaw(spid),
-  ['player-detail'],
+  ['player-detail-v2'],
   { revalidate: 3600 },
 )
 

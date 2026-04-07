@@ -385,14 +385,33 @@ export default function PlayerDetailPanel({
         {detail.traits.length > 0 && (
           <div className="mt-4 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
             <p className="app-player-muted text-xs font-medium">특성</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {detail.traits
+                .filter((trait) => trait.iconSrc)
+                .map((trait, index) => (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    key={`${trait.name}-${index}`}
+                    src={trait.iconSrc ?? ''}
+                    alt={trait.name}
+                    title={trait.name}
+                    className="h-12 w-12 shrink-0 object-contain"
+                  />
+                ))}
+            </div>
+            <div className="app-player-body mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-[1.5]">
               {detail.traits.map((trait, index) => (
-                <span
-                  key={`${trait.name}-${index}`}
-                  className="app-player-body inline-flex rounded-full border px-3 py-1.5 text-xs font-medium"
-                  style={{ backgroundColor: 'var(--app-player-chip-bg)', borderColor: 'var(--app-player-chip-border)' }}
-                >
-                  {trait.name}
+                <span key={`${trait.name}-label-${index}`} className="inline-flex items-center gap-2">
+                  {index > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="font-medium"
+                      style={{ color: 'color-mix(in srgb, var(--app-player-muted) 34%, transparent)' }}
+                    >
+                      |
+                    </span>
+                  )}
+                  <span>{trait.name}</span>
                 </span>
               ))}
             </div>
