@@ -104,6 +104,9 @@ npm run lint
 
 ## Release Rules
 
+- Follow the project versioning convention: after `13.9`, the next release is `14.0` rather than `13.10`.
+- 이 프로젝트 버전 관례에서는 `13.9` 다음 릴리스를 `13.10`이 아니라 `14.0`으로 올립니다.
+
 - Before production deployment, bump the version in `apps/fconline/package.json`.
 - 운영 배포 전에는 `apps/fconline/package.json`의 버전을 먼저 올립니다.
 - Add a matching release-note entry in `apps/fconline/src/lib/appVersion.ts`.
