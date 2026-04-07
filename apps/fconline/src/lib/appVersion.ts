@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '14.2': [
+    '선수 상세 상단 오버롤 숫자에도 적응도 적용 시 +4가 함께 반영되도록 조정',
+  ],
   '14.1': [
     '선수 상세 능력치에 카드 단계 상승 수치와 적응도 적용 수치를 분리 표기하고, 적응도 +4 토글을 추가해 라이트/다크 모드 모두에서 보기 쉽게 조정',
   ],

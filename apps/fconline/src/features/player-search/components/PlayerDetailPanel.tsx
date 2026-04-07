@@ -60,23 +60,23 @@ export default function PlayerDetailPanel({
     velocity: 0,
   })
 
-  const currentOverall = useMemo(() => {
-    if (detail.overall == null) {
-      return null
-    }
-
-    const baseOverall = detail.overall - getStrongPoint(1)
-    return baseOverall + getStrongPoint(strongLevel)
-  }, [detail.overall, strongLevel])
-
-  const currentPrice = formatPriceWithKoreanUnits(detail.prices[strongLevel])
-
   const abilityBoost = useMemo(
     () => getStrongPoint(strongLevel) - getStrongPoint(1),
     [strongLevel],
   )
   const chemistryBoost = isChemistryApplied ? 4 : 0
   const totalStatBoost = abilityBoost + chemistryBoost
+
+  const currentOverall = useMemo(() => {
+    if (detail.overall == null) {
+      return null
+    }
+
+    const baseOverall = detail.overall - getStrongPoint(1)
+    return baseOverall + getStrongPoint(strongLevel) + chemistryBoost
+  }, [chemistryBoost, detail.overall, strongLevel])
+
+  const currentPrice = formatPriceWithKoreanUnits(detail.prices[strongLevel])
 
   const adjustedAbilities = useMemo(() => {
     if (detail.abilities.length === 0) {
