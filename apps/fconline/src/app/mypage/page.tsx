@@ -159,7 +159,7 @@ export default function MyPage() {
     transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
   }
   const darkModeLabelStyle = {
-    color: isDarkModeEnabled ? '#457ae5' : '#8a949e',
+    color: isDarkModeEnabled ? '#457ae5' : 'var(--app-muted-text)',
     transition: 'color 180ms ease',
   }
 
@@ -279,12 +279,16 @@ export default function MyPage() {
               aria-label="다크모드 토글"
               aria-pressed={isDarkModeEnabled}
               onClick={handleDarkModeToggle}
-              className="relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full transition-colors"
-              style={{ backgroundColor: isDarkModeEnabled ? '#457ae5' : '#d5dbe3' }}
+              className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
+              style={{
+                backgroundColor: isDarkModeEnabled
+                  ? '#457ae5'
+                  : '#d5dbe3',
+              }}
             >
               <span
-                className="absolute h-6 w-6 rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
-                style={{ transform: `translateX(${isDarkModeEnabled ? '24px' : '4px'})` }}
+                className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+                style={{ transform: `translateX(${isDarkModeEnabled ? '24px' : '0px'})` }}
                 aria-hidden="true"
               />
             </button>
