@@ -96,8 +96,8 @@
   --app-player-title: #1e2124;
   --app-player-body: #58616a;
   --app-player-muted: #8a949e;
-  --app-player-boost: #25a348;
-  --app-player-toggle-on: #34c759;
+  --app-player-boost: #7386a8;
+  --app-player-toggle-on: #457ae5;
   --app-player-toggle-off: #d2d5db;
   --app-player-chip-bg: #ffffff;
   --app-player-chip-border: #e6e8ea;
@@ -199,8 +199,8 @@ html.app-dark-mode {
   --app-player-title: #f3f4f6;
   --app-player-body: #b2b5be;
   --app-player-muted: #8d919c;
-  --app-player-boost: #239b43;
-  --app-player-toggle-on: #30d158;
+  --app-player-boost: #648bd8;
+  --app-player-toggle-on: #6ea2ff;
   --app-player-toggle-off: #5f5f64;
   --app-player-chip-bg: #1a1c22;
   --app-player-chip-border: #2a2d36;
