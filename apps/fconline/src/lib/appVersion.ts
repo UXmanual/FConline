@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '13.10': [
+    '모바일 선수 검색에서 상세 정보가 비어 보이는 현상을 줄이기 위해 검색 캐시를 5분 기준으로 재검증하고 불완전한 결과는 캐시에 남기지 않도록 조정',
+  ],
   '13.9': [
     '홈 오늘의 팁을 하루 1개만 노출하도록 유지하고 한국시간 자정 기준으로 매일 교체되게 조정',
   ],

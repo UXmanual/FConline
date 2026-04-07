@@ -14,6 +14,7 @@ const RESET_KEY = 'player-search-reset'
 const PRESERVE_KEY = 'player-search-preserve'
 const POPULAR_PLAYERS_CACHE_KEY = 'players-popular-cache'
 const PLAYER_QUERY_CACHE_KEY = 'players-query-cache'
+const PLAYER_QUERY_CACHE_TTL_MS = 1000 * 60 * 5
 
 const TITLE_TEXT = '\uC120\uC218\uB97C \uCC3E\uC544\uBCFC\uAE4C\uC694?'
 const BACK_HOME_TEXT = '\uC120\uC218 \uD648'
@@ -105,6 +106,34 @@ type PopularPlayerCardItem = {
   metric: string
   imageUrl?: string
   seasonBadgeUrl?: string
+}
+
+type PlayerSearchResultsCacheEntry = {
+  players: Player[]
+  seasons: Season[]
+  cachedAt: number
+}
+
+type PlayerQueryCacheStore = Record<string, PlayerSearchResultsCacheEntry>
+
+function hasIncompletePlayerDetails(players: Player[]) {
+  return players.some((player) => player.detail == null)
+}
+
+function isValidPlayerSearchResultsCacheEntry(entry: PlayerSearchResultsCacheEntry | null | undefined) {
+  if (!entry || typeof entry.cachedAt !== 'number') {
+    return false
+  }
+
+  if (Date.now() - entry.cachedAt > PLAYER_QUERY_CACHE_TTL_MS) {
+    return false
+  }
+
+  if (hasIncompletePlayerDetails(entry.players)) {
+    return false
+  }
+
+  return true
 }
 
 function getKstDateKey() {
@@ -223,12 +252,13 @@ export default function PlayersPage() {
 
         if (savedResults) {
           try {
-            const results = JSON.parse(savedResults) as {
-              players: Player[]
-              seasons: Season[]
+            const results = JSON.parse(savedResults) as PlayerSearchResultsCacheEntry
+            if (isValidPlayerSearchResultsCacheEntry(results)) {
+              setPlayers(results.players)
+              setSeasons(results.seasons)
+            } else {
+              sessionStorage.removeItem(RESULTS_KEY)
             }
-            setPlayers(results.players)
-            setSeasons(results.seasons)
           } catch {
             sessionStorage.removeItem(RESULTS_KEY)
           }
@@ -343,13 +373,10 @@ export default function PlayersPage() {
     const cachedResults = sessionStorage.getItem(PLAYER_QUERY_CACHE_KEY)
     if (cachedResults) {
       try {
-        const parsed = JSON.parse(cachedResults) as Record<
-          string,
-          { players: Player[]; seasons: Season[] }
-        >
+        const parsed = JSON.parse(cachedResults) as PlayerQueryCacheStore
         const cached = parsed[searchQuery]
 
-        if (cached) {
+        if (isValidPlayerSearchResultsCacheEntry(cached)) {
           setPlayers(cached.players)
           setSeasons(cached.seasons)
           setLoading(false)
@@ -358,9 +385,15 @@ export default function PlayersPage() {
             JSON.stringify({
               players: cached.players,
               seasons: cached.seasons,
+              cachedAt: cached.cachedAt,
             }),
           )
           return
+        }
+
+        if (cached) {
+          delete parsed[searchQuery]
+          sessionStorage.setItem(PLAYER_QUERY_CACHE_KEY, JSON.stringify(parsed))
         }
       } catch {
         sessionStorage.removeItem(PLAYER_QUERY_CACHE_KEY)
@@ -373,27 +406,34 @@ export default function PlayersPage() {
       .then((data) => {
         setPlayers(data.players)
         setSeasons(data.seasons)
-        const parsed = (() => {
-          try {
-            return (
-              JSON.parse(sessionStorage.getItem(PLAYER_QUERY_CACHE_KEY) ?? '{}') as Record<
-                string,
-                { players: Player[]; seasons: Season[] }
-              >
-            )
-          } catch {
-            return {}
-          }
-        })()
-        parsed[searchQuery] = { players: data.players, seasons: data.seasons }
-        sessionStorage.setItem(PLAYER_QUERY_CACHE_KEY, JSON.stringify(parsed))
-        sessionStorage.setItem(
-          RESULTS_KEY,
-          JSON.stringify({
+        const shouldCacheResults = !hasIncompletePlayerDetails(data.players)
+
+        if (shouldCacheResults) {
+          const parsed = (() => {
+            try {
+              return JSON.parse(sessionStorage.getItem(PLAYER_QUERY_CACHE_KEY) ?? '{}') as PlayerQueryCacheStore
+            } catch {
+              return {}
+            }
+          })()
+
+          parsed[searchQuery] = {
             players: data.players,
             seasons: data.seasons,
-          }),
-        )
+            cachedAt: Date.now(),
+          }
+          sessionStorage.setItem(PLAYER_QUERY_CACHE_KEY, JSON.stringify(parsed))
+          sessionStorage.setItem(
+            RESULTS_KEY,
+            JSON.stringify({
+              players: data.players,
+              seasons: data.seasons,
+              cachedAt: Date.now(),
+            }),
+          )
+        } else {
+          sessionStorage.removeItem(RESULTS_KEY)
+        }
       })
       .finally(() => setLoading(false))
   }, [hydrated, searchQuery])
