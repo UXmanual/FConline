@@ -3,9 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '13.8': [
+    '마이페이지 최신 버전 노트 문구를 정리하고 배포 문서 흐름을 정비',
+  ],
   '13.7': [
     '볼타 훈련코치 카드를 커뮤니티 실사용 기준 추천 코치 5종으로 교체',
-    'OFFICIAL 뱃지를 COACH로 변경하고 라인 브레이커·스피드스터 대신 타이탄·블로커·2개의 심장·파이터·체이서로 정리',
   ],
   '13.6': [
     '볼타 훈련코치 카드의 코치명과 아이콘을 FC ONLINE 공식 코치헬퍼 기준으로 다시 매칭',
