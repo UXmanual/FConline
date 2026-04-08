@@ -174,6 +174,37 @@ export interface VoltaTopRankItem {
   rankIconUrl: string | null
 }
 
+export interface OfficialTopRankItem {
+  rank: number
+  nickname: string
+  rankPoint: number | null
+  winRate: number | null
+  wins: number | null
+  draws: number | null
+  losses: number | null
+  formation: string | null
+  price: string | null
+  rankIconUrl: string | null
+  teamColors: string[]
+}
+
+export interface OfficialFormationMetaItem {
+  rank: number
+  formation: string
+  usageCount: number
+  usageRate: number
+  averageWinRate: number | null
+  bestRank: number | null
+}
+
+export interface OfficialTeamColorMetaItem {
+  rank: number
+  teamColor: string
+  usageCount: number
+  usageRate: number
+  emblemUrl: string | null
+}
+
 export interface VoltaBestStatItem {
   label: string
   nickname: string

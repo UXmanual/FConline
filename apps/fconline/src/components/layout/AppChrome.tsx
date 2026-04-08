@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useLayoutEffect } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
 
 export default function AppChrome() {
   const pathname = usePathname()
   const hideFooter = pathname.startsWith('/community')
+  const [isStandaloneDisplayMode, setIsStandaloneDisplayMode] = useState(false)
+  const footerBottomCompensation = isStandaloneDisplayMode ? 30 : 0
 
   useEffect(() => {
     if (!('scrollRestoration' in window.history)) return
@@ -16,6 +18,28 @@ export default function AppChrome() {
 
     return () => {
       window.history.scrollRestoration = previousScrollRestoration
+    }
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(display-mode: standalone)')
+
+    const updateDisplayMode = () => {
+      const isStandalone =
+        mediaQuery.matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches ||
+        (typeof navigator !== 'undefined' &&
+          'standalone' in navigator &&
+          Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
+
+      setIsStandaloneDisplayMode(isStandalone)
+    }
+
+    updateDisplayMode()
+    mediaQuery.addEventListener?.('change', updateDisplayMode)
+
+    return () => {
+      mediaQuery.removeEventListener?.('change', updateDisplayMode)
     }
   }, [])
 
@@ -58,7 +82,7 @@ export default function AppChrome() {
               transition: 'background-color 180ms ease, color 180ms ease',
             }}
           >
-            게임 배너, 이미지, 선수 정보의 저작권은 NEXON Korea Corporation에 있습니다.
+            {'게임 배너, 이미지, 선수 정보의 저작권은 NEXON Korea Corporation에 있습니다.'}
           </div>
           <footer
             className="px-5 pb-4 text-left text-xs font-medium tracking-[0.02em]"
@@ -70,9 +94,17 @@ export default function AppChrome() {
           >
             {'\u00A9uxdmanual'}
           </footer>
+          <div
+            aria-hidden="true"
+            style={{
+              height: `${footerBottomCompensation}px`,
+              backgroundColor: 'var(--app-page-bg)',
+              transition: 'background-color 180ms ease',
+            }}
+          />
         </>
       ) : null}
-      <BottomNav />
+      <BottomNav isStandaloneDisplayMode={isStandaloneDisplayMode} />
     </>
   )
 }

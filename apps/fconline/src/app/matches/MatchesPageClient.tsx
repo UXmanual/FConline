@@ -3,7 +3,9 @@
 import { ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowLeft, LinkSimple, MagnifyingGlass, XLogo } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
-import VoltaBestStatsCard from '@/features/match-analysis/components/VoltaBestStatsCard'
+import OfficialFormationMetaCard from '@/features/match-analysis/components/OfficialFormationMetaCard'
+import OfficialTeamColorMetaCard from '@/features/match-analysis/components/OfficialTeamColorMetaCard'
+import OfficialTopRankCard from '@/features/match-analysis/components/OfficialTopRankCard'
 import VoltaPopularCoachCard from '@/features/match-analysis/components/VoltaPopularCoachCard'
 import VoltaTopRankCard from '@/features/match-analysis/components/VoltaTopRankCard'
 import PlayerImage from '@/features/player-search/components/PlayerImage'
@@ -12,14 +14,18 @@ import {
   MatchData,
   MatchPlayerInfo,
   MatchSearchCandidate,
-  VoltaBestStatItem,
+  OfficialFormationMetaItem,
+  OfficialTeamColorMetaItem,
+  OfficialTopRankItem,
   VoltaTopRankItem,
 } from '@/features/match-analysis/types'
 
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
 const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v2'
 const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v3'
-const VOLTA_BEST_CACHE_KEY = 'fconline.match.volta-best-cache.v3'
+const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-meta-cache.v2'
+const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v7'
+const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v2'
 const VOLTA_TOP_CACHE_KEY = 'fconline.match.volta-top-cache.v2'
 const MATCH_LIST_LIMIT = 10
 const MATCH_LIST_TIMEOUT_MS = 10000
@@ -47,14 +53,45 @@ type MatchResultsCacheEntry = {
   matches: MatchData[]
 }
 type MatchResultsCacheStore = Record<string, MatchResultsCacheEntry>
-type VoltaBestCacheEntry = {
-  dateKey: string
-  items: VoltaBestStatItem[]
-}
 type VoltaTopRankCacheEntry = {
   dateKey: string
   items: VoltaTopRankItem[]
 }
+type OfficialTopRankCacheEntry = {
+  dateKey: string
+  items: OfficialTopRankItem[]
+}
+type OfficialFormationMetaCacheEntry = {
+  dateKey: string
+  items: OfficialFormationMetaItem[]
+  sampleSize: number
+}
+type OfficialTeamColorMetaCacheEntry = {
+  dateKey: string
+  items: OfficialTeamColorMetaItem[]
+  sampleSize: number
+}
+type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
+
+const SEARCH_MODE_OPTIONS: Array<{
+  value: SearchMode
+  label: string
+  disabled?: boolean
+}> = [
+  {
+    value: 'official1on1',
+    label: '1:1 공식경기',
+  },
+  {
+    value: 'voltaLive',
+    label: '볼타 라이브',
+  },
+  {
+    value: 'manager',
+    label: '감독모드',
+    disabled: true,
+  },
+]
 
 function formatDate(dateStr: string) {
   const normalized = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`
@@ -526,6 +563,167 @@ function SummaryPill({
       <div className="app-theme-muted text-[11px]">{label}</div>
       <div className="app-theme-title mt-1 text-sm font-semibold">{value}</div>
     </div>
+  )
+}
+
+function SearchModeTabs({
+  selectedMode,
+  onSelect,
+}: {
+  selectedMode: SearchMode
+  onSelect: (mode: SearchMode) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+      {SEARCH_MODE_OPTIONS.map((option) => {
+        const active = option.value === selectedMode
+        const activeStyle =
+          option.value === 'voltaLive'
+            ? {
+                color: 'var(--app-volta-accent-fg)',
+                backgroundColor: 'var(--app-volta-accent-bg)',
+              }
+            : {
+                color: 'var(--app-accent-blue)',
+                backgroundColor: 'rgba(37, 110, 244, 0.1)',
+              }
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => {
+              if (option.disabled) return
+              onSelect(option.value)
+            }}
+            disabled={option.disabled}
+            className="rounded-full px-3 py-1.5 text-[15px] font-semibold tracking-[-0.02em] transition"
+            style={
+              option.disabled
+                ? {
+                    color: 'var(--app-muted-text)',
+                    backgroundColor: 'transparent',
+                    opacity: 0.45,
+                    cursor: 'not-allowed',
+                  }
+                : active
+                ? activeStyle
+                : {
+                    color: 'var(--app-body-text)',
+                    backgroundColor: 'transparent',
+                  }
+            }
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function SearchModePreviewCard({
+  selectedMode,
+  officialFormationMetaItems,
+  officialFormationMetaLoading,
+  officialFormationMetaSampleSize,
+  officialTeamColorMetaItems,
+  officialTeamColorMetaLoading,
+  officialTeamColorMetaSampleSize,
+  officialTopItems,
+  officialTopLoading,
+  voltaTopItems,
+  voltaTopLoading,
+}: {
+  selectedMode: SearchMode
+  officialFormationMetaItems: OfficialFormationMetaItem[]
+  officialFormationMetaLoading: boolean
+  officialFormationMetaSampleSize: number
+  officialTeamColorMetaItems: OfficialTeamColorMetaItem[]
+  officialTeamColorMetaLoading: boolean
+  officialTeamColorMetaSampleSize: number
+  officialTopItems: OfficialTopRankItem[]
+  officialTopLoading: boolean
+  voltaTopItems: VoltaTopRankItem[]
+  voltaTopLoading: boolean
+}) {
+  if (selectedMode === 'official1on1') {
+    return (
+      <>
+        <section className="mt-4 space-y-3">
+          <p className="app-theme-muted text-[11px] font-medium leading-4">
+            • 현재 시즌 1:1 공식경기 랭킹 기준
+          </p>
+
+          <OfficialTopRankCard items={officialTopItems} isLoading={officialTopLoading} />
+        </section>
+
+        <section className="mt-4">
+          <OfficialTeamColorMetaCard
+            items={officialTeamColorMetaItems}
+            sampleSize={officialTeamColorMetaSampleSize}
+            isLoading={officialTeamColorMetaLoading}
+          />
+        </section>
+
+        <section className="mt-4">
+          <OfficialFormationMetaCard
+            items={officialFormationMetaItems}
+            sampleSize={officialFormationMetaSampleSize}
+            isLoading={officialFormationMetaLoading}
+          />
+        </section>
+      </>
+    )
+  }
+
+  if (selectedMode === 'manager') {
+    return (
+      <section className="app-theme-card rounded-lg border px-5 py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="app-theme-title text-base font-semibold">감독모드 준비 중</p>
+            <p className="app-theme-body mt-1 text-sm leading-5">
+              감독모드는 다음 단계에서 전적, 티어, 최근 경기 흐름에 맞춰 연결할 예정이에요.
+            </p>
+          </div>
+          <span
+            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{
+              backgroundColor: 'var(--app-analysis-soft-bg)',
+              color: 'var(--app-title)',
+            }}
+          >
+            Preview
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <InfoCard label="예정 정보" value="감독 티어" />
+          <InfoCard label="예정 정보" value="승무패" />
+          <InfoCard label="예정 정보" value="승률" />
+          <InfoCard label="예정 정보" value="최근 경기" />
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <>
+      <section className="mt-4 space-y-3">
+        <p className="app-theme-muted text-[11px] font-medium leading-4">
+          • 현재 시즌 볼타 라이브 공식 랭킹 기준
+        </p>
+
+        {voltaTopLoading || voltaTopItems.length > 0 ? (
+          <VoltaTopRankCard items={voltaTopItems} isLoading={voltaTopLoading} />
+        ) : null}
+      </section>
+
+      <section className="mt-4">
+        <VoltaPopularCoachCard />
+      </section>
+    </>
   )
 }
 
@@ -1443,17 +1641,25 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
 
+  const [selectedSearchMode, setSelectedSearchMode] = useState<SearchMode>('voltaLive')
+  const [isSearchInputFocused, setIsSearchInputFocused] = useState(false)
   const [hasPendingRouteSearch, setHasPendingRouteSearch] = useState(Boolean(initialNickname))
   const [query, setQuery] = useState(initialNickname)
   const [activeSearchQuery, setActiveSearchQuery] = useState(initialNickname)
   const [exactCandidate, setExactCandidate] = useState<MatchSearchCandidate | null>(null)
   const [candidates, setCandidates] = useState<MatchSearchCandidate[]>([])
   const [matches, setMatches] = useState<MatchData[]>([])
-  const [voltaBestItems, setVoltaBestItems] = useState<VoltaBestStatItem[]>([])
+  const [officialFormationMetaItems, setOfficialFormationMetaItems] = useState<OfficialFormationMetaItem[]>([])
+  const [officialFormationMetaSampleSize, setOfficialFormationMetaSampleSize] = useState(100)
+  const [officialTeamColorMetaItems, setOfficialTeamColorMetaItems] = useState<OfficialTeamColorMetaItem[]>([])
+  const [officialTeamColorMetaSampleSize, setOfficialTeamColorMetaSampleSize] = useState(4000)
+  const [officialTopItems, setOfficialTopItems] = useState<OfficialTopRankItem[]>([])
   const [voltaTopItems, setVoltaTopItems] = useState<VoltaTopRankItem[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [matchLoading, setMatchLoading] = useState(false)
-  const [voltaBestLoading, setVoltaBestLoading] = useState(true)
+  const [officialFormationMetaLoading, setOfficialFormationMetaLoading] = useState(true)
+  const [officialTeamColorMetaLoading, setOfficialTeamColorMetaLoading] = useState(true)
+  const [officialTopLoading, setOfficialTopLoading] = useState(true)
   const [voltaTopLoading, setVoltaTopLoading] = useState(true)
   const [matchesError, setMatchesError] = useState('')
   const [visibleMatchCount, setVisibleMatchCount] = useState(INITIAL_VISIBLE_MATCHES)
@@ -1461,49 +1667,6 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
 
   useEffect(() => {
     let cancelled = false
-
-    const loadVoltaBestStats = async () => {
-      const todayKey = getKstDateKey()
-      const cached = readJsonStorage<VoltaBestCacheEntry>(VOLTA_BEST_CACHE_KEY)
-
-      if (
-        cached?.dateKey === todayKey &&
-        Array.isArray(cached.items) &&
-        cached.items.length >= 7 &&
-        cached.items.every((item) => item.iconUrl)
-      ) {
-        setVoltaBestItems(cached.items)
-        setVoltaBestLoading(false)
-        return
-      }
-
-      try {
-        const res = await fetch('/api/nexon/matches/volta-best')
-        if (!res.ok) {
-          return
-        }
-
-        const data = await res.json().catch(() => null)
-        const items = Array.isArray(data?.items) ? (data.items as VoltaBestStatItem[]) : []
-
-        if (cancelled) {
-          return
-        }
-
-        setVoltaBestItems(items)
-
-        if (items.length > 0) {
-          writeJsonStorage(VOLTA_BEST_CACHE_KEY, {
-            dateKey: todayKey,
-            items,
-          } satisfies VoltaBestCacheEntry)
-        }
-      } finally {
-        if (!cancelled) {
-          setVoltaBestLoading(false)
-        }
-      }
-    }
 
     const loadVoltaTopRanks = async () => {
       const todayKey = getKstDateKey()
@@ -1543,7 +1706,131 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
       }
     }
 
-    void loadVoltaBestStats()
+    const loadOfficialTopRanks = async () => {
+      const todayKey = getKstDateKey()
+      const cached = readJsonStorage<OfficialTopRankCacheEntry>(OFFICIAL_TOP_CACHE_KEY)
+
+      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5) {
+        setOfficialTopItems(cached.items)
+        setOfficialTopLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/nexon/matches/official-top')
+        if (!res.ok) {
+          return
+        }
+
+        const data = await res.json().catch(() => null)
+        const items = Array.isArray(data?.items) ? (data.items as OfficialTopRankItem[]) : []
+
+        if (cancelled) {
+          return
+        }
+
+        setOfficialTopItems(items)
+
+        if (items.length > 0) {
+          writeJsonStorage(OFFICIAL_TOP_CACHE_KEY, {
+            dateKey: todayKey,
+            items,
+          } satisfies OfficialTopRankCacheEntry)
+        }
+      } finally {
+        if (!cancelled) {
+          setOfficialTopLoading(false)
+        }
+      }
+    }
+
+    const loadOfficialFormationMeta = async () => {
+      const todayKey = getKstDateKey()
+      const cached = readJsonStorage<OfficialFormationMetaCacheEntry>(OFFICIAL_FORMATION_META_CACHE_KEY)
+
+      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 3) {
+        setOfficialFormationMetaItems(cached.items)
+        setOfficialFormationMetaSampleSize(cached.sampleSize || 100)
+        setOfficialFormationMetaLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/nexon/matches/official-formation-meta')
+        if (!res.ok) {
+          return
+        }
+
+        const data = await res.json().catch(() => null)
+        const items = Array.isArray(data?.items) ? (data.items as OfficialFormationMetaItem[]) : []
+        const sampleSize = typeof data?.sampleSize === 'number' ? data.sampleSize : 100
+
+        if (cancelled) {
+          return
+        }
+
+        setOfficialFormationMetaItems(items)
+        setOfficialFormationMetaSampleSize(sampleSize)
+
+        if (items.length > 0) {
+          writeJsonStorage(OFFICIAL_FORMATION_META_CACHE_KEY, {
+            dateKey: todayKey,
+            items,
+            sampleSize,
+          } satisfies OfficialFormationMetaCacheEntry)
+        }
+      } finally {
+        if (!cancelled) {
+          setOfficialFormationMetaLoading(false)
+        }
+      }
+    }
+
+    const loadOfficialTeamColorMeta = async () => {
+      const todayKey = getKstDateKey()
+      const cached = readJsonStorage<OfficialTeamColorMetaCacheEntry>(OFFICIAL_TEAM_COLOR_META_CACHE_KEY)
+
+      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5) {
+        setOfficialTeamColorMetaItems(cached.items)
+        setOfficialTeamColorMetaSampleSize(cached.sampleSize || 100)
+        setOfficialTeamColorMetaLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/nexon/matches/official-team-color-meta')
+        if (!res.ok) {
+          return
+        }
+
+        const data = await res.json().catch(() => null)
+        const items = Array.isArray(data?.items) ? (data.items as OfficialTeamColorMetaItem[]) : []
+        const sampleSize = typeof data?.sampleSize === 'number' ? data.sampleSize : 100
+
+        if (cancelled) {
+          return
+        }
+
+        setOfficialTeamColorMetaItems(items)
+        setOfficialTeamColorMetaSampleSize(sampleSize)
+
+        if (items.length > 0) {
+          writeJsonStorage(OFFICIAL_TEAM_COLOR_META_CACHE_KEY, {
+            dateKey: todayKey,
+            items,
+            sampleSize,
+          } satisfies OfficialTeamColorMetaCacheEntry)
+        }
+      } finally {
+        if (!cancelled) {
+          setOfficialTeamColorMetaLoading(false)
+        }
+      }
+    }
+
+    void loadOfficialTeamColorMeta()
+    void loadOfficialFormationMeta()
+    void loadOfficialTopRanks()
     void loadVoltaTopRanks()
 
     return () => {
@@ -1684,6 +1971,10 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
   }
 
   const handleSearch = async () => {
+    if (isPreviewOnlyMode) {
+      return
+    }
+
     await runSearch(query)
   }
 
@@ -1699,6 +1990,10 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
   }
 
   const handleSearchContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isSearchDisabled) {
+      return
+    }
+
     const target = event.target as HTMLElement
     if (target.closest('button')) {
       return
@@ -1741,6 +2036,15 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
   const recentMatchesLabel = '최근 10경기'
   const recentGoalsForLabel = '최근 10경기 총 득점'
   const recentGoalsAgainstLabel = '최근 10경기 총 실점'
+  const searchTitle = '어떤 공식경기 기록을 찾아볼까요?'
+  const searchPlaceholder =
+    selectedSearchMode === 'official1on1'
+      ? '1:1 공식경기 구단주명을 입력해 주세요'
+      : selectedSearchMode === 'manager'
+        ? '감독모드 구단주명을 입력해 주세요'
+        : '볼타 라이브 구단주명을 입력해 주세요'
+  const isPreviewOnlyMode = selectedSearchMode !== 'voltaLive'
+  const isSearchDisabled = searchLoading || isPreviewOnlyMode
   const hasVoltaRank =
     exactCandidate?.voltaRank !== null ||
     exactCandidate?.voltaRankPoint !== null ||
@@ -1776,38 +2080,47 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
           </button>
         ) : (
           <h1 className="app-theme-title text-[18px] font-bold tracking-[-0.02em]">
-            내 볼타 분석을 찾아볼까요?
+            {searchTitle}
           </h1>
         )}
       </div>
 
       {!showResultsPanel && (
-        <div
-          className="mt-4 flex h-14 items-center gap-2 rounded-lg border px-4 focus-within:border-2 focus-within:border-[#457ae5]"
-          style={{
-            backgroundColor: 'var(--app-card-bg)',
-            borderColor: 'var(--app-input-border)',
-          }}
-          onClick={handleSearchContainerClick}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="구단주명을 입력해 주세요"
-            className="min-w-0 flex-1 bg-transparent text-[15px] outline-none"
-            style={{ color: 'var(--app-title)' }}
-          />
-          <button
-            type="button"
-            onClick={() => void handleSearch()}
-            disabled={searchLoading}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg disabled:opacity-50"
+        <div className="mt-4 space-y-3">
+          <SearchModeTabs selectedMode={selectedSearchMode} onSelect={setSelectedSearchMode} />
+
+          <div
+            className={`flex h-14 items-center gap-2 rounded-lg border px-4 focus-within:border-2 focus-within:border-[#457ae5] ${
+              isSearchDisabled ? 'opacity-60' : ''
+            }`}
+            style={{
+              backgroundColor: 'var(--app-card-bg)',
+              borderColor: isSearchInputFocused ? '#457ae5' : 'var(--app-input-border)',
+            }}
+            onClick={handleSearchContainerClick}
           >
-            <MagnifyingGlass size={24} className="app-theme-body" weight="bold" />
-          </button>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsSearchInputFocused(true)}
+              onBlur={() => setIsSearchInputFocused(false)}
+              placeholder={searchPlaceholder}
+              disabled={isSearchDisabled}
+              className="h-full min-w-0 flex-1 bg-transparent text-[15px] leading-[1] outline-none"
+              style={{ color: 'var(--app-title)' }}
+            />
+            <button
+              type="button"
+              onClick={() => void handleSearch()}
+              disabled={isSearchDisabled}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg disabled:opacity-50"
+            >
+              <MagnifyingGlass size={24} className="app-theme-body" weight="bold" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -2057,27 +2370,19 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
             )}
 
             {showHomePanels && (
-              <>
-                <section className="mt-4 space-y-3">
-                  <p className="app-theme-muted text-[11px] font-medium leading-4">
-                    • 현재 시즌 볼타 라이브 공식 랭킹 기준
-                  </p>
-
-                  {voltaTopLoading || voltaTopItems.length > 0 ? (
-                    <VoltaTopRankCard items={voltaTopItems} isLoading={voltaTopLoading} />
-                  ) : null}
-                </section>
-
-                <section className="mt-4">
-                  {voltaBestLoading || voltaBestItems.length > 0 ? (
-                    <VoltaBestStatsCard items={voltaBestItems} isLoading={voltaBestLoading} />
-                  ) : null}
-                </section>
-
-                <section className="mt-4">
-                  <VoltaPopularCoachCard />
-                </section>
-              </>
+              <SearchModePreviewCard
+                selectedMode={selectedSearchMode}
+                officialFormationMetaItems={officialFormationMetaItems}
+                officialFormationMetaLoading={officialFormationMetaLoading}
+                officialFormationMetaSampleSize={officialFormationMetaSampleSize}
+                officialTeamColorMetaItems={officialTeamColorMetaItems}
+                officialTeamColorMetaLoading={officialTeamColorMetaLoading}
+                officialTeamColorMetaSampleSize={officialTeamColorMetaSampleSize}
+                officialTopItems={officialTopItems}
+                officialTopLoading={officialTopLoading}
+                voltaTopItems={voltaTopItems}
+                voltaTopLoading={voltaTopLoading}
+              />
             )}
           </>
         )}

@@ -40,15 +40,15 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
 
   const detailItems = detail
     ? [
-        { label: `${strongLevel}카`, value: null, emphasize: null as boolean | null },
-        { label: '포지션', value: detail.position ?? '-', emphasize: true },
-        { label: '오버롤', value: currentOverall ?? '-', emphasize: true },
-        { label: '급여', value: detail.pay ?? '-', emphasize: true },
-        { label: '현재 금액', value: formatPriceWithKoreanUnits(detail.prices[strongLevel]), emphasize: true },
-        { label: '키', value: detail.height ? `${detail.height}cm` : '-', emphasize: false },
-        { label: '몸무게', value: detail.weight ? `${detail.weight}kg` : '-', emphasize: false },
-        { label: '체형', value: bodyTypeNormalized, emphasize: false },
-        { label: '왼발', value: detail.leftFoot ?? '-', emphasize: false, right: `오른발 ${detail.rightFoot ?? '-'}` },
+        { label: `${strongLevel}\uAC15`, value: null, emphasize: null as boolean | null },
+        { label: '\uC8FC\uD3EC\uC9C0\uC158', value: detail.position ?? '-', emphasize: true },
+        { label: '\uC624\uBC84\uB864', value: currentOverall ?? '-', emphasize: true },
+        { label: '\uAE09\uC5EC', value: detail.pay ?? '-', emphasize: true },
+        { label: '\uD604\uC7AC \uAE08\uC561', value: formatPriceWithKoreanUnits(detail.prices[strongLevel]), emphasize: true },
+        { label: '\uD0A4', value: detail.height ? `${detail.height}cm` : '-', emphasize: false },
+        { label: '\uBAB8\uBB34\uAC8C', value: detail.weight ? `${detail.weight}kg` : '-', emphasize: false },
+        { label: '\uCCB4\uD615', value: bodyTypeNormalized, emphasize: false },
+        { label: '\uC67C\uBC1C', value: detail.leftFoot ?? '-', emphasize: false, right: `\uC624\uB978\uBC1C ${detail.rightFoot ?? '-'}` },
       ]
     : []
 

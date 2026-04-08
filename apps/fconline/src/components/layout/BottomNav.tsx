@@ -22,12 +22,20 @@ const navItems = [
   { href: '/mypage', icon: MypageIcon, label: '\uB9C8\uC774' },
 ]
 
-export default function BottomNav() {
+type Props = {
+  isStandaloneDisplayMode?: boolean
+}
+
+export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
   const pathname = usePathname()
+  const pwaBottomCompensation = isStandaloneDisplayMode ? 14 : 0
 
   return (
     <>
-      <div className="h-[70px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+      <div
+        className="h-[70px]"
+        style={{ paddingBottom: `calc(env(safe-area-inset-bottom) + ${pwaBottomCompensation}px)` }}
+      />
 
       <div
         aria-hidden="true"
@@ -56,8 +64,8 @@ export default function BottomNav() {
             return (
               <motion.div
                 key={href}
-                whileTap={{ scale: 1.08 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                whileTap={{ scale: 0.86 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 17, mass: 0.82 }}
                 className="h-full flex-1"
               >
                 <Link

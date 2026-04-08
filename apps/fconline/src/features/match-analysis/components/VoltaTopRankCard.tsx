@@ -50,8 +50,8 @@ export default function VoltaTopRankCard({ items, isLoading = false }: Props) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="app-theme-title text-sm font-semibold">
-            <span style={{ color: 'var(--app-volta-accent-fg)' }}>볼타</span>
-            <span>{' 랭킹 TOP 5'}</span>
+            <span style={{ color: 'var(--app-volta-accent-fg)' }}>{'\uBCFC\uD0C0'}</span>
+            <span>{' \uB7AD\uD0B9 TOP 5'}</span>
           </h2>
         </div>
         <span
@@ -103,7 +103,7 @@ export default function VoltaTopRankCard({ items, isLoading = false }: Props) {
                       </span>
                     ) : null}
                     <span className="truncate">
-                      평점 {formatAverageRating(item.averageRating)} · 승률{' '}
+                      {'\uD3C9\uC810'} {formatAverageRating(item.averageRating)} {'\u00B7 \uC2B9\uB960'}{' '}
                       {item.winRate !== null ? `${item.winRate}%` : '-'}
                     </span>
                   </div>
@@ -114,7 +114,7 @@ export default function VoltaTopRankCard({ items, isLoading = false }: Props) {
                 <div className="text-[13px] font-semibold" style={{ color: 'var(--app-volta-accent-fg)' }}>
                   {formatRankPoint(item.rankPoint)}
                 </div>
-                <div className="app-theme-muted mt-0.5 text-[11px]">랭킹 포인트</div>
+                <div className="app-theme-muted mt-0.5 text-[11px]">{'\uB7AD\uD0B9 \uD3EC\uC778\uD2B8'}</div>
               </div>
             </div>
           ))}

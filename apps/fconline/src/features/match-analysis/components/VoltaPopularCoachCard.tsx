@@ -1,33 +1,33 @@
 const VOLTA_RECOMMENDED_COACHES = [
   {
     id: '64',
-    name: '타이탄',
+    name: '\uD0C0\uC774\uD0C4',
     imageSrc: 'https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/traits/trait_icon_64.png',
-    summary: '공중볼 경합 체감이 좋아 볼타에서 선호됩니다.',
+    summary: '\uACF5\uC911\uBCFC \uACBD\uD569 \uCCB4\uAC10\uC774 \uC88B\uC544 \uBCFC\uD0C0\uC5D0\uC11C \uC120\uD638\uB429\uB2C8\uB2E4.',
   },
   {
     id: '62',
-    name: '블로커',
+    name: '\uBE14\uB85C\uCEE4',
     imageSrc: 'https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/traits/trait_icon_62.png',
-    summary: '슈팅 차단 체감 때문에 수비 코치로 많이 씁니다.',
+    summary: '\uC288\uD305 \uCC28\uB2E8 \uCCB4\uAC10 \uB54C\uBB38\uC5D0 \uC218\uBE44 \uCF54\uCE58\uB85C \uB9CE\uC774 \uC4F0\uC785\uB2C8\uB2E4.',
   },
   {
     id: '55',
-    name: '2개의 심장',
+    name: '2\uAC1C\uC758 \uC2EC\uC7A5',
     imageSrc: 'https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/traits/trait_icon_55.png',
-    summary: '활동량이 많은 볼타에서 스태미너 유지에 좋습니다.',
+    summary: '\uD65C\uB3D9\uB7C9\uC774 \uB9CE\uC740 \uBCFC\uD0C0\uC5D0\uC11C \uC2A4\uD0DC\uBBF8\uB108 \uC720\uC9C0\uC5D0 \uC88B\uC2B5\uB2C8\uB2E4.',
   },
   {
     id: '56',
-    name: '파이터',
+    name: '\uD30C\uC774\uD130',
     imageSrc: 'https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/traits/trait_icon_56.png',
-    summary: '몸싸움과 압박 체감 때문에 자주 추천됩니다.',
+    summary: '\uBAB8\uC2F8\uC6C0\uACFC \uC555\uBC15 \uCCB4\uAC10 \uB54C\uBB38\uC5D0 \uC790\uC8FC \uCD94\uCC9C\uB429\uB2C8\uB2E4.',
   },
   {
     id: '54',
-    name: '체이서',
+    name: '\uCCB4\uC774\uC11C',
     imageSrc: 'https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/traits/trait_icon_54.png',
-    summary: '역습 추격 체감이 좋아 수비 코치로 거론됩니다.',
+    summary: '\uC5ED\uC2B5 \uCD94\uACA9 \uCCB4\uAC10\uC774 \uC88B\uC544 \uC218\uBE44 \uCF54\uCE58\uB85C \uAC70\uB860\uB429\uB2C8\uB2E4.',
   },
 ] as const
 
@@ -37,8 +37,8 @@ export default function VoltaPopularCoachCard() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="app-theme-title text-sm font-semibold">
-            <span style={{ color: 'var(--app-volta-accent-fg)' }}>볼타</span>
-            <span>{' 추천 훈련코치 5종'}</span>
+            <span style={{ color: 'var(--app-volta-accent-fg)' }}>{'\uBCFC\uD0C0'}</span>
+            <span>{' \uCD94\uCC9C \uD6C8\uB828\uCF54\uCE58 5\uC885'}</span>
           </h2>
         </div>
         <span

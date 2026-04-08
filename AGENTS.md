@@ -78,6 +78,8 @@ npm run lint
 - Windows 환경에서는 로컬 Node.js 개발 서버 실행 안정성을 위해 Cygwin bash보다 PowerShell로 앱을 시작합니다.
 - Preferred command from the repo root: `npm run dev --workspace apps/fconline`
 - 저장소 루트 기준 권장 명령은 `npm run dev --workspace apps/fconline`입니다.
+- The default local dev address for `apps/fconline` is `http://localhost:4000`.
+- `apps/fconline`의 기본 로컬 개발 주소는 `http://localhost:4000`입니다.
 - The agent should try to start the dev server directly first before assuming a local environment issue.
 - 에이전트는 로컬 환경 문제라고 가정하기 전에 먼저 개발 서버를 직접 실행해 봅니다.
 - If the agent cannot start the dev server, it should tell the user that the attempt failed and provide a direct local shell command for `cmd` or PowerShell.
