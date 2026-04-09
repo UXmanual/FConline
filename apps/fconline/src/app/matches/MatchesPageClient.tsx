@@ -21,8 +21,8 @@ import {
 } from '@/features/match-analysis/types'
 
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
-const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v2'
-const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v3'
+const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v5'
+const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v5'
 const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-meta-cache.v2'
 const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v7'
 const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v2'
@@ -92,6 +92,22 @@ const SEARCH_MODE_OPTIONS: Array<{
     disabled: true,
   },
 ]
+
+function normalizeSearchMode(value: string | null | undefined): SearchMode {
+  return value === 'official1on1' || value === 'manager' ? value : 'voltaLive'
+}
+
+function getMatchTypeForMode(mode: SearchMode) {
+  return mode === 'official1on1' ? 50 : mode === 'manager' ? 52 : 214
+}
+
+function getModeLabel(mode: SearchMode) {
+  return mode === 'official1on1' ? '1:1 공식경기' : mode === 'manager' ? '감독모드' : '볼타 공식 경기'
+}
+
+function buildMatchCacheKey(ouid: string, mode: SearchMode) {
+  return `${ouid}:${mode}`
+}
 
 function formatDate(dateStr: string) {
   const normalized = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : `${dateStr}Z`
@@ -240,6 +256,300 @@ function summarizeMatches(matches: MatchData[], ouid: string | null | undefined)
   return { total, wins, draws, losses, goalsFor, goalsAgainst }
 }
 
+function getOfficialPlayerMetrics(player: MatchPlayerInfo) {
+  const passTotals = calcPassTotal(player.pass)
+  const blockTry = player.defence.blockTry ?? null
+  const blockSuccess = player.defence.blockSuccess ?? null
+  const blockRate =
+    blockTry != null && blockTry > 0 && blockSuccess != null ? (blockSuccess / blockTry) * 100 : null
+  const tackleTry = player.defence.tackleTry ?? null
+  const tackleSuccess = player.defence.tackleSuccess ?? null
+  const tackleRate =
+    tackleTry != null && tackleTry > 0 && tackleSuccess != null ? (tackleSuccess / tackleTry) * 100 : null
+
+  return {
+    controller: formatControllerLabel(player.matchDetail.controller),
+    possession: player.matchDetail.possession ?? 0,
+    fouls: player.matchDetail.foul ?? 0,
+    corners: player.matchDetail.cornerKick ?? 0,
+    offsides: player.matchDetail.offsideCount ?? 0,
+    yellowCards: player.matchDetail.yellowCards ?? 0,
+    redCards: player.matchDetail.redCards ?? 0,
+    rating: player.matchDetail.averageRating ?? 0,
+    shots: player.shoot.shootTotal ?? 0,
+    effectiveShots: player.shoot.effectiveShootTotal ?? 0,
+    goals: getDisplayScore(player),
+    passTry: passTotals.try,
+    passSuccess: passTotals.success,
+    passRate: passTotals.try > 0 ? (passTotals.success / passTotals.try) * 100 : null,
+    blockTry,
+    blockSuccess,
+    blockRate,
+    tackleTry,
+    tackleSuccess,
+    tackleRate,
+  }
+}
+
+function buildOfficialTeams(match: MatchData, myOuid: string) {
+  const players = Array.isArray(match.matchInfo) ? match.matchInfo : []
+  const me = players.find((player) => player.ouid === myOuid)
+
+  if (!me) {
+    return null
+  }
+
+  const opponent = players.find((player) => player.ouid !== myOuid)
+
+  if (!opponent) {
+    return null
+  }
+
+  return {
+    me,
+    opponent,
+    myScore: getDisplayScore(me),
+    opponentScore: getDisplayScore(opponent),
+  }
+}
+
+function summarizeOfficialMatches(matches: MatchData[], ouid: string | null | undefined) {
+  if (!ouid) return null
+
+  let wins = 0
+  let draws = 0
+  let losses = 0
+  let goalsFor = 0
+  let goalsAgainst = 0
+  let cleanSheets = 0
+  let possessionTotal = 0
+  let shotTotal = 0
+  let effectiveShotTotal = 0
+  const passRates: number[] = []
+
+  for (const match of matches) {
+    const teams = buildOfficialTeams(match, ouid)
+    if (!teams) continue
+
+    const meMetrics = getOfficialPlayerMetrics(teams.me)
+    const result = teams.me.matchDetail.matchResult
+
+    if (result === '승') wins += 1
+    else if (result === '무') draws += 1
+    else if (result === '패') losses += 1
+
+    goalsFor += teams.myScore
+    goalsAgainst += teams.opponentScore
+    possessionTotal += meMetrics.possession
+    shotTotal += meMetrics.shots
+    effectiveShotTotal += meMetrics.effectiveShots
+
+    if (meMetrics.passRate != null) {
+      passRates.push(meMetrics.passRate)
+    }
+
+    if (teams.opponentScore === 0) {
+      cleanSheets += 1
+    }
+  }
+
+  const total = wins + draws + losses
+  if (total === 0) return null
+
+  return {
+    total,
+    wins,
+    draws,
+    losses,
+    goalsFor,
+    goalsAgainst,
+    cleanSheets,
+    averagePossession: possessionTotal / total,
+    averageShots: shotTotal / total,
+    averageEffectiveShots: effectiveShotTotal / total,
+    averagePassRate: passRates.length > 0 ? average(passRates) : null,
+  }
+}
+
+type OfficialRecentScoringSummary = {
+  totalGoals: number
+  inPenaltyGoals: number
+  outPenaltyGoals: number
+  headerGoals: number
+  freekickGoals: number
+  penaltyGoals: number
+  multiGoalMatches: number
+  cleanFinishes: number
+}
+
+type OfficialRecentPlayerLeader = {
+  key: string
+  spId: number
+  spPosition: number | null
+  enhancement: number | null
+  playerName: string | null
+  seasonName: string | null
+  appearances: number
+  goals: number
+  assists: number
+  effectiveShots: number
+  shots: number
+  averageRating: number
+}
+
+const FC_POSITION_LABELS: Record<number, string> = {
+  0: 'GK',
+  1: 'SW',
+  2: 'RWB',
+  3: 'RB',
+  4: 'RCB',
+  5: 'CB',
+  6: 'LCB',
+  7: 'LB',
+  8: 'LWB',
+  9: 'RDM',
+  10: 'CDM',
+  11: 'LDM',
+  12: 'RM',
+  13: 'RCM',
+  14: 'CM',
+  15: 'LCM',
+  16: 'LM',
+  17: 'RAM',
+  18: 'CAM',
+  19: 'LAM',
+  20: 'RF',
+  21: 'CF',
+  22: 'LF',
+  23: 'RW',
+  24: 'RS',
+  25: 'ST',
+  26: 'LS',
+  27: 'LW',
+}
+
+function summarizeOfficialScoringStyles(matches: MatchData[], ouid: string | null | undefined): OfficialRecentScoringSummary | null {
+  if (!ouid) return null
+
+  let totalGoals = 0
+  let inPenaltyGoals = 0
+  let outPenaltyGoals = 0
+  let headerGoals = 0
+  let freekickGoals = 0
+  let penaltyGoals = 0
+  let multiGoalMatches = 0
+  let cleanFinishes = 0
+
+  for (const match of matches) {
+    const teams = buildOfficialTeams(match, ouid)
+    if (!teams) continue
+
+    const myGoals = teams.myScore
+    totalGoals += myGoals
+    if (myGoals >= 2) {
+      multiGoalMatches += 1
+    }
+
+    inPenaltyGoals += teams.me.shoot.goalInPenalty ?? 0
+    outPenaltyGoals += teams.me.shoot.goalOutPenalty ?? 0
+    headerGoals += teams.me.shoot.goalHeading ?? 0
+    freekickGoals += teams.me.shoot.goalFreekick ?? 0
+    penaltyGoals += teams.me.shoot.goalPenaltyKick ?? 0
+
+    const effectiveShots = teams.me.shoot.effectiveShootTotal ?? 0
+    if (effectiveShots > 0 && myGoals > 0) {
+      cleanFinishes += myGoals / effectiveShots >= 0.5 ? 1 : 0
+    }
+  }
+
+  if (totalGoals === 0 && inPenaltyGoals === 0 && outPenaltyGoals === 0) {
+    return null
+  }
+
+  return {
+    totalGoals,
+    inPenaltyGoals,
+    outPenaltyGoals,
+    headerGoals,
+    freekickGoals,
+    penaltyGoals,
+    multiGoalMatches,
+    cleanFinishes,
+  }
+}
+
+function buildOfficialRecentPlayerLeaders(matches: MatchData[], ouid: string | null | undefined) {
+  if (!ouid) return []
+
+  const players = new Map<string, OfficialRecentPlayerLeader>()
+
+  for (const match of matches) {
+    const teams = buildOfficialTeams(match, ouid)
+    const squad = teams?.me.player
+
+    if (!teams || !Array.isArray(squad)) continue
+
+    for (const squadPlayer of squad) {
+      const spId = typeof squadPlayer?.spId === 'number' ? squadPlayer.spId : null
+      if (!spId) continue
+
+      const enhancement =
+        typeof squadPlayer?.spGrade === 'number' && Number.isFinite(squadPlayer.spGrade)
+          ? squadPlayer.spGrade
+          : null
+      const key = `${spId}:${enhancement ?? 0}`
+      const status = squadPlayer.status
+      const previous = players.get(key)
+      const goals = status?.goal ?? 0
+      const assists = status?.assist ?? 0
+      const effectiveShots = status?.effectiveShoot ?? 0
+      const shots = status?.shoot ?? 0
+      const rating = status?.spRating ?? 0
+
+      players.set(key, {
+        key,
+        spId,
+        spPosition:
+          typeof squadPlayer?.spPosition === 'number' ? squadPlayer.spPosition : previous?.spPosition ?? null,
+        enhancement,
+        playerName: squadPlayer.cardInfo?.playerName ?? previous?.playerName ?? null,
+        seasonName: squadPlayer.cardInfo?.seasonName ?? previous?.seasonName ?? null,
+        appearances: (previous?.appearances ?? 0) + 1,
+        goals: (previous?.goals ?? 0) + goals,
+        assists: (previous?.assists ?? 0) + assists,
+        effectiveShots: (previous?.effectiveShots ?? 0) + effectiveShots,
+        shots: (previous?.shots ?? 0) + shots,
+        averageRating: (previous?.averageRating ?? 0) + rating,
+      })
+    }
+  }
+
+  return [...players.values()]
+    .map((player) => ({
+      ...player,
+      averageRating: player.appearances > 0 ? player.averageRating / player.appearances : 0,
+    }))
+    .sort((a, b) => {
+      if (b.goals !== a.goals) return b.goals - a.goals
+      if (b.assists !== a.assists) return b.assists - a.assists
+      if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating
+      return b.effectiveShots - a.effectiveShots
+    })
+    .slice(0, 5)
+}
+
+function formatPlayerLeaderSubtitle(player: OfficialRecentPlayerLeader) {
+  const positionLabel =
+    player.spPosition != null ? FC_POSITION_LABELS[player.spPosition] ?? `POS ${player.spPosition}` : null
+  const parts = [
+    positionLabel,
+    player.enhancement != null ? `${player.enhancement}강` : null,
+    player.seasonName || null,
+  ].filter((part): part is string => Boolean(part))
+
+  return parts.join(' · ')
+}
+
 function getVoltaPlayerMetrics(player: MatchPlayerInfo) {
   const status = (player as MatchPlayerInfo & {
     player?: Array<{
@@ -386,11 +696,11 @@ function writeCachedSearch(nickname: string, entry: MatchSearchCacheEntry) {
   writeJsonStorage(MATCH_SEARCH_CACHE_KEY, parsed)
 }
 
-function readCachedMatches(ouid: string) {
+function readCachedMatches(cacheKey: string) {
   const parsed = readJsonStorage<MatchResultsCacheStore>(MATCH_RESULTS_CACHE_KEY)
   if (!parsed) return null
 
-  const entry = parsed[ouid]
+  const entry = parsed[cacheKey]
   if (!entry) return null
 
   if (Date.now() - entry.cachedAt > MATCH_RESULTS_CACHE_TTL_MS) {
@@ -400,16 +710,16 @@ function readCachedMatches(ouid: string) {
   return Array.isArray(entry.matches) ? entry.matches : null
 }
 
-function writeCachedMatches(ouid: string, matches: MatchData[]) {
+function writeCachedMatches(cacheKey: string, matches: MatchData[]) {
   const parsed = readJsonStorage<MatchResultsCacheStore>(MATCH_RESULTS_CACHE_KEY) ?? {}
-  parsed[ouid] = {
+  parsed[cacheKey] = {
     cachedAt: Date.now(),
     matches,
   }
   writeJsonStorage(MATCH_RESULTS_CACHE_KEY, parsed)
 }
 
-function buildMatchesUrl(nickname: string | null, matchId?: string | null) {
+function buildMatchesUrl(nickname: string | null, matchId?: string | null, mode: SearchMode = 'voltaLive') {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
 
@@ -425,12 +735,18 @@ function buildMatchesUrl(nickname: string | null, matchId?: string | null) {
     url.searchParams.delete('matchId')
   }
 
+  if (mode !== 'voltaLive') {
+    url.searchParams.set('mode', mode)
+  } else {
+    url.searchParams.delete('mode')
+  }
+
   return `${url.pathname}${url.search}`
 }
 
-function updateMatchesUrl(nickname: string | null, matchId?: string | null) {
+function updateMatchesUrl(nickname: string | null, matchId?: string | null, mode: SearchMode = 'voltaLive') {
   if (typeof window === 'undefined') return
-  const nextUrl = buildMatchesUrl(nickname, matchId)
+  const nextUrl = buildMatchesUrl(nickname, matchId, mode)
   if (!nextUrl) return
   window.history.replaceState({}, '', nextUrl)
 }
@@ -1205,22 +1521,157 @@ function buildMatchInsight(
   return ['기록 대부분이 팀 평균 부근에 모여 있어 눈에 띄는 장점과 약점이 크게 갈리진 않았습니다. 이런 경기는 한 가지 역할이라도 더 선명하게 만드는 쪽이 다음 평가를 바꿉니다.']
 }
 
+function buildOfficialMatchInsight(teams: NonNullable<ReturnType<typeof buildOfficialTeams>>) {
+  const meMetrics = getOfficialPlayerMetrics(teams.me)
+  const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
+  const lines: string[] = []
+
+  if (teams.myScore > teams.opponentScore) {
+    if (meMetrics.effectiveShots > opponentMetrics.effectiveShots) {
+      lines.push(
+        `유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 마무리 질에서 앞섰고, 그 차이가 승리로 연결됐습니다.`,
+      )
+    } else {
+      lines.push(
+        `스코어는 ${teams.myScore}:${teams.opponentScore} 승리였고, 적은 찬스에서도 마무리를 살린 경기였습니다.`,
+      )
+    }
+  } else if (teams.myScore < teams.opponentScore) {
+    if (meMetrics.shots < opponentMetrics.shots) {
+      lines.push(
+        `슈팅 수가 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}로 밀려 공격 장면을 덜 만들었습니다. 이번 경기는 진입 횟수 자체가 아쉬웠습니다.`,
+      )
+    } else {
+      lines.push(
+        `기회 수는 크게 밀리지 않았지만 ${teams.myScore}:${teams.opponentScore}로 패했습니다. 마지막 결정 장면의 정교함이 결과를 갈랐습니다.`,
+      )
+    }
+  } else {
+    lines.push(
+      `무승부 경기였고, 점수 차이는 없었지만 유효슛과 패스 완성도 같은 세부 지표에서 다음 승부 포인트가 보이는 경기였습니다.`,
+    )
+  }
+
+  const possessionGap = meMetrics.possession - opponentMetrics.possession
+  if (Math.abs(possessionGap) >= 8) {
+    lines.push(
+      possessionGap > 0
+        ? `점유율 ${formatMetricNumber(meMetrics.possession)}%로 볼 소유는 더 길게 가져갔습니다. 다만 점유 우위를 유효슛으로 더 강하게 연결하면 체감이 더 좋아질 흐름입니다.`
+        : `점유율이 ${formatMetricNumber(opponentMetrics.possession)}%까지 넘어가며 흐름을 상대에게 내준 시간대가 길었습니다. 빌드업 첫 패스 안정화가 우선 포인트입니다.`,
+    )
+  }
+
+  if (meMetrics.passRate != null && opponentMetrics.passRate != null) {
+    const passGap = meMetrics.passRate - opponentMetrics.passRate
+    if (passGap >= 6) {
+      lines.push(
+        `패스 성공률은 ${formatPercent(meMetrics.passRate)}로 상대보다 안정적이었습니다. 전개 안정감은 좋았고, 박스 앞 선택만 더 날카로우면 같은 패턴이 더 큰 위협이 됩니다.`,
+      )
+    } else if (passGap <= -6) {
+      lines.push(
+        `패스 성공률이 ${formatPercent(meMetrics.passRate)}로 상대보다 낮았습니다. 이번 경기는 빠르게 풀려는 선택보다 한 템포 더 정리하는 운영이 더 유효했을 가능성이 큽니다.`,
+      )
+    }
+  }
+
+  const defensivePlays = (meMetrics.tackleSuccess ?? 0) + (meMetrics.blockSuccess ?? 0)
+  if (defensivePlays >= 4) {
+    lines.push(
+      `태클/차단 성공이 합계 ${formatMetricNumber(defensivePlays)}회로 수비 개입은 꾸준했습니다. 압박 타이밍은 나쁘지 않았고, 탈취 직후 전개만 더 붙으면 역습 효율도 올라갑니다.`,
+    )
+  }
+
+  return lines.slice(0, 3)
+}
+
+function formatOfficialTeamColors(teamColors: string[] | null | undefined) {
+  if (!teamColors || teamColors.length === 0) {
+    return '-'
+  }
+
+  return teamColors.slice(0, 3).join(' · ')
+}
+
+function getOfficialDisplayFields(candidate: MatchSearchCandidate | null) {
+  return {
+    rank: candidate?.officialRank ?? candidate?.rank ?? null,
+    rankPoint: candidate?.officialRankPoint ?? candidate?.elo ?? null,
+    rankLabel: candidate?.officialRankLabel ?? candidate?.rankLabel ?? null,
+    rankIconUrl: candidate?.officialRankIconUrl ?? candidate?.rankIconUrl ?? null,
+    winRate: candidate?.officialWinRate ?? candidate?.winRate ?? null,
+    wins: candidate?.officialWins ?? candidate?.wins ?? null,
+    draws: candidate?.officialDraws ?? candidate?.draws ?? null,
+    losses: candidate?.officialLosses ?? candidate?.losses ?? null,
+    formation: candidate?.officialFormation ?? candidate?.formation ?? null,
+    teamColors:
+      candidate?.officialTeamColors && candidate.officialTeamColors.length > 0
+        ? candidate.officialTeamColors
+        : candidate?.teamColors ?? [],
+  }
+}
+
+function formatMatchRecordLine(wins: number | null, draws: number | null, losses: number | null) {
+  if (wins == null || draws == null || losses == null) {
+    return '-'
+  }
+
+  return `${wins}승 ${draws}무 ${losses}패`
+}
+
+function OfficialComparisonRow({
+  label,
+  myValue,
+  opponentValue,
+  myAccent = false,
+  opponentAccent = false,
+}: {
+  label: string
+  myValue: string
+  opponentValue: string
+  myAccent?: boolean
+  opponentAccent?: boolean
+}) {
+  return (
+    <div
+      className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-lg px-3 py-2.5"
+      style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}
+    >
+      <p
+        className="text-left text-sm font-semibold"
+        style={{ color: myAccent ? 'var(--app-accent-blue)' : 'var(--app-title)' }}
+      >
+        {myValue}
+      </p>
+      <p className="app-theme-muted text-[11px] font-medium whitespace-nowrap">{label}</p>
+      <p
+        className="text-right text-sm font-semibold"
+        style={{ color: opponentAccent ? 'var(--app-accent-red)' : 'var(--app-title)' }}
+      >
+        {opponentValue}
+      </p>
+    </div>
+  )
+}
+
 function MatchRecordCard({
   match,
   teams,
   shareNickname,
+  searchMode,
   shouldExpand,
   onExpandedChange,
 }: {
   match: MatchData
   teams: NonNullable<ReturnType<typeof buildVoltaTeams>>
   shareNickname: string
+  searchMode: SearchMode
   shouldExpand: boolean
   onExpandedChange: (matchId: string | null) => void
 }) {
   const cardRef = useRef<HTMLElement | null>(null)
   const [selectedPlayerOuid, setSelectedPlayerOuid] = useState(teams.me.ouid)
-  const [expanded, setExpanded] = useState(false)
+  const [isExpandedInternal, setIsExpandedInternal] = useState(false)
+  const expanded = shouldExpand || isExpandedInternal
   const result = teams.me.matchDetail.matchResult
   const scorelineLabel = `${teams.myScore} : ${teams.opponentScore}`
   const cardTintColor =
@@ -1246,7 +1697,6 @@ function MatchRecordCard({
 
   useEffect(() => {
     if (shouldExpand) {
-      setExpanded(true)
       const timeoutId = window.setTimeout(() => {
         cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 80)
@@ -1257,7 +1707,7 @@ function MatchRecordCard({
   const handleShare = async (type: 'x' | 'copy') => {
     if (typeof window === 'undefined') return
 
-    const relativeUrl = buildMatchesUrl(shareNickname, match.matchId)
+    const relativeUrl = buildMatchesUrl(shareNickname, match.matchId, searchMode)
     const shareUrl = relativeUrl ? new URL(relativeUrl, window.location.origin).toString() : window.location.href
     const shareText = `${selectedPlayer.nickname} 경기 분석 ${scorelineLabel}`
 
@@ -1284,7 +1734,7 @@ function MatchRecordCard({
       style={{ backgroundColor: cardTintColor }}
       onClick={() => {
         const nextExpanded = !expanded
-        setExpanded(nextExpanded)
+        setIsExpandedInternal(nextExpanded)
         onExpandedChange(nextExpanded ? match.matchId : null)
       }}
     >
@@ -1314,7 +1764,7 @@ function MatchRecordCard({
               type="button"
               onClick={(event) => {
                 event.stopPropagation()
-                setExpanded(true)
+                setIsExpandedInternal(true)
                 onExpandedChange(match.matchId)
               }}
               className="inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none whitespace-nowrap text-white"
@@ -1477,10 +1927,266 @@ function MatchRecordCard({
   )
 }
 
-async function copyOwnerPageLink(nickname: string) {
+function OfficialMatchRecordCard({
+  match,
+  teams,
+  shareNickname,
+  searchMode,
+  shouldExpand,
+  onExpandedChange,
+}: {
+  match: MatchData
+  teams: NonNullable<ReturnType<typeof buildOfficialTeams>>
+  shareNickname: string
+  searchMode: SearchMode
+  shouldExpand: boolean
+  onExpandedChange: (matchId: string | null) => void
+}) {
+  const cardRef = useRef<HTMLElement | null>(null)
+  const [isExpandedInternal, setIsExpandedInternal] = useState(false)
+  const expanded = shouldExpand || isExpandedInternal
+  const result = teams.me.matchDetail.matchResult
+  const scorelineLabel = `${teams.myScore} : ${teams.opponentScore}`
+  const cardTintColor =
+    result === '승'
+      ? 'var(--app-result-win-soft)'
+      : result === '패'
+        ? 'var(--app-result-loss-soft)'
+        : 'var(--app-result-draw-soft)'
+  const viewButtonColor =
+    result === '패' ? '#ef6b76' : result === '무' ? '#7a8793' : '#5e8fe8'
+  const meMetrics = getOfficialPlayerMetrics(teams.me)
+  const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
+  const matchInsight = buildOfficialMatchInsight(teams)
+
+  useEffect(() => {
+    if (shouldExpand) {
+      const timeoutId = window.setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+      return () => window.clearTimeout(timeoutId)
+    }
+  }, [shouldExpand])
+
+  const handleShare = async (type: 'x' | 'copy') => {
+    if (typeof window === 'undefined') return
+
+    const relativeUrl = buildMatchesUrl(shareNickname, match.matchId, searchMode)
+    const shareUrl = relativeUrl ? new URL(relativeUrl, window.location.origin).toString() : window.location.href
+    const shareText = `${teams.me.nickname} 공식경기 분석 ${scorelineLabel}`
+
+    if (type === 'copy') {
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        window.alert('링크가 복사되었습니다.')
+      } catch {
+        window.alert('링크 복사에 실패했습니다.')
+      }
+      return
+    }
+
+    const xIntentUrl = new URL('https://twitter.com/intent/tweet')
+    xIntentUrl.searchParams.set('text', shareText)
+    xIntentUrl.searchParams.set('url', shareUrl)
+    window.open(xIntentUrl.toString(), '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <article
+      ref={cardRef}
+      className="rounded-lg px-4 py-4"
+      style={{ backgroundColor: cardTintColor }}
+      onClick={() => {
+        const nextExpanded = !expanded
+        setIsExpandedInternal(nextExpanded)
+        onExpandedChange(nextExpanded ? match.matchId : null)
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <MatchResultBadge result={result} />
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <MatchResultLabel result={result} />
+              <MutedDivider />
+              <span className="app-theme-body text-sm font-semibold">1:1 공식경기</span>
+            </div>
+            <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+              <span className="app-theme-title font-semibold">{scorelineLabel}</span>
+              <MutedDivider />
+              <span>{formatDate(match.matchDate)}</span>
+            </div>
+            <div className="app-theme-muted mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+              <span>점유율 {formatMetricNumber(meMetrics.possession)}%</span>
+              <MutedDivider />
+              <span>슛 {formatMetricNumber(meMetrics.shots)}</span>
+              <MutedDivider />
+              <span>유효슛 {formatMetricNumber(meMetrics.effectiveShots)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex h-11 shrink-0 items-center">
+          {!expanded ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setIsExpandedInternal(true)
+                onExpandedChange(match.matchId)
+              }}
+              className="inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none whitespace-nowrap text-white"
+              style={{ backgroundColor: viewButtonColor }}
+            >
+              <span>상세</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 space-y-3" onClick={(event) => event.stopPropagation()}>
+          <div className="app-theme-card rounded-lg px-4 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div
+                className="rounded-lg px-4 py-3"
+                style={{ backgroundColor: 'var(--app-analysis-soft-alt-bg)' }}
+              >
+                <p className="app-theme-muted text-[11px]">내 구단주</p>
+                <p className="app-theme-title mt-1 truncate text-sm font-semibold">{teams.me.nickname}</p>
+                <p className="app-theme-body mt-1 text-xs">{getControllerDisplay(meMetrics.controller)}</p>
+              </div>
+              <div
+                className="rounded-lg px-4 py-3 text-right"
+                style={{ backgroundColor: 'var(--app-analysis-soft-alt-bg)' }}
+              >
+                <p className="app-theme-muted text-[11px]">상대 구단주</p>
+                <p className="app-theme-title mt-1 truncate text-sm font-semibold">{teams.opponent.nickname}</p>
+                <p className="app-theme-body mt-1 text-xs">{getControllerDisplay(opponentMetrics.controller)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <MatchMetricCard label="득점" value={formatMetricNumber(meMetrics.goals)} accent="blue" />
+            <MatchMetricCard
+              label="유효슛 / 슛"
+              value={`${formatMetricNumber(meMetrics.effectiveShots)} / ${formatMetricNumber(meMetrics.shots)}`}
+            />
+            <MatchMetricCard
+              label="패스 성공률"
+              value={meMetrics.passRate != null ? formatPercent(meMetrics.passRate) : '-'}
+              accent="green"
+            />
+            <MatchMetricCard label="평점" value={formatMetricNumber(meMetrics.rating, 2)} />
+          </div>
+
+          <div className="app-theme-card rounded-lg px-4 py-4">
+            <p className="app-theme-title text-sm font-semibold">경기 지표 비교</p>
+            <div className="mt-3 space-y-2">
+              <OfficialComparisonRow
+                label="점유율"
+                myValue={`${formatMetricNumber(meMetrics.possession)}%`}
+                opponentValue={`${formatMetricNumber(opponentMetrics.possession)}%`}
+                myAccent={meMetrics.possession > opponentMetrics.possession}
+                opponentAccent={opponentMetrics.possession > meMetrics.possession}
+              />
+              <OfficialComparisonRow
+                label="슈팅"
+                myValue={formatMetricNumber(meMetrics.shots)}
+                opponentValue={formatMetricNumber(opponentMetrics.shots)}
+                myAccent={meMetrics.shots > opponentMetrics.shots}
+                opponentAccent={opponentMetrics.shots > meMetrics.shots}
+              />
+              <OfficialComparisonRow
+                label="유효슛"
+                myValue={formatMetricNumber(meMetrics.effectiveShots)}
+                opponentValue={formatMetricNumber(opponentMetrics.effectiveShots)}
+                myAccent={meMetrics.effectiveShots > opponentMetrics.effectiveShots}
+                opponentAccent={opponentMetrics.effectiveShots > meMetrics.effectiveShots}
+              />
+              <OfficialComparisonRow
+                label="패스 성공률"
+                myValue={meMetrics.passRate != null ? formatPercent(meMetrics.passRate) : '-'}
+                opponentValue={opponentMetrics.passRate != null ? formatPercent(opponentMetrics.passRate) : '-'}
+                myAccent={(meMetrics.passRate ?? -1) > (opponentMetrics.passRate ?? -1)}
+                opponentAccent={(opponentMetrics.passRate ?? -1) > (meMetrics.passRate ?? -1)}
+              />
+              <OfficialComparisonRow
+                label="태클 성공률"
+                myValue={meMetrics.tackleRate != null ? formatPercent(meMetrics.tackleRate) : '-'}
+                opponentValue={opponentMetrics.tackleRate != null ? formatPercent(opponentMetrics.tackleRate) : '-'}
+                myAccent={(meMetrics.tackleRate ?? -1) > (opponentMetrics.tackleRate ?? -1)}
+                opponentAccent={(opponentMetrics.tackleRate ?? -1) > (meMetrics.tackleRate ?? -1)}
+              />
+              <OfficialComparisonRow
+                label="차단 성공률"
+                myValue={meMetrics.blockRate != null ? formatPercent(meMetrics.blockRate) : '-'}
+                opponentValue={opponentMetrics.blockRate != null ? formatPercent(opponentMetrics.blockRate) : '-'}
+                myAccent={(meMetrics.blockRate ?? -1) > (opponentMetrics.blockRate ?? -1)}
+                opponentAccent={(opponentMetrics.blockRate ?? -1) > (meMetrics.blockRate ?? -1)}
+              />
+              <OfficialComparisonRow
+                label="파울"
+                myValue={formatMetricNumber(meMetrics.fouls)}
+                opponentValue={formatMetricNumber(opponentMetrics.fouls)}
+              />
+              <OfficialComparisonRow
+                label="코너킥"
+                myValue={formatMetricNumber(meMetrics.corners)}
+                opponentValue={formatMetricNumber(opponentMetrics.corners)}
+                myAccent={meMetrics.corners > opponentMetrics.corners}
+                opponentAccent={opponentMetrics.corners > meMetrics.corners}
+              />
+            </div>
+          </div>
+
+          <div className="app-theme-card rounded-lg px-4 py-4">
+            <p className="app-theme-title text-sm font-semibold">경기 분석</p>
+            <div className="mt-2 space-y-1">
+              {matchInsight.map((line, index) => (
+                <p key={`${match.matchId}-official-insight-${index}`} className="app-theme-body text-sm leading-5">
+                  {line}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <div className="app-theme-card rounded-lg px-4 py-4">
+            <p className="app-theme-title text-sm font-semibold">상세 분석 공유하기</p>
+            <div className="mt-2.5 flex items-center gap-2">
+              {SHARE_CHANNELS.map((channel) => {
+                const Icon = channel.icon
+                return (
+                  <button
+                    key={`${match.matchId}-${channel.label}`}
+                    type="button"
+                    aria-label={`${channel.label} 공유`}
+                    onClick={() => void handleShare(channel.key)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border transition"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
+                  >
+                    <Icon size={20} weight="bold" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </article>
+  )
+}
+
+async function copyOwnerPageLink(nickname: string, searchMode: SearchMode) {
   if (typeof window === 'undefined') return
 
-  const relativeUrl = buildMatchesUrl(nickname, null)
+  const relativeUrl = buildMatchesUrl(nickname, null, searchMode)
   const shareUrl = relativeUrl ? new URL(relativeUrl, window.location.origin).toString() : window.location.href
 
   try {
@@ -1635,13 +2341,15 @@ function MatchNoResultState({ nickname }: { nickname: string }) {
 type Props = {
   initialNickname: string
   initialMatchId: string
+  initialSearchMode: string
 }
 
-export default function MatchesPageClient({ initialNickname, initialMatchId }: Props) {
+export default function MatchesPageClient({ initialNickname, initialMatchId, initialSearchMode }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
+  const normalizedInitialMode = normalizeSearchMode(initialSearchMode)
 
-  const [selectedSearchMode, setSelectedSearchMode] = useState<SearchMode>('voltaLive')
+  const [selectedSearchMode, setSelectedSearchMode] = useState<SearchMode>(normalizedInitialMode)
   const [isSearchInputFocused, setIsSearchInputFocused] = useState(false)
   const [hasPendingRouteSearch, setHasPendingRouteSearch] = useState(Boolean(initialNickname))
   const [query, setQuery] = useState(initialNickname)
@@ -1838,8 +2546,10 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
     }
   }, [])
 
-  const loadMatches = async (targetOuid: string) => {
-    const cachedMatches = readCachedMatches(targetOuid)
+  const loadMatches = async (targetOuid: string, searchMode: SearchMode) => {
+    const cacheKey = buildMatchCacheKey(targetOuid, searchMode)
+    const cachedMatches = readCachedMatches(cacheKey)
+    const matchType = getMatchTypeForMode(searchMode)
 
     if (cachedMatches) {
       setMatches(cachedMatches)
@@ -1858,7 +2568,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), MATCH_LIST_TIMEOUT_MS)
       const res = await fetch(
-        `/api/nexon/matches/list?ouid=${targetOuid}&matchtype=214&limit=${MATCH_LIST_LIMIT}`,
+        `/api/nexon/matches/list?ouid=${targetOuid}&matchtype=${matchType}&limit=${MATCH_LIST_LIMIT}`,
         { signal: controller.signal },
       ).finally(() => clearTimeout(timer))
 
@@ -1872,7 +2582,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
       const nextMatches = Array.isArray(data) ? data : []
       setMatches(nextMatches)
       if (nextMatches.length > 0) {
-        writeCachedMatches(targetOuid, nextMatches)
+        writeCachedMatches(cacheKey, nextMatches)
       }
     } catch {
       setMatches([])
@@ -1906,7 +2616,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
     if (!trimmed) return
 
     if (shouldUpdateUrl) {
-      updateMatchesUrl(trimmed, matchIdToKeep ?? null)
+      updateMatchesUrl(trimmed, matchIdToKeep ?? null, selectedSearchMode)
     }
 
     const requestId = ++requestIdRef.current
@@ -1927,7 +2637,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
 
         if (cachedSearch.exactCandidate?.ouid) {
           writeCachedOuid(trimmed, cachedSearch.exactCandidate.ouid)
-          void loadMatches(cachedSearch.exactCandidate.ouid)
+          void loadMatches(cachedSearch.exactCandidate.ouid, selectedSearchMode)
         }
 
         return
@@ -1960,7 +2670,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
 
       if (nextExactMatch?.ouid) {
         writeCachedOuid(trimmed, nextExactMatch.ouid)
-        void loadMatches(nextExactMatch.ouid)
+        void loadMatches(nextExactMatch.ouid, selectedSearchMode)
       }
     } finally {
       if (requestId === requestIdRef.current) {
@@ -2002,8 +2712,16 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
     inputRef.current?.focus()
   }
 
+  const handleSelectSearchMode = (mode: SearchMode) => {
+    setSelectedSearchMode(mode)
+
+    if (!showResultsPanel) {
+      updateMatchesUrl(null, null, mode)
+    }
+  }
+
   const handleBackHome = () => {
-    updateMatchesUrl(null, null)
+    updateMatchesUrl(null, null, selectedSearchMode)
     setHasPendingRouteSearch(false)
     setQuery('')
     setActiveSearchQuery('')
@@ -2032,19 +2750,29 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
     setVisibleMatchCount((current) => Math.max(current, matchIndex + 1))
   }, [activeMatchId, matches])
 
-  const voltaSummary = summarizeMatches(matches, exactCandidate?.ouid)
+  const isOfficialMode = selectedSearchMode === 'official1on1'
+  const isVoltaMode = selectedSearchMode === 'voltaLive'
+  const voltaSummary = isVoltaMode ? summarizeMatches(matches, exactCandidate?.ouid) : null
+  const officialSummary = isOfficialMode ? summarizeOfficialMatches(matches, exactCandidate?.ouid) : null
+  const officialScoringSummary = isOfficialMode ? summarizeOfficialScoringStyles(matches, exactCandidate?.ouid) : null
+  const officialTopPlayers = isOfficialMode ? buildOfficialRecentPlayerLeaders(matches, exactCandidate?.ouid) : []
   const recentMatchesLabel = '최근 10경기'
   const recentGoalsForLabel = '최근 10경기 총 득점'
   const recentGoalsAgainstLabel = '최근 10경기 총 실점'
-  const searchTitle = '어떤 공식경기 기록을 찾아볼까요?'
+  const searchTitle = '어떤 경기 기록을 찾아볼까요?'
   const searchPlaceholder =
     selectedSearchMode === 'official1on1'
       ? '1:1 공식경기 구단주명을 입력해 주세요'
       : selectedSearchMode === 'manager'
         ? '감독모드 구단주명을 입력해 주세요'
         : '볼타 라이브 구단주명을 입력해 주세요'
-  const isPreviewOnlyMode = selectedSearchMode !== 'voltaLive'
+  const isPreviewOnlyMode = selectedSearchMode === 'manager'
   const isSearchDisabled = searchLoading || isPreviewOnlyMode
+  const officialDisplay = getOfficialDisplayFields(exactCandidate)
+  const fallbackOwnerEmblemUrl = exactCandidate?.representativeTeamEmblemUrl ?? null
+  const officialBadgeImageUrl = officialDisplay.rankIconUrl ?? fallbackOwnerEmblemUrl
+  const hasOfficialRank =
+    officialDisplay.rank !== null || officialDisplay.rankPoint !== null || !!officialDisplay.rankIconUrl
   const hasVoltaRank =
     exactCandidate?.voltaRank !== null ||
     exactCandidate?.voltaRankPoint !== null ||
@@ -2065,6 +2793,12 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
   const showHomePanels = !hasResultContext
   const resultsTitle = exactCandidate?.nickname || activeSearchQuery || query.trim() || '분석 홈'
   const shareNickname = exactCandidate?.nickname || activeSearchQuery || query.trim()
+  const officialTeamColorValue = formatOfficialTeamColors(officialDisplay.teamColors)
+  const officialRecordValue = formatMatchRecordLine(
+    officialDisplay.wins,
+    officialDisplay.draws,
+    officialDisplay.losses,
+  )
 
   return (
     <div className="pt-5">
@@ -2087,7 +2821,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
 
       {!showResultsPanel && (
         <div className="mt-4 space-y-3">
-          <SearchModeTabs selectedMode={selectedSearchMode} onSelect={setSelectedSearchMode} />
+          <SearchModeTabs selectedMode={selectedSearchMode} onSelect={handleSelectSearchMode} />
 
           <div
             className={`flex h-14 items-center gap-2 rounded-lg border px-4 focus-within:border-2 focus-within:border-[#457ae5] ${
@@ -2141,231 +2875,486 @@ export default function MatchesPageClient({ initialNickname, initialMatchId }: P
 
             {exactCandidate && (
               <div className="space-y-4">
-                <section className="app-theme-card rounded-lg border px-5 py-5">
-                  <div className="flex items-start gap-4">
-                    {exactCandidate.voltaRankIconUrl ? (
-                      <img
-                        src={exactCandidate.voltaRankIconUrl}
-                        alt="볼타 등급"
-                        className="mt-0.5 h-10 w-10 shrink-0 object-contain"
-                      />
-                    ) : (
-                      <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
-                        볼타
-                      </div>
-                    )}
+                {isOfficialMode ? (
+                  <>
+                    <section className="app-theme-card rounded-lg border px-5 py-5">
+                      <div className="flex items-start gap-4">
+                        {officialBadgeImageUrl ? (
+                          <img
+                            src={officialBadgeImageUrl}
+                            alt={officialDisplay.rankIconUrl ? '공식경기 등급' : '대표팀 엠블럼'}
+                            className="mt-0.5 h-10 w-10 shrink-0 object-contain"
+                          />
+                        ) : (
+                          <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
+                            1vs1
+                          </div>
+                        )}
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <h2 className="app-theme-title truncate text-2xl font-bold tracking-[-0.03em]">
-                          {exactCandidate.nickname}
-                        </h2>
-                        <button
-                          type="button"
-                          aria-label="구단주 페이지 링크 복사"
-                          onClick={() => void copyOwnerPageLink(exactCandidate.nickname)}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
-                          style={{
-                            backgroundColor: 'transparent',
-                            borderColor: 'var(--app-input-border)',
-                            color: 'var(--app-title)',
-                          }}
-                        >
-                          <LinkSimple size={16} weight="bold" />
-                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <h2 className="app-theme-title truncate text-2xl font-bold tracking-[-0.03em]">
+                              {exactCandidate.nickname}
+                            </h2>
+                            <button
+                              type="button"
+                              aria-label="구단주 페이지 링크 복사"
+                              onClick={() => void copyOwnerPageLink(exactCandidate.nickname, selectedSearchMode)}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
+                              style={{
+                                backgroundColor: 'transparent',
+                                borderColor: 'var(--app-input-border)',
+                                color: 'var(--app-title)',
+                              }}
+                            >
+                              <LinkSimple size={16} weight="bold" />
+                            </button>
+                          </div>
+                          <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                            <span>
+                              공식 승률 {officialDisplay.winRate != null ? `${formatDecimal(officialDisplay.winRate, 2)}%` : '-'}
+                            </span>
+                            <MutedDivider />
+                            <span>{officialDisplay.rankLabel ?? '공식 랭킹 검색 결과'}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
-                        <span>평점 {formatDecimal(exactCandidate.voltaAverageRating, 2)}</span>
-                        <MutedDivider />
-                        <span>
-                          승률{' '}
-                          {exactCandidate.voltaWinRate != null
-                            ? `${formatDecimal(exactCandidate.voltaWinRate, 2)}%`
-                            : '-'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {hasVoltaRank ? (
-                    <>
                       <div className="mt-4 grid grid-cols-2 gap-3">
-                        <InfoCard label="현재 순위" value={`#${statValue(exactCandidate.voltaRank)}`} />
-                        <InfoCard label="랭킹 포인트" value={statValue(exactCandidate.voltaRankPoint)} />
-                        <InfoCard
-                          label="구단주 취임일"
-                          value={statValue(exactCandidate.ownerSince)}
-                        />
-                        <InfoCard
-                          label="대표팀"
-                          value={statValue(exactCandidate.representativeTeam)}
-                        />
-                        <InfoCard
-                          label="승무패"
-                          value={`${statValue(exactCandidate.voltaWins)}승 ${statValue(exactCandidate.voltaDraws)}무 ${statValue(exactCandidate.voltaLosses)}패`}
-                        />
+                        <InfoCard label="현재 순위" value={officialDisplay.rank != null ? `#${officialDisplay.rank}` : '-'} />
+                        <InfoCard label="랭킹 포인트" value={statValue(officialDisplay.rankPoint)} />
+                        <InfoCard label="구단주 취임일" value={statValue(exactCandidate.ownerSince)} />
+                        <InfoCard label="대표팀" value={statValue(exactCandidate.representativeTeam)} />
+                        <InfoCard label="승무패" value={officialRecordValue} />
                         <InfoCard
                           label="승률"
-                          value={exactCandidate.voltaWinRate !== null ? `${exactCandidate.voltaWinRate}%` : '-'}
+                          value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'}
                         />
-                        <InfoCard label="평균 평점" value={statValue(exactCandidate.voltaAverageRating)} />
-                        <InfoCard label="MOM 선정" value={statValue(exactCandidate.voltaMomCount)} />
-                        <InfoCard label="득점" value={statValue(exactCandidate.voltaGoals)} />
-                        <InfoCard label="도움" value={statValue(exactCandidate.voltaAssists)} />
+                        <InfoCard label="주요 포메이션" value={statValue(officialDisplay.formation)} />
+                        <InfoCard label="대표 팀컬러" value={officialTeamColorValue} />
                         <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
                         <InfoCard
                           label={recentMatchesLabel}
                           value={
-                            voltaSummary
-                              ? `${voltaSummary.wins}승 ${voltaSummary.draws}무 ${voltaSummary.losses}패`
+                            officialSummary
+                              ? `${officialSummary.wins}승 ${officialSummary.draws}무 ${officialSummary.losses}패`
                               : '-'
                           }
                         />
                       </div>
 
-                    </>
-                  ) : (
-                    <div className="app-theme-soft app-theme-body mt-4 rounded-lg px-4 py-3 text-sm">
-                      볼타 랭킹 1만위 밖 유저거나 공개 랭킹 정보가 없어요.
-                    </div>
-                  )}
-
-                  {voltaSummary && (
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <SummaryPill
-                        label={recentGoalsForLabel}
-                        value={voltaSummary.goalsFor}
-                      />
-                      <SummaryPill
-                        label={recentGoalsAgainstLabel}
-                        value={voltaSummary.goalsAgainst}
-                      />
-                    </div>
-                  )}
-                </section>
-
-                {hasVoltaRank && (
-                  <section className="app-theme-card rounded-lg border px-5 py-5">
-                    <h2 className="app-theme-title text-base font-semibold">상세 정보</h2>
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <DetailStatCard
-                        label="태클 성공률"
-                        value={exactCandidate.voltaTackleRate ?? '-'}
-                      />
-                      <DetailStatCard
-                        label="차단 성공률"
-                        value={exactCandidate.voltaBlockRate ?? '-'}
-                      />
-                      <DetailStatCard
-                        label="유효슛"
-                        value={exactCandidate.voltaEffectiveShots ?? '-'}
-                      />
-                      <DetailStatCard
-                        label="패스 성공률"
-                        value={exactCandidate.voltaPassRate ?? '-'}
-                      />
-                      <DetailStatCard
-                        label="드리블 성공률"
-                        value={exactCandidate.voltaDribbleRate ?? '-'}
-                      />
-                      <DetailStatCard
-                        label="주요 포지션"
-                        value={exactCandidate.voltaMainPosition ?? '-'}
-                      />
-                    </div>
-                  </section>
-                )}
-
-                <section className="app-theme-card rounded-lg border px-5 py-5">
-                  <h2 className="app-theme-title mb-3 text-base font-semibold">볼타 공식 최근 10경기</h2>
-
-                  {matchLoading && <MatchRecordSkeletonList />}
-
-                  {!matchLoading && matchesError && (
-                    <p className="app-theme-muted py-4 text-sm">{matchesError}</p>
-                  )}
-
-                  {!matchLoading && !matchesError && matches.length === 0 && (
-                    <p className="app-theme-muted py-4 text-sm">볼타 공식 경기 기록이 없어요.</p>
-                  )}
-
-                  {!matchLoading && !matchesError && (
-                    <div className="space-y-3">
-                      {matches.slice(0, visibleMatchCount).map((match) => {
-                        const teams = buildVoltaTeams(match, exactCandidate.ouid ?? '')
-                        if (!teams) {
-                          return null
-                        }
-
-                        return (
-                          <MatchRecordCard
-                            key={match.matchId}
-                            match={match}
-                            teams={teams}
-                            shareNickname={shareNickname}
-                            shouldExpand={activeMatchId === match.matchId}
-                            onExpandedChange={(matchId) => {
-                              setActiveMatchId(matchId ?? '')
-                              updateMatchesUrl(shareNickname || null, matchId ?? null)
-                            }}
+                      {officialSummary ? (
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <SummaryPill label={recentGoalsForLabel} value={officialSummary.goalsFor} />
+                          <SummaryPill label={recentGoalsAgainstLabel} value={officialSummary.goalsAgainst} />
+                          <SummaryPill
+                            label="최근 10경기 평균 점유율"
+                            value={`${formatMetricNumber(officialSummary.averagePossession, 1)}%`}
                           />
-                        )
-                      })}
+                          <SummaryPill
+                            label="최근 10경기 평균 패스 성공률"
+                            value={
+                              officialSummary.averagePassRate != null
+                                ? `${formatMetricNumber(officialSummary.averagePassRate, 1)}%`
+                                : '-'
+                            }
+                          />
+                        </div>
+                      ) : null}
+                    </section>
 
-                      {matches.length > visibleMatchCount && (
-                        <button
-                          type="button"
-                          onClick={() => setVisibleMatchCount(matches.length)}
-                          className="app-theme-title flex w-full items-center justify-center rounded-lg border px-4 py-3 text-sm font-semibold"
-                          style={{
-                            backgroundColor: 'var(--app-card-bg)',
-                            borderColor: 'var(--app-input-border)',
-                          }}
-                        >
-                          더보기
-                        </button>
+                    <section className="app-theme-card rounded-lg border px-5 py-5">
+                      <h2 className="app-theme-title text-base font-semibold">상세 정보</h2>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <DetailStatCard label="주요 포메이션" value={officialDisplay.formation ?? '-'} />
+                        <DetailStatCard label="대표 팀컬러" value={officialTeamColorValue} />
+                        <DetailStatCard
+                          label="랭크 / 포인트"
+                          value={
+                            hasOfficialRank
+                              ? `${officialDisplay.rank != null ? `#${officialDisplay.rank}` : '-'} · ${statValue(officialDisplay.rankPoint)}`
+                              : '-'
+                          }
+                        />
+                        <DetailStatCard label="공식 승률" value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'} />
+                        <DetailStatCard
+                          label="최근 평균 슈팅"
+                          value={officialSummary ? formatMetricNumber(officialSummary.averageShots, 1) : '-'}
+                        />
+                        <DetailStatCard
+                          label="최근 평균 유효슛"
+                          value={officialSummary ? formatMetricNumber(officialSummary.averageEffectiveShots, 1) : '-'}
+                        />
+                        <DetailStatCard
+                          label="최근 클린시트"
+                          value={officialSummary ? `${officialSummary.cleanSheets}회` : '-'}
+                        />
+                        <DetailStatCard label="검색 모드" value={getModeLabel(selectedSearchMode)} />
+                      </div>
+                    </section>
+
+                    <section className="app-theme-card rounded-lg border px-5 py-5">
+                      <h2 className="app-theme-title mb-3 text-base font-semibold">1:1 공식경기 최근 10경기</h2>
+
+                      {matchLoading && <MatchRecordSkeletonList />}
+
+                      {!matchLoading && matchesError && (
+                        <p className="app-theme-muted py-4 text-sm">{matchesError}</p>
                       )}
-                    </div>
-                  )}
-                </section>
+
+                      {!matchLoading && !matchesError && matches.length === 0 && (
+                        <p className="app-theme-muted py-4 text-sm">1:1 공식경기 기록이 없어요.</p>
+                      )}
+
+                      {!matchLoading && !matchesError && (
+                        <div className="space-y-3">
+                          {matches.slice(0, visibleMatchCount).map((match) => {
+                            const teams = buildOfficialTeams(match, exactCandidate.ouid ?? '')
+                            if (!teams) {
+                              return null
+                            }
+
+                            return (
+                              <OfficialMatchRecordCard
+                                key={match.matchId}
+                                match={match}
+                                teams={teams}
+                                shareNickname={shareNickname}
+                                searchMode={selectedSearchMode}
+                                shouldExpand={activeMatchId === match.matchId}
+                                onExpandedChange={(matchId) => {
+                                  setActiveMatchId(matchId ?? '')
+                                  updateMatchesUrl(shareNickname || null, matchId ?? null, selectedSearchMode)
+                                }}
+                              />
+                            )
+                          })}
+
+                          {matches.length > visibleMatchCount && (
+                            <button
+                              type="button"
+                              onClick={() => setVisibleMatchCount(matches.length)}
+                              className="app-theme-title flex w-full items-center justify-center rounded-lg border px-4 py-3 text-sm font-semibold"
+                              style={{
+                                backgroundColor: 'var(--app-card-bg)',
+                                borderColor: 'var(--app-input-border)',
+                              }}
+                            >
+                              더보기
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </section>
+
+                    {(officialScoringSummary || officialTopPlayers.length > 0) && (
+                      <section className="app-theme-card rounded-lg border px-5 py-5">
+                        <h2 className="app-theme-title text-base font-semibold">최근 10경기 공격 패턴</h2>
+
+                        {officialScoringSummary ? (
+                          <div className="mt-4 grid grid-cols-2 gap-3">
+                            <SummaryPill label="총 득점" value={officialScoringSummary.totalGoals} />
+                            <SummaryPill label="멀티득점 경기" value={`${officialScoringSummary.multiGoalMatches}경기`} />
+                            <SummaryPill
+                              label="박스 안 득점"
+                              value={`${officialScoringSummary.inPenaltyGoals}골`}
+                            />
+                            <SummaryPill
+                              label="박스 밖 득점"
+                              value={`${officialScoringSummary.outPenaltyGoals}골`}
+                            />
+                            <SummaryPill label="헤더 득점" value={`${officialScoringSummary.headerGoals}골`} />
+                            <SummaryPill
+                              label="PK/프리킥 득점"
+                              value={`${officialScoringSummary.penaltyGoals + officialScoringSummary.freekickGoals}골`}
+                            />
+                          </div>
+                        ) : (
+                          <p className="app-theme-muted mt-4 text-sm">최근 10경기에서 집계할 득점 패턴이 아직 부족해요.</p>
+                        )}
+
+                        {officialTopPlayers.length > 0 && (
+                          <>
+                            <h3 className="app-theme-title mt-6 text-sm font-semibold">최근 10경기 주요 선수 TOP 5</h3>
+                            <div className="mt-3 space-y-3">
+                              {officialTopPlayers.map((player) => (
+                                <div
+                                  key={player.key}
+                                  className="app-theme-soft rounded-lg px-4 py-3"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div
+                                      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg"
+                                      style={{ backgroundColor: 'var(--app-analysis-soft-alt-bg)' }}
+                                    >
+                                      <PlayerImage
+                                        spid={player.spId}
+                                        alt={player.playerName ?? '선수'}
+                                        className="object-contain"
+                                        sizes="56px"
+                                      />
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                      <p className="app-theme-title truncate text-sm font-semibold">
+                                        {player.playerName ?? '선수 정보 없음'}
+                                      </p>
+                                      <p className="app-theme-body mt-1 text-xs">
+                                        {formatPlayerLeaderSubtitle(player)}
+                                      </p>
+
+                                      <div className="app-theme-body mt-2 flex flex-wrap items-center gap-1.5 text-xs leading-5">
+                                        <span>출전 {player.appearances}경기</span>
+                                        <MutedDivider />
+                                        <span>평점 {formatMetricNumber(player.averageRating, 2)}</span>
+                                        <MutedDivider />
+                                        <span>득점 {player.goals}골</span>
+                                        <MutedDivider />
+                                        <span>도움 {player.assists}개</span>
+                                        <MutedDivider />
+                                        <span>유효슛 {player.effectiveShots}회</span>
+                                        <MutedDivider />
+                                        <span>슛 {player.shots}회</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </section>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <section className="app-theme-card rounded-lg border px-5 py-5">
+                      <div className="flex items-start gap-4">
+                        {exactCandidate.voltaRankIconUrl ? (
+                          <img
+                            src={exactCandidate.voltaRankIconUrl}
+                            alt="볼타 등급"
+                            className="mt-0.5 h-10 w-10 shrink-0 object-contain"
+                          />
+                        ) : (
+                          <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
+                            볼타
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <h2 className="app-theme-title truncate text-2xl font-bold tracking-[-0.03em]">
+                              {exactCandidate.nickname}
+                            </h2>
+                            <button
+                              type="button"
+                              aria-label="구단주 페이지 링크 복사"
+                              onClick={() => void copyOwnerPageLink(exactCandidate.nickname, selectedSearchMode)}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
+                              style={{
+                                backgroundColor: 'transparent',
+                                borderColor: 'var(--app-input-border)',
+                                color: 'var(--app-title)',
+                              }}
+                            >
+                              <LinkSimple size={16} weight="bold" />
+                            </button>
+                          </div>
+                          <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                            <span>평점 {formatDecimal(exactCandidate.voltaAverageRating, 2)}</span>
+                            <MutedDivider />
+                            <span>
+                              승률{' '}
+                              {exactCandidate.voltaWinRate != null
+                                ? `${formatDecimal(exactCandidate.voltaWinRate, 2)}%`
+                                : '-'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {hasVoltaRank ? (
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <InfoCard label="현재 순위" value={`#${statValue(exactCandidate.voltaRank)}`} />
+                          <InfoCard label="랭킹 포인트" value={statValue(exactCandidate.voltaRankPoint)} />
+                          <InfoCard label="구단주 취임일" value={statValue(exactCandidate.ownerSince)} />
+                          <InfoCard label="대표팀" value={statValue(exactCandidate.representativeTeam)} />
+                          <InfoCard
+                            label="승무패"
+                            value={`${statValue(exactCandidate.voltaWins)}승 ${statValue(exactCandidate.voltaDraws)}무 ${statValue(exactCandidate.voltaLosses)}패`}
+                          />
+                          <InfoCard
+                            label="승률"
+                            value={exactCandidate.voltaWinRate !== null ? `${exactCandidate.voltaWinRate}%` : '-'}
+                          />
+                          <InfoCard label="평균 평점" value={statValue(exactCandidate.voltaAverageRating)} />
+                          <InfoCard label="MOM 선정" value={statValue(exactCandidate.voltaMomCount)} />
+                          <InfoCard label="득점" value={statValue(exactCandidate.voltaGoals)} />
+                          <InfoCard label="도움" value={statValue(exactCandidate.voltaAssists)} />
+                          <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
+                          <InfoCard
+                            label={recentMatchesLabel}
+                            value={
+                              voltaSummary
+                                ? `${voltaSummary.wins}승 ${voltaSummary.draws}무 ${voltaSummary.losses}패`
+                                : '-'
+                            }
+                          />
+                        </div>
+                      ) : (
+                        <div className="app-theme-soft app-theme-body mt-4 rounded-lg px-4 py-3 text-sm">
+                          볼타 랭킹 1만위 밖 유저거나 공개 랭킹 정보가 없어요.
+                        </div>
+                      )}
+
+                      {voltaSummary && (
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <SummaryPill label={recentGoalsForLabel} value={voltaSummary.goalsFor} />
+                          <SummaryPill label={recentGoalsAgainstLabel} value={voltaSummary.goalsAgainst} />
+                        </div>
+                      )}
+                    </section>
+
+                    {hasVoltaRank && (
+                      <section className="app-theme-card rounded-lg border px-5 py-5">
+                        <h2 className="app-theme-title text-base font-semibold">상세 정보</h2>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <DetailStatCard label="태클 성공률" value={exactCandidate.voltaTackleRate ?? '-'} />
+                          <DetailStatCard label="차단 성공률" value={exactCandidate.voltaBlockRate ?? '-'} />
+                          <DetailStatCard label="유효슛" value={exactCandidate.voltaEffectiveShots ?? '-'} />
+                          <DetailStatCard label="패스 성공률" value={exactCandidate.voltaPassRate ?? '-'} />
+                          <DetailStatCard label="드리블 성공률" value={exactCandidate.voltaDribbleRate ?? '-'} />
+                          <DetailStatCard label="주요 포지션" value={exactCandidate.voltaMainPosition ?? '-'} />
+                        </div>
+                      </section>
+                    )}
+
+                    <section className="app-theme-card rounded-lg border px-5 py-5">
+                      <h2 className="app-theme-title mb-3 text-base font-semibold">볼타 공식 최근 10경기</h2>
+
+                      {matchLoading && <MatchRecordSkeletonList />}
+
+                      {!matchLoading && matchesError && (
+                        <p className="app-theme-muted py-4 text-sm">{matchesError}</p>
+                      )}
+
+                      {!matchLoading && !matchesError && matches.length === 0 && (
+                        <p className="app-theme-muted py-4 text-sm">볼타 공식 경기 기록이 없어요.</p>
+                      )}
+
+                      {!matchLoading && !matchesError && (
+                        <div className="space-y-3">
+                          {matches.slice(0, visibleMatchCount).map((match) => {
+                            const teams = buildVoltaTeams(match, exactCandidate.ouid ?? '')
+                            if (!teams) {
+                              return null
+                            }
+
+                            return (
+                              <MatchRecordCard
+                                key={match.matchId}
+                                match={match}
+                                teams={teams}
+                                shareNickname={shareNickname}
+                                searchMode={selectedSearchMode}
+                                shouldExpand={activeMatchId === match.matchId}
+                                onExpandedChange={(matchId) => {
+                                  setActiveMatchId(matchId ?? '')
+                                  updateMatchesUrl(shareNickname || null, matchId ?? null, selectedSearchMode)
+                                }}
+                              />
+                            )
+                          })}
+
+                          {matches.length > visibleMatchCount && (
+                            <button
+                              type="button"
+                              onClick={() => setVisibleMatchCount(matches.length)}
+                              className="app-theme-title flex w-full items-center justify-center rounded-lg border px-4 py-3 text-sm font-semibold"
+                              style={{
+                                backgroundColor: 'var(--app-card-bg)',
+                                borderColor: 'var(--app-input-border)',
+                              }}
+                            >
+                              더보기
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </section>
+                  </>
+                )}
               </div>
             )}
 
             {!exactCandidate && candidates.length > 0 && (
               <div className="space-y-2">
                 <p className="app-theme-muted pb-1 text-xs font-semibold">랭킹 후보</p>
-                {candidates.map((candidate) => (
-                  <div
-                    key={`${candidate.nexonSn}-${candidate.nickname}`}
-                    className="app-theme-card block w-full rounded-lg border px-4 py-3 text-left"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-bold">{candidate.nickname}</div>
-                        <div className="app-theme-muted mt-1 text-xs">{candidate.modes.join(' · ')}</div>
-                      </div>
-                      {candidate.voltaRank !== null ? (
-                        <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                          볼타 #{candidate.voltaRank}
-                        </span>
-                      ) : candidate.rank !== null ? (
-                        <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                          공식 {candidate.rank}위
-                        </span>
-                      ) : null}
-                    </div>
+                {candidates.map((candidate) => {
+                  const officialCandidateDisplay = getOfficialDisplayFields(candidate)
 
-                    <div className="app-theme-body mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <span>볼타 포인트 {statValue(candidate.voltaRankPoint)}</span>
-                      <span>승률 {candidate.voltaWinRate !== null ? `${candidate.voltaWinRate}%` : '-'}</span>
-                      <span>
-                        전적 {statValue(candidate.voltaWins)} / {statValue(candidate.voltaDraws)} /{' '}
-                        {statValue(candidate.voltaLosses)}
-                      </span>
-                      <span>평균 평점 {statValue(candidate.voltaAverageRating)}</span>
-                    </div>
-                  </div>
-                ))}
+                  return (
+                    <button
+                      key={`${candidate.nexonSn}-${candidate.nickname}`}
+                      type="button"
+                      onClick={() => {
+                        setQuery(candidate.nickname)
+                        void runSearch(candidate.nickname)
+                      }}
+                      className="app-theme-card block w-full rounded-lg border px-4 py-3 text-left"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-bold">{candidate.nickname}</div>
+                          <div className="app-theme-muted mt-1 text-xs">{candidate.modes.join(' · ')}</div>
+                        </div>
+                        {isOfficialMode && officialCandidateDisplay.rank !== null ? (
+                          <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                            공식 #{officialCandidateDisplay.rank}
+                          </span>
+                        ) : candidate.voltaRank !== null ? (
+                          <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                            볼타 #{candidate.voltaRank}
+                          </span>
+                        ) : officialCandidateDisplay.rank !== null ? (
+                          <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                            공식 {officialCandidateDisplay.rank}위
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="app-theme-body mt-3 grid grid-cols-2 gap-2 text-xs">
+                        {isOfficialMode ? (
+                          <>
+                            <span>랭킹 포인트 {statValue(officialCandidateDisplay.rankPoint)}</span>
+                            <span>
+                              승률 {officialCandidateDisplay.winRate !== null ? `${officialCandidateDisplay.winRate}%` : '-'}
+                            </span>
+                            <span>
+                              전적 {formatMatchRecordLine(
+                                officialCandidateDisplay.wins,
+                                officialCandidateDisplay.draws,
+                                officialCandidateDisplay.losses,
+                              )}
+                            </span>
+                            <span>포메이션 {statValue(officialCandidateDisplay.formation)}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>볼타 포인트 {statValue(candidate.voltaRankPoint)}</span>
+                            <span>승률 {candidate.voltaWinRate !== null ? `${candidate.voltaWinRate}%` : '-'}</span>
+                            <span>
+                              전적 {statValue(candidate.voltaWins)} / {statValue(candidate.voltaDraws)} /{' '}
+                              {statValue(candidate.voltaLosses)}
+                            </span>
+                            <span>평균 평점 {statValue(candidate.voltaAverageRating)}</span>
+                          </>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             )}
 

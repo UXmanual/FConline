@@ -28,6 +28,7 @@ export interface MatchSearchCandidate {
   ouid?: string | null
   ownerSince?: string | null
   representativeTeam?: string | null
+  representativeTeamEmblemUrl?: string | null
   level: number | null
   rank: number | null
   elo: number | null
@@ -42,6 +43,16 @@ export interface MatchSearchCandidate {
   price: string | null
   modes: string[]
   source: 'exact' | 'rank'
+  officialRank: number | null
+  officialRankPoint: number | null
+  officialRankLabel?: string | null
+  officialRankIconUrl: string | null
+  officialWinRate: number | null
+  officialWins: number | null
+  officialDraws: number | null
+  officialLosses: number | null
+  officialTeamColors: string[]
+  officialFormation: string | null
   voltaRank: number | null
   voltaRankPoint: number | null
   voltaRankIconUrl: string | null
@@ -71,6 +82,11 @@ export interface MatchPlayerInfo {
     spId?: number | null
     spPosition?: number | null
     spGrade?: number | null
+    cardInfo?: {
+      playerName: string | null
+      seasonName: string | null
+      enhancement: number | null
+    } | null
     status?: {
       shoot?: number | null
       effectiveShoot?: number | null

@@ -97,6 +97,46 @@ async function fetchMatchDetailRaw(matchId: string) {
 async function enrichMatchDetail(detail: MatchData) {
   const enrichedMatchInfo = await Promise.all(
     detail.matchInfo.map(async (player) => {
+      const enrichedSquadPlayers = Array.isArray(player.player)
+        ? await Promise.all(
+            player.player.map(async (squadPlayer) => {
+              const squadSpId = typeof squadPlayer?.spId === 'number' ? squadPlayer.spId : null
+              const squadEnhancement =
+                typeof squadPlayer?.spGrade === 'number' && Number.isFinite(squadPlayer.spGrade)
+                  ? squadPlayer.spGrade
+                  : null
+
+              if (!squadSpId) {
+                return {
+                  ...squadPlayer,
+                  spId: null,
+                  spGrade: squadEnhancement,
+                  spPosition: typeof squadPlayer?.spPosition === 'number' ? squadPlayer.spPosition : null,
+                  cardInfo: null,
+                }
+              }
+
+              const seasonId = Math.floor(squadSpId / 1000000)
+              const [spidMeta, seasonMeta] = await Promise.all([
+                getSpidMetaItem(squadSpId),
+                getSeasonMetaItem(seasonId),
+              ])
+
+              return {
+                ...squadPlayer,
+                spId: squadSpId,
+                spGrade: squadEnhancement,
+                spPosition: typeof squadPlayer?.spPosition === 'number' ? squadPlayer.spPosition : null,
+                cardInfo: {
+                  playerName: spidMeta?.name ?? null,
+                  seasonName: seasonMeta?.className ?? null,
+                  enhancement: squadEnhancement,
+                },
+              }
+            }),
+          )
+        : player.player
+
       const cardPlayer = player.player?.[0]
       const spId =
         typeof cardPlayer?.spId === 'number'
@@ -131,6 +171,7 @@ async function enrichMatchDetail(detail: MatchData) {
         ...player,
         spId,
         spGrade: enhancement,
+        player: enrichedSquadPlayers,
         spPosition:
           typeof cardPlayer?.spPosition === 'number'
             ? cardPlayer.spPosition

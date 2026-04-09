@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '15.1': [
+    '1:1 공식경기 구단주 검색을 다시 활성화하고 볼타 라이브와 같은 톤으로 공식경기 전용 상세 화면을 추가',
+    '공식 랭킹 정보가 없는 구단주는 대표팀 엠블럼으로 상단 배지를 대체하고 최근 10경기 공식경기 기록은 계속 볼 수 있게 정리',
+    '최근 10경기 기반 공격 패턴 요약과 주요 선수 TOP 5 카드를 추가해 득점 유형·핵심 선수를 한눈에 볼 수 있게 개선',
+  ],
   '15.0': [
     '\uBD84\uC11D \uD648\uC5D0 1:1 \uACF5\uC2DD\uACBD\uAE30 \uD0ED\uC744 \uCD94\uAC00\uD558\uACE0 \uACF5\uC2DD\uACBD\uAE30 \uB7AD\uD0B9 TOP 5\u00B7\uD3EC\uBA54\uC774\uC158 \uC0C1\uC704\uAD8C \uC0AC\uC6A9 \uBE44\uC728\u00B7\uD300\uCEEC\uB7EC \uC0C1\uC704\uAD8C \uBA54\uD0C0 \uBE14\uB85D\uC744 \uCD94\uAC00',
     '\uD300\uCEEC\uB7EC \uBA54\uD0C0 \uC9D1\uACC4\uB97C \uC0C1\uC704 4000\uBA85 \uAE30\uC900\uC73C\uB85C \uD655\uB300\uD558\uACE0 \uD074\uB7FD \uC5E0\uBE14\uB7FC\uACFC \uAD6D\uAC00 \uD50C\uB798\uADF8 \uC774\uBBF8\uC9C0 \uB9E4\uD551\uC744 \uBC18\uC601',

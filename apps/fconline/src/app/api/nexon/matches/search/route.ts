@@ -5,6 +5,9 @@ const NEXON_API_KEY = process.env.NEXON_API_KEY!
 const nexonHeaders = { 'x-nxopen-api-key': NEXON_API_KEY }
 const ouidCache = new Map<string, string>()
 const SEARCH_CACHE_TTL_MS = 1000 * 60 * 5
+const DAILY_SQUAD_URL = 'https://fconline.nexon.com/datacenter/dailysquad'
+const TEAM_ASSET_PATTERN =
+  /((?:https?:)?\/\/[^"'\s>]*(?:crests\/light\/medium\/[^"'\s>]+\.png|countries\/largeflags\/[^"'\s>]+\.png))/g
 
 const SEARCH_MODES = [
   { key: '1vs1', label: '1vs1' },
@@ -12,11 +15,22 @@ const SEARCH_MODES = [
   { key: 'manager', label: 'manager' },
 ] as const
 
+type SearchModeKey = (typeof SEARCH_MODES)[number]['key']
+type RankSearchModeResult = {
+  mode: SearchModeKey
+  candidates: MatchSearchCandidate[]
+}
+
 type MatchSearchResponse = {
   nickname: string
   candidates: MatchSearchCandidate[]
   exactMatch: MatchSearchCandidate | null
   source: string
+}
+
+type TeamEmblemCacheEntry = {
+  expiresAt: number
+  map: Map<string, string>
 }
 
 const searchCache = new Map<
@@ -28,6 +42,8 @@ const searchCache = new Map<
 >()
 
 const searchPromiseCache = new Map<string, Promise<MatchSearchResponse>>()
+let teamEmblemCache: TeamEmblemCacheEntry | null = null
+let teamEmblemPromise: Promise<Map<string, string>> | null = null
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -102,8 +118,16 @@ function parseNumber(value: string | null) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function cleanTeamColorName(value: string) {
+  return value.replace(/\s*\(\d+명\)\s*$/u, '').trim()
+}
+
 function normalizeNickname(value: string) {
   return value.trim().toLowerCase()
+}
+
+function normalizeTeamName(value: string) {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase()
 }
 
 function formatOwnerSince(value: string | null) {
@@ -123,6 +147,7 @@ function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact'
     nickname,
     nexonSn,
     ouid: null,
+    representativeTeamEmblemUrl: null,
     level: null,
     rank: null,
     elo: null,
@@ -137,6 +162,16 @@ function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact'
     price: null,
     modes: [],
     source,
+    officialRank: null,
+    officialRankPoint: null,
+    officialRankLabel: null,
+    officialRankIconUrl: null,
+    officialWinRate: null,
+    officialWins: null,
+    officialDraws: null,
+    officialLosses: null,
+    officialTeamColors: [],
+    officialFormation: null,
     voltaRank: null,
     voltaRankPoint: null,
     voltaRankIconUrl: null,
@@ -158,51 +193,45 @@ function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact'
 }
 
 function parseOfficialRankResult(candidateHtml: string, modeLabel: string): MatchSearchCandidate | null {
-  const nickname = stripTags(
-    candidateHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '',
-  )
-  const nexonSn = candidateHtml.match(/data-sn="(\d+)"/)?.[1] ?? ''
+  const rowHtml = candidateHtml
+  const getCellValue = (cellClass: string) =>
+    stripTags(rowHtml.match(new RegExp(`<span class="td ${cellClass}[^"]*">([\\s\\S]*?)<\\/span>`))?.[0] ?? '') ||
+    null
+  const nickname = stripTags(rowHtml.match(/<span class="name profile_pointer"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '')
+  const nexonSn = rowHtml.match(/data-sn="(\d+)"/)?.[1] ?? ''
 
   if (!nickname || !nexonSn) return null
 
   const candidate = createEmptyCandidate(nickname, nexonSn, 'rank')
-  const winLossText = stripTags(candidateHtml.match(/<span class="bottom">[\s\S]*?<\/span>/)?.[0] ?? '')
+  const winLossText = stripTags(rowHtml.match(/<span class="bottom">[\s\S]*?<\/span>/)?.[0] ?? '')
   const [wins, draws, losses] = winLossText.split('|').map((part) => parseNumber(part))
 
-  candidate.level = parseNumber(
-    stripTags(
-      candidateHtml.match(/<span class="txt">\d+<\/span><\/span>\s*<span class="name profile_pointer"/)?.[0] ?? '',
-    ).match(/\d+/)?.[0] ?? null,
-  )
-  candidate.rank = parseNumber(
-    stripTags(candidateHtml.match(/<span class="td rank_no">[\s\S]*?<\/span>/)?.[0] ?? ''),
-  )
-  candidate.elo = parseNumber(
-    stripTags(candidateHtml.match(/<span class="td rank_r_win_point">[\s\S]*?<\/span>/)?.[0] ?? ''),
-  )
+  candidate.level = parseNumber(stripTags(rowHtml.match(/<span class="level">[\s\S]*?<\/span>/)?.[0] ?? '').match(/\d+/)?.[0] ?? null)
+  candidate.rank = parseNumber(getCellValue('rank_no'))
+  candidate.elo = parseNumber(getCellValue('rank_r_win_point'))
   candidate.rankLabel = candidate.elo !== null ? modeLabel : null
-  candidate.rankIconUrl = candidateHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null
+  candidate.rankIconUrl = rowHtml.match(/<span class="ico_rank"><img src="([^"]+)"/)?.[1] ?? null
   candidate.winRate = parseNumber(
-    stripTags(candidateHtml.match(/<span class="top">[\s\S]*?%[\s\S]*?<\/span>/)?.[0] ?? ''),
+    stripTags(rowHtml.match(/<span class="top">[\s\S]*?%[\s\S]*?<\/span>/)?.[0] ?? ''),
   )
   candidate.wins = wins ?? null
   candidate.draws = draws ?? null
   candidate.losses = losses ?? null
-  candidate.teamColors = [...candidateHtml.matchAll(/<span class="inner">([\s\S]*?)<\/span>/g)]
-    .map((match) => stripTags(match[1]))
+  candidate.teamColors = [...rowHtml.matchAll(/<span class="inner">([\s\S]*?)<\/span>/g)]
+    .map((match) => cleanTeamColorName(stripTags(match[1])))
     .filter(Boolean)
-  candidate.formation =
-    stripTags(candidateHtml.match(/<span class="td formation">[\s\S]*?<\/span>/)?.[0] ?? '') || null
-  candidate.price =
-    stripTags(candidateHtml.match(/<span class="price"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '') || null
+  candidate.formation = stripTags(rowHtml.match(/<span class="td formation">[\s\S]*?<\/span>/)?.[0] ?? '') || null
+  candidate.price = stripTags(rowHtml.match(/<span class="price"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '') || null
   candidate.modes = [modeLabel]
 
   return candidate
 }
 
 function parseOfficialCandidates(html: string, modeLabel: string) {
-  return [...html.matchAll(/<div class="tr">([\s\S]*?)<\/div>\s*<\/div>/g)]
-    .map((match) => parseOfficialRankResult(match[0], modeLabel))
+  return html
+    .split('<div class="tr">')
+    .slice(1)
+    .map((chunk) => parseOfficialRankResult(`<div class="tr">${chunk}`, modeLabel))
     .filter((candidate): candidate is MatchSearchCandidate => candidate !== null)
 }
 
@@ -297,19 +326,92 @@ async function fetchOwnerProfile(ownerProfileId: string) {
   )
 
   if (!html) {
-    return { ownerSince: null, representativeTeam: null }
+    return { ownerSince: null, representativeTeam: null, representativeTeamEmblemUrl: null }
   }
 
   const representativeSection = html.match(/<div class="major">([\s\S]*?)<\/div>\s*<\/div>/i)?.[1] ?? ''
   const representativeTeam =
     stripTags(representativeSection.match(/<span>([^<]+)<\/span>/i)?.[0] ?? '') || null
+  const representativeTeamEmblemUrl = [...representativeSection.matchAll(TEAM_ASSET_PATTERN)].at(-1)?.[1] ?? null
   const ownerSinceRaw =
     stripTags(html.match(/<div class="since">[\s\S]*?<div class="text">([^<]+)<\/div>/i)?.[1] ?? '') || null
 
   return {
     ownerSince: formatOwnerSince(ownerSinceRaw),
     representativeTeam,
+    representativeTeamEmblemUrl,
   }
+}
+
+function buildTeamEmblemMap(html: string) {
+  const map = new Map<string, string>()
+  const names = Array.from(
+    new Set(
+      [...html.matchAll(/<span[^>]*>([^<]+)<\/span>/g)]
+        .map((match) => cleanTeamColorName(stripTags(match[1])))
+        .filter(Boolean),
+    ),
+  )
+
+  for (const name of names) {
+    const markerIndex = html.indexOf(name)
+    if (markerIndex < 0) continue
+
+    const lookbehind = html.slice(Math.max(0, markerIndex - 700), markerIndex)
+    const assetMatches = [...lookbehind.matchAll(TEAM_ASSET_PATTERN)]
+    const emblemUrl = assetMatches.at(-1)?.[1] ?? null
+
+    if (emblemUrl) {
+      map.set(normalizeTeamName(name), emblemUrl)
+    }
+  }
+
+  return map
+}
+
+async function getTeamEmblemMap() {
+  const now = Date.now()
+
+  if (teamEmblemCache && teamEmblemCache.expiresAt > now) {
+    return teamEmblemCache.map
+  }
+
+  if (teamEmblemPromise) {
+    return teamEmblemPromise
+  }
+
+  teamEmblemPromise = (async () => {
+    const html = await fetchTextWithRetry(
+      DAILY_SQUAD_URL,
+      {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        },
+        cache: 'no-store',
+      },
+      5000,
+      0,
+    )
+
+    const map = html ? buildTeamEmblemMap(html) : new Map<string, string>()
+    teamEmblemCache = {
+      expiresAt: Date.now() + 1000 * 60 * 30,
+      map,
+    }
+    return map
+  })().finally(() => {
+    teamEmblemPromise = null
+  })
+
+  return teamEmblemPromise
+}
+
+async function resolveRepresentativeTeamEmblem(representativeTeam: string | null | undefined) {
+  if (!representativeTeam) return null
+
+  const map = await getTeamEmblemMap()
+  return map.get(normalizeTeamName(representativeTeam)) ?? null
 }
 
 async function resolveOwnerProfileId(nickname: string, voltaHtml: string | null) {
@@ -353,7 +455,61 @@ function mergeCandidate(base: MatchSearchCandidate, incoming: Partial<MatchSearc
         : base.modes,
     teamColors:
       incoming.teamColors && incoming.teamColors.length > 0 ? incoming.teamColors : base.teamColors,
+    officialRank: incoming.officialRank ?? base.officialRank,
+    officialRankPoint: incoming.officialRankPoint ?? base.officialRankPoint,
+    officialRankLabel: incoming.officialRankLabel ?? base.officialRankLabel ?? null,
+    officialRankIconUrl: incoming.officialRankIconUrl ?? base.officialRankIconUrl,
+    officialWinRate: incoming.officialWinRate ?? base.officialWinRate,
+    officialWins: incoming.officialWins ?? base.officialWins,
+    officialDraws: incoming.officialDraws ?? base.officialDraws,
+    officialLosses: incoming.officialLosses ?? base.officialLosses,
+    officialTeamColors:
+      incoming.officialTeamColors && incoming.officialTeamColors.length > 0
+        ? incoming.officialTeamColors
+        : base.officialTeamColors,
+    officialFormation: incoming.officialFormation ?? base.officialFormation,
   }
+}
+
+function applyModeSpecificFields(candidate: MatchSearchCandidate, mode: SearchModeKey): MatchSearchCandidate {
+  if (mode !== '1vs1') {
+    return candidate
+  }
+
+  return {
+    ...candidate,
+    officialRank: candidate.rank,
+    officialRankPoint: candidate.elo,
+    officialRankLabel: candidate.rankLabel ?? null,
+    officialRankIconUrl: candidate.rankIconUrl ?? null,
+    officialWinRate: candidate.winRate,
+    officialWins: candidate.wins,
+    officialDraws: candidate.draws,
+    officialLosses: candidate.losses,
+    officialTeamColors: candidate.teamColors,
+    officialFormation: candidate.formation,
+  }
+}
+
+function mergeRankCandidates(rankResults: RankSearchModeResult[]) {
+  const merged = new Map<string, MatchSearchCandidate>()
+
+  for (const result of rankResults) {
+    for (const rawCandidate of result.candidates) {
+      const candidate = applyModeSpecificFields(rawCandidate, result.mode)
+      const key = `${candidate.nexonSn}:${candidate.nickname}`
+      merged.set(key, merged.has(key) ? mergeCandidate(merged.get(key)!, candidate) : candidate)
+    }
+  }
+
+  return [...merged.values()]
+    .sort((a, b) => {
+      if (a.rank === null && b.rank === null) return a.nickname.localeCompare(b.nickname, 'ko')
+      if (a.rank === null) return 1
+      if (b.rank === null) return -1
+      return a.rank - b.rank
+    })
+    .slice(0, 20)
 }
 
 async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse> {
@@ -401,39 +557,8 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
     const ownerProfileId = await resolveOwnerProfileId(nickname, voltaHtml)
     const ownerProfile = ownerProfileId
       ? await fetchOwnerProfile(ownerProfileId)
-      : { ownerSince: null, representativeTeam: null }
+      : { ownerSince: null, representativeTeam: null, representativeTeamEmblemUrl: null }
     let exactCandidate: MatchSearchCandidate | null = null
-
-    if (exactData?.ouid) {
-      exactCandidate = {
-        ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
-        ouid: exactData.ouid,
-        ownerSince: ownerProfile.ownerSince,
-        representativeTeam: ownerProfile.representativeTeam,
-        modes: ['exact'],
-      }
-    } else if (voltaCandidate) {
-      exactCandidate = {
-        ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
-        ownerSince: ownerProfile.ownerSince,
-        representativeTeam: ownerProfile.representativeTeam,
-        modes: ['volta'],
-      }
-    }
-
-    if (exactCandidate && voltaCandidate) {
-      exactCandidate = mergeCandidate(exactCandidate, voltaCandidate)
-    }
-
-    if (exactCandidate) {
-      return {
-        nickname,
-        candidates: [exactCandidate],
-        exactMatch: exactCandidate,
-        source: 'official-rank-search',
-      }
-    }
-
     const rankResults = await Promise.all(
       SEARCH_MODES.map(async (mode) => {
         const html = await fetchTextWithRetry(
@@ -449,29 +574,65 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
           0,
         )
 
-        return html ? parseOfficialCandidates(html, mode.label) : []
+        return {
+          mode: mode.key,
+          candidates: html ? parseOfficialCandidates(html, mode.label) : [],
+        } satisfies RankSearchModeResult
       }),
     )
+    const mergedRankCandidates = mergeRankCandidates(rankResults)
 
-    const merged = new Map<string, MatchSearchCandidate>()
+    if (exactData?.ouid) {
+      exactCandidate = {
+        ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
+        ouid: exactData.ouid,
+        ownerSince: ownerProfile.ownerSince,
+        representativeTeam: ownerProfile.representativeTeam,
+        representativeTeamEmblemUrl:
+          ownerProfile.representativeTeamEmblemUrl ??
+          (await resolveRepresentativeTeamEmblem(ownerProfile.representativeTeam)),
+        modes: ['exact'],
+      }
+    } else if (voltaCandidate) {
+      exactCandidate = {
+        ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
+        ownerSince: ownerProfile.ownerSince,
+        representativeTeam: ownerProfile.representativeTeam,
+        representativeTeamEmblemUrl:
+          ownerProfile.representativeTeamEmblemUrl ??
+          (await resolveRepresentativeTeamEmblem(ownerProfile.representativeTeam)),
+        modes: ['volta'],
+      }
+    }
 
-    for (const candidates of rankResults) {
-      for (const candidate of candidates) {
-        const key = `${candidate.nexonSn}:${candidate.nickname}`
-        merged.set(key, merged.has(key) ? mergeCandidate(merged.get(key)!, candidate) : candidate)
+    if (exactCandidate && voltaCandidate) {
+      exactCandidate = mergeCandidate(exactCandidate, voltaCandidate)
+    }
+
+    const exactOfficialCandidate =
+      mergedRankCandidates.find((candidate) => normalizeNickname(candidate.nickname) === normalizedNickname) ?? null
+
+    if (exactCandidate && exactOfficialCandidate) {
+      exactCandidate = {
+        ...mergeCandidate(exactCandidate, exactOfficialCandidate),
+        source: 'exact',
+      }
+    }
+
+    if (exactCandidate) {
+      return {
+        nickname,
+        candidates: mergedRankCandidates.filter(
+          (candidate) => normalizeNickname(candidate.nickname) !== normalizedNickname,
+        ),
+        exactMatch: exactCandidate,
+        source: 'official-rank-search',
       }
     }
 
     return {
       nickname,
-      candidates: [...merged.values()]
-        .sort((a, b) => {
-          if (a.rank === null && b.rank === null) return a.nickname.localeCompare(b.nickname, 'ko')
-          if (a.rank === null) return 1
-          if (b.rank === null) return -1
-          return a.rank - b.rank
-        })
-        .slice(0, 20),
+      candidates: mergedRankCandidates,
       exactMatch: null,
       source: 'official-rank-search',
     }
