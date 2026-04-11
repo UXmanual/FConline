@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   HomeIcon,
@@ -28,7 +27,22 @@ type Props = {
 
 export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const pwaBottomCompensation = isStandaloneDisplayMode ? 14 : 0
+
+  const navigateToRoot = (href: string) => {
+    if (href === '/players') {
+      sessionStorage.setItem(RESET_KEY, '1')
+      sessionStorage.removeItem(PRESERVE_KEY)
+    }
+
+    if (pathname === href) {
+      window.location.assign(href)
+      return
+    }
+
+    router.push(href)
+  }
 
   return (
     <>
@@ -68,14 +82,9 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
                 transition={{ type: 'spring', stiffness: 340, damping: 17, mass: 0.82 }}
                 className="h-full flex-1"
               >
-                <Link
-                  href={href}
-                  onClick={() => {
-                    if (href === '/players') {
-                      sessionStorage.setItem(RESET_KEY, '1')
-                      sessionStorage.removeItem(PRESERVE_KEY)
-                    }
-                  }}
+                <button
+                  type="button"
+                  onClick={() => navigateToRoot(href)}
                   className="flex h-full w-full flex-col items-center justify-center gap-2"
                 >
                   <Icon
@@ -95,7 +104,7 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
                   >
                     {label}
                   </span>
-                </Link>
+                </button>
               </motion.div>
             )
           })}

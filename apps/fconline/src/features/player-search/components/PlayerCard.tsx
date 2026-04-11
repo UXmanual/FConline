@@ -82,28 +82,43 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
                 />
               </div>
             )}
-            <span className="app-player-title truncate text-sm font-semibold">{player.name}</span>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="app-player-title truncate text-sm font-semibold">{player.name}</span>
+              {typeof player.reviewCount === 'number' && player.reviewCount > 0 ? (
+                <span
+                  className="shrink-0 text-[11px] font-medium whitespace-nowrap"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  <span className="font-semibold" style={{ color: '#457ae5' }}>
+                    {player.reviewCount.toLocaleString()}
+                  </span>{' '}
+                  평가
+                </span>
+              ) : null}
+            </div>
           </div>
 
-          {detail?.skillMove != null && (
-            <div className="shrink-0 flex gap-0.5">
-              {Array.from({ length: calculateSkillMoveStars(detail.skillMove, strongLevel) }, (_, i) => (
-                <svg
-                  key={i}
-                  width="12"
-                  height="12"
-                  viewBox="0 0 19 18"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4.19227 17.44L6.27227 11.08L0.832266 7.16H7.51227L9.59227 0.799999L11.6723 7.16H18.3923L12.9523 11.08L15.0323 17.44L9.59227 13.52L4.19227 17.44Z"
-                    fill="#F1C018"
-                  />
-                </svg>
-              ))}
-            </div>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {detail?.skillMove != null && (
+              <div className="shrink-0 flex gap-0.5">
+                {Array.from({ length: calculateSkillMoveStars(detail.skillMove, strongLevel) }, (_, i) => (
+                  <svg
+                    key={i}
+                    width="12"
+                    height="12"
+                    viewBox="0 0 19 18"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4.19227 17.44L6.27227 11.08L0.832266 7.16H7.51227L9.59227 0.799999L11.6723 7.16H18.3923L12.9523 11.08L15.0323 17.44L9.59227 13.52L4.19227 17.44Z"
+                      fill="#F1C018"
+                    />
+                  </svg>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {detail && (

@@ -1,6 +1,6 @@
 {
   "name": "fconlinemanual",
-  "version": "15.1",
+  "version": "15.2",
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 4000",

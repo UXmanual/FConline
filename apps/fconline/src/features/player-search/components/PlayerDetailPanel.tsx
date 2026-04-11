@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import PlayerReviewSection from './PlayerReviewSection'
 import { calculateSkillMoveStars, formatPriceWithKoreanUnits, getStrongPoint } from '../player-detail'
 import { getPlayerImageCandidates } from '../player-image'
-import { AbilityStat, PlayerDetail } from '../types'
+import { AbilityStat, PlayerDetail, Trait } from '../types'
 
 const ABILITY_GROUPS = [
   ['속력', '반응 속도'],
@@ -25,6 +26,9 @@ const ABILITY_GROUPS = [
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, index) => index + 1)
 const DRAG_THRESHOLD = 8
 const PLAYER_THUMBNAIL_SIZE = 96
+const FORWARD_POSITIONS = new Set(['ST', 'CF', 'LF', 'RF', 'LW', 'RW'])
+const MIDFIELDER_POSITIONS = new Set(['CAM', 'CM', 'CDM', 'LAM', 'RAM', 'LM', 'RM'])
+const DEFENDER_POSITIONS = new Set(['CB', 'LB', 'RB', 'LWB', 'RWB', 'SW'])
 
 interface Props {
   playerName: string
@@ -45,6 +49,8 @@ export default function PlayerDetailPanel({
 }: Props) {
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
   const [isChemistryApplied, setIsChemistryApplied] = useState(false)
+  const [activeTab, setActiveTab] = useState<'detail' | 'review'>('detail')
+  const [reviewCount, setReviewCount] = useState(0)
   const [imageSrcIndex, setImageSrcIndex] = useState(0)
   const [showLeftFade, setShowLeftFade] = useState(false)
   const [showRightFade, setShowRightFade] = useState(false)
@@ -109,11 +115,72 @@ export default function PlayerDetailPanel({
       })
   }, [adjustedAbilities])
 
+  const aiReviewSummariesByLevel = useMemo(
+    () =>
+      Object.fromEntries(
+        STRONG_LEVELS.map((level) => {
+          const levelAbilityBoost = getStrongPoint(level) - getStrongPoint(1)
+          const levelTotalStatBoost = levelAbilityBoost + chemistryBoost
+          const levelAbilities = detail.abilities.map((ability) => ({
+            ...ability,
+            value: ability.value + levelTotalStatBoost,
+          }))
+          const levelOverall =
+            detail.overall == null
+              ? null
+              : detail.overall - getStrongPoint(1) + getStrongPoint(level) + chemistryBoost
+
+          return [
+            level,
+            buildAiReviewSummary({
+              playerName,
+              abilities: levelAbilities,
+              traits: detail.traits,
+              position: detail.position,
+              overall: levelOverall,
+              strongLevel: level,
+            }),
+          ]
+        }),
+      ),
+    [chemistryBoost, detail.abilities, detail.overall, detail.position, playerName],
+  )
+
   const imageCandidates = useMemo(() => getPlayerImageCandidates(spid), [spid])
 
   useEffect(() => {
     setStrongLevel(initialStrongLevel)
   }, [initialStrongLevel])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function fetchReviewCount() {
+      try {
+        const response = await fetch(
+          `/api/player-reviews/posts?page=1&pageSize=1&playerId=${encodeURIComponent(String(spid))}`,
+          { cache: 'no-store' },
+        )
+        const result = await response.json()
+
+        if (!response.ok || isCancelled) {
+          return
+        }
+
+        setReviewCount(result.totalCount ?? 0)
+      } catch {
+        if (!isCancelled) {
+          setReviewCount(0)
+        }
+      }
+    }
+
+    void fetchReviewCount()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [spid])
 
   useEffect(() => {
     const element = scrollRef.current
@@ -419,6 +486,57 @@ export default function PlayerDetailPanel({
         )}
       </section>
 
+      <section className="py-1" aria-label="선수 상세 탭">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('detail')}
+            className="flex h-12 items-center justify-center rounded-xl text-[15px] font-semibold tracking-[-0.02em] transition"
+            style={
+              activeTab === 'detail'
+                ? {
+                    backgroundColor: '#457ae5',
+                    color: '#ffffff',
+                    border: '1px solid #457ae5',
+                  }
+                : {
+                    backgroundColor: 'var(--app-player-soft-bg)',
+                    color: 'var(--app-muted-text)',
+                    border: '1px solid var(--app-card-border)',
+                  }
+            }
+          >
+            <span>선수 상세</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('review')}
+            className="flex h-12 items-center justify-center gap-1.5 rounded-xl text-[15px] font-semibold tracking-[-0.02em] transition"
+            style={
+              activeTab === 'review'
+                ? {
+                    backgroundColor: '#457ae5',
+                    color: '#ffffff',
+                    border: '1px solid #457ae5',
+                  }
+                : {
+                    backgroundColor: 'var(--app-player-soft-bg)',
+                    color: 'var(--app-muted-text)',
+                    border: '1px solid var(--app-card-border)',
+                  }
+            }
+          >
+            <span>선수 평가</span>
+            <span style={{ color: activeTab === 'review' ? '#ffffff' : '#457ae5' }}>
+              {reviewCount.toLocaleString()}
+            </span>
+          </button>
+        </div>
+      </section>
+
+      {activeTab === 'detail' ? (
+        <>
       <section className="app-player-card rounded-lg px-5 py-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="app-player-title text-base font-semibold">능력치</h2>
@@ -593,6 +711,16 @@ export default function PlayerDetailPanel({
           </div>
         </section>
       )}
+        </>
+      ) : (
+        <PlayerReviewSection
+          playerId={String(spid)}
+          playerName={playerName}
+          defaultCardLevel={strongLevel}
+          aiReviewSummariesByLevel={aiReviewSummariesByLevel}
+          onTotalCountChange={setReviewCount}
+        />
+      )}
     </div>
   )
 }
@@ -620,6 +748,300 @@ function PositionBadge({ position }: { position: string }) {
       {position}
     </span>
   )
+}
+
+function buildAiReviewSummary({
+  playerName,
+  abilities,
+  traits,
+  position,
+  overall,
+  strongLevel,
+}: {
+  playerName: string
+  abilities: AbilityStat[]
+  traits: Trait[]
+  position: string | null
+  overall: number | null
+  strongLevel: number
+}) {
+  if (abilities.length === 0) {
+    return `${strongLevel}카 기준 현재 시즌 카드 수치를 종합하면 직접 체감과 활용 포지션을 비교해볼 만한 카드예요.`
+  }
+
+  const topAbilities = abilities
+    .slice()
+    .sort((left, right) => right.value - left.value)
+    .slice(0, 3)
+  const topAbilitySummary = formatAbilitySummary(topAbilities)
+
+  const positionGroup = getPositionGroupLabel(position)
+  const playStyle = getPlayStyleLabel(position)
+  const traitContext = getTraitContextSummary(traits, position)
+  const gradeTone =
+    overall == null
+      ? '완성도가 괜찮은'
+      : overall >= 130
+        ? '최상위권으로 볼 수 있는'
+        : overall >= 120
+          ? '상위권으로 볼 수 있는'
+          : overall >= 110
+            ? '준수한'
+            : '무난한'
+  const levelTone =
+    strongLevel >= 10
+      ? '확실히 체감이 살아나는'
+      : strongLevel >= 7
+        ? '실사용 메리트가 분명한'
+      : strongLevel >= 5
+        ? '밸런스가 더 안정되는'
+        : '기본 장점이 드러나는'
+  const seed = `${playerName}|${position ?? 'NA'}|${strongLevel}|${overall ?? 'NA'}|${topAbilitySummary}`
+  const templateIndex = hashReviewSeed(seed) % AI_REVIEW_TEMPLATES.length
+
+  return AI_REVIEW_TEMPLATES[templateIndex]({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  })
+}
+
+const AI_REVIEW_TEMPLATES = [
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 기준 ${positionGroup} ${topAbilitySummary} 수치가 두드러져 ${playStyle}에서 ${levelTone} ${gradeTone} 카드예요.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카로 보면 ${positionGroup} ${topAbilitySummary} 쪽이 확실히 살아 있어 ${playStyle}에서 ${levelTone} ${gradeTone} 카드에 가깝습니다.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 시점에서는 ${positionGroup} ${topAbilitySummary} 조합이 좋아서 ${playStyle}을 노릴 때 ${levelTone} ${gradeTone} 카드로 읽혀요.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 기준 한줄로 정리하면, ${positionGroup} ${topAbilitySummary}가 강점이라 ${playStyle}에서 ${levelTone} ${gradeTone} 카드입니다.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카에서는 ${positionGroup} ${topAbilitySummary} 수치가 먼저 눈에 들어오고, 실제로도 ${playStyle} 구간에서 ${levelTone} ${gradeTone} 카드예요.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카만 놓고 보면 ${positionGroup} ${topAbilitySummary}가 좋아 ${playStyle}에 강점이 몰린 ${levelTone} ${gradeTone} 카드라고 볼 수 있어요.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 평가로는 ${positionGroup} ${topAbilitySummary} 쪽 완성도가 괜찮아서 ${playStyle}에서 ${levelTone} ${gradeTone} 카드로 보입니다.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 단계에선 ${positionGroup} ${topAbilitySummary} 수치가 받쳐줘서 ${playStyle} 체감 쪽으로 ${levelTone} ${gradeTone} 카드예요.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 기준으로 해석하면 ${positionGroup} ${topAbilitySummary}가 핵심이고, 그래서 ${playStyle}에서 ${levelTone} ${gradeTone} 카드라는 인상이 강합니다.${traitContext}`,
+  ({
+    strongLevel,
+    positionGroup,
+    topAbilitySummary,
+    playStyle,
+    traitContext,
+    levelTone,
+    gradeTone,
+  }: AiReviewTemplateArgs) =>
+    `${strongLevel}카 기준 현재 수치만 봐도 ${positionGroup} ${topAbilitySummary}가 좋아 ${playStyle} 활용도 면에서 ${levelTone} ${gradeTone} 카드로 정리됩니다.${traitContext}`,
+] as const
+
+type AiReviewTemplateArgs = {
+  strongLevel: number
+  positionGroup: string
+  topAbilitySummary: string
+  playStyle: string
+  traitContext: string
+  levelTone: string
+  gradeTone: string
+}
+
+function hashReviewSeed(value: string) {
+  let hash = 0
+
+  for (const char of value) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  }
+
+  return hash
+}
+
+function formatAbilitySummary(labels: AbilityStat[]) {
+  if (labels.length === 0) {
+    return '핵심 능력치'
+  }
+
+  if (labels.length === 1) {
+    return `${labels[0].name} ${labels[0].value}`
+  }
+
+  if (labels.length === 2) {
+    return `${labels[0].name} ${labels[0].value}, ${labels[1].name} ${labels[1].value}`
+  }
+
+  return `${labels[0].name} ${labels[0].value}, ${labels[1].name} ${labels[1].value}, ${labels[2].name} ${labels[2].value}`
+}
+
+const POSITIVE_TRAIT_HINTS = [
+  { keyword: '예리한 감아차기', text: ' 특성상 감아차기 각이 열릴 때 마무리 기대치도 높은 편입니다.' },
+  { keyword: '스피드 드리블러', text: ' 특성 덕분에 치고 나가는 드리블 체감도 함께 기대해볼 만합니다.' },
+  { keyword: '파워 헤더', text: ' 특성상 크로스 상황이나 세트피스에서 존재감이 살아날 수 있어요.' },
+  { keyword: '플레어', text: ' 플레어 성향이 있어 좁은 구간에서 예측 못한 터치가 장점으로 이어질 수 있습니다.' },
+  { keyword: '롱 패서', text: ' 롱 패서 특성까지 있어 전개 길게 찔러주는 장면도 잘 어울립니다.' },
+  { keyword: '얼리 크로스', text: ' 얼리 크로스 성향까지 겹치면 빠른 타이밍의 측면 전개도 잘 받습니다.' },
+  { keyword: '긴 패스 선호', text: ' 긴 패스 선호 특성 덕분에 시원하게 방향 전환하는 장면도 기대해볼 만해요.' },
+  { keyword: '테크니컬 드리블러', text: ' 테크니컬 드리블러 특성 덕분에 볼 간수와 탈압박 체감도 보완됩니다.' },
+  { keyword: '중거리 슛 선호', text: ' 중거리 슛 성향이 있어 박스 앞 선택지까지 넓게 가져갈 수 있습니다.' },
+  { keyword: '세트피스 스페셜리스트', text: ' 세트피스 상황에서 한 방 옵션이 있다는 점도 분명한 장점이에요.' },
+]
+
+const CAUTION_TRAIT_HINTS = [
+  { keyword: '얼리 크로스', positions: ['ST', 'CF'], text: ' 다만 중앙 침투 위주로만 쓰면 얼리 크로스 성향은 덜 체감될 수 있어요.' },
+  { keyword: '롱 스로어', positions: ['ST', 'CF', 'CAM', 'CM'], text: ' 다만 롱 스로어 특성은 주 포지션 활용에선 체감 포인트가 제한적일 수 있습니다.' },
+  { keyword: 'GK 멀리 던지기', positions: ['ST', 'CF', 'CAM', 'CM', 'CB'], text: ' 다만 이 특성은 현재 포지션 활용과 직접 연결되진 않아 체감 차이는 작을 수 있어요.' },
+]
+
+function getTraitContextSummary(traits: Trait[], position: string | null) {
+  if (traits.length === 0) {
+    return ''
+  }
+
+  const traitNames = traits.map((trait) => trait.name)
+  const upperPosition = position?.toUpperCase() ?? null
+  const positiveHint = POSITIVE_TRAIT_HINTS.find((hint) =>
+    traitNames.some((traitName) => traitName.includes(hint.keyword)),
+  )
+  const cautionHint = CAUTION_TRAIT_HINTS.find(
+    (hint) =>
+      traitNames.some((traitName) => traitName.includes(hint.keyword)) &&
+      (!!upperPosition && hint.positions.includes(upperPosition)),
+  )
+
+  if (positiveHint && cautionHint) {
+    return `${positiveHint.text}${cautionHint.text}`
+  }
+
+  if (positiveHint) {
+    return positiveHint.text
+  }
+
+  if (cautionHint) {
+    return cautionHint.text
+  }
+
+  const highlightedTraits = traitNames.slice(0, 2).join(', ')
+  return ` ${highlightedTraits} 특성도 함께 달려 있어 실제 체감 방향을 잡을 때 참고할 만합니다.`
+}
+
+function getPositionGroupLabel(position: string | null) {
+  const upper = position?.toUpperCase()
+
+  if (upper && FORWARD_POSITIONS.has(upper)) {
+    return '공격수 자원으로 보면'
+  }
+
+  if (upper && MIDFIELDER_POSITIONS.has(upper)) {
+    return '미드필더 자원으로 보면'
+  }
+
+  if (upper === 'GK') {
+    return '골키퍼 자원으로 보면'
+  }
+
+  if (upper && DEFENDER_POSITIONS.has(upper)) {
+    return '수비수 자원으로 보면'
+  }
+
+  return '포지션 수치만 놓고 보면'
+}
+
+function getPlayStyleLabel(position: string | null) {
+  const upper = position?.toUpperCase()
+
+  if (upper && FORWARD_POSITIONS.has(upper)) {
+    return '침투와 마무리'
+  }
+
+  if (upper && MIDFIELDER_POSITIONS.has(upper)) {
+    return '연계와 전진 전개'
+  }
+
+  if (upper === 'GK') {
+    return '선방과 안정감'
+  }
+
+  if (upper && DEFENDER_POSITIONS.has(upper)) {
+    return '대인 수비와 커버'
+  }
+
+  return '실전 활용'
 }
 
 function InfoCard({ label, value }: { label: string; value?: string | null }) {

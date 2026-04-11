@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { FormEvent, useState } from 'react'
+import SelectChevron from '@/components/ui/SelectChevron'
 import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 
@@ -134,11 +135,67 @@ export default function MyPage() {
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
+  const [contactCategory, setContactCategory] = useState('앱 문의')
+  const [contactTitle, setContactTitle] = useState('')
+  const [contactContent, setContactContent] = useState('')
+  const [contactValue, setContactValue] = useState('')
+  const [isSendingContact, setIsSendingContact] = useState(false)
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
 
   const handleDarkModeToggle = () => {
     const nextValue = !isDarkModeEnabled
     setDarkModeEnabled(nextValue)
+  }
+
+  const resetContactForm = () => {
+    setContactCategory('앱 문의')
+    setContactTitle('')
+    setContactContent('')
+    setContactValue('')
+  }
+
+  const handleSubmitContact = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (isSendingContact) {
+      return
+    }
+
+    const trimmedTitle = contactTitle.trim()
+    const trimmedContent = contactContent.trim()
+    const trimmedContact = contactValue.trim()
+
+    if (!trimmedTitle || !trimmedContent) {
+      return
+    }
+
+    try {
+      setIsSendingContact(true)
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: contactCategory,
+          title: trimmedTitle,
+          content: trimmedContent,
+          contact: trimmedContact,
+        }),
+      })
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.message ?? '문의 전송에 실패했습니다.')
+      }
+
+      resetContactForm()
+      setIsContactModalOpen(false)
+      window.alert('문의가 성공적으로 접수되었습니다.')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '문의 전송에 실패했습니다.')
+    } finally {
+      setIsSendingContact(false)
+    }
   }
 
   const cardStyle = {
@@ -233,11 +290,9 @@ export default function MyPage() {
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center gap-1">
             <p className="text-sm font-semibold" style={titleStyle}>
-              준비중이에요
+              <span style={{ color: '#457ae5' }}>로그인</span>
+              <span>{' 개발 준비중입니다'}</span>
             </p>
-            <span aria-hidden="true" className="text-[18px] leading-none">
-              🤗
-            </span>
           </div>
         </section>
 
@@ -248,18 +303,19 @@ export default function MyPage() {
                 현재 베타 테스트 중입니다.
               </p>
               <p className="text-sm leading-[1.45]" style={bodyStyle}>
-                문의사항은 이메일로 연락해 주세요.
+                문의나 요청사항은 쪽지로 남겨주세요.
               </p>
             </div>
 
-            <a
-              href="mailto:uxdmanual@gmail.com"
-              aria-label="이메일 보내기"
+            <button
+              type="button"
+              onClick={() => setIsContactModalOpen(true)}
+              aria-label="문의 보내기"
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[18px] leading-none"
               style={badgeStyle}
             >
               📧
-            </a>
+            </button>
           </div>
         </section>
 
@@ -396,6 +452,129 @@ export default function MyPage() {
           ) : null}
         </section>
       </div>
+
+      {isContactModalOpen ? (
+        <div className="fixed inset-0 z-[60]">
+          <button
+            type="button"
+            aria-label="문의 작성 닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(37, 52, 82, 0.58)' }}
+            onClick={() => setIsContactModalOpen(false)}
+          />
+
+          <div className="absolute inset-0 z-10 flex items-center justify-center px-8 py-6 sm:px-7">
+            <section
+              className="max-h-[calc(100vh-48px)] w-full max-w-[320px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[360px] sm:px-6 sm:py-6"
+              style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <form className="space-y-5" onSubmit={handleSubmitContact}>
+                <div>
+                  <p className="text-[16px] font-semibold tracking-[-0.02em]" style={titleStyle}>
+                    <span style={{ color: '#457ae5' }}>앱문의</span>
+                    <span>{' 보내기'}</span>
+                  </p>
+                </div>
+
+                <label className="block">
+                  <span className="text-sm font-semibold" style={titleStyle}>문의 유형</span>
+                  <div className="relative mt-2">
+                    <select
+                      value={contactCategory}
+                      onChange={(event) => setContactCategory(event.target.value)}
+                      className="h-11 w-full appearance-none rounded-lg border pl-3 pr-10 text-sm font-semibold outline-none transition focus:bg-transparent"
+                      style={{
+                        backgroundColor: 'var(--app-input-bg)',
+                        borderColor: 'var(--app-input-border)',
+                        color: 'var(--app-title)',
+                      }}
+                    >
+                      <option value="앱 문의">앱 문의</option>
+                      <option value="기능 요청">기능 요청</option>
+                      <option value="오류 제보">오류 제보</option>
+                    </select>
+                    <SelectChevron className="right-3" />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-semibold" style={titleStyle}>제목</span>
+                  <input
+                    required
+                    maxLength={100}
+                    value={contactTitle}
+                    onChange={(event) => setContactTitle(event.target.value)}
+                    placeholder="제목을 입력해주세요"
+                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-semibold" style={titleStyle}>내용</span>
+                  <textarea
+                    required
+                    maxLength={2000}
+                    value={contactContent}
+                    onChange={(event) => setContactContent(event.target.value)}
+                    placeholder="문의 내용을 입력해주세요"
+                    rows={5}
+                    className="mt-2 w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition focus:bg-transparent"
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                      resize: 'none',
+                    }}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-semibold" style={titleStyle}>연락수단</span>
+                  <input
+                    maxLength={100}
+                    value={contactValue}
+                    onChange={(event) => setContactValue(event.target.value)}
+                    placeholder="이메일 또는 연락처 (선택)"
+                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsContactModalOpen(false)}
+                    className="h-11 rounded-lg text-sm font-semibold"
+                    style={{
+                      backgroundColor: 'var(--app-surface-soft)',
+                      color: 'var(--app-body-text)',
+                    }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingContact}
+                    className="h-11 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                    style={{ backgroundColor: '#457ae5' }}
+                  >
+                    {isSendingContact ? '보내는 중...' : '보내기'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

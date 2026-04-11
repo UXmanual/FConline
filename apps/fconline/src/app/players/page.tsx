@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, CaretDown } from '@phosphor-icons/react'
+import { ArrowLeft } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
+import SelectChevron from '@/components/ui/SelectChevron'
 import PlayerSearchBar from '@/features/player-search/components/PlayerSearchBar'
 import PlayerCard from '@/features/player-search/components/PlayerCard'
 import { Player, Season } from '@/features/player-search/types'
@@ -15,6 +16,7 @@ const PRESERVE_KEY = 'player-search-preserve'
 const POPULAR_PLAYERS_CACHE_KEY = 'players-popular-cache'
 const PLAYER_QUERY_CACHE_KEY = 'players-query-cache'
 const PLAYER_QUERY_CACHE_TTL_MS = 1000 * 60 * 5
+const PLAYER_QUERY_CACHE_VERSION = 2
 
 const TITLE_TEXT = '\uC120\uC218\uB97C \uCC3E\uC544\uBCFC\uAE4C\uC694?'
 const BACK_HOME_TEXT = '\uC120\uC218 \uD648'
@@ -112,6 +114,7 @@ type PlayerSearchResultsCacheEntry = {
   players: Player[]
   seasons: Season[]
   cachedAt: number
+  version?: number
 }
 
 type PlayerQueryCacheStore = Record<string, PlayerSearchResultsCacheEntry>
@@ -122,6 +125,10 @@ function hasIncompletePlayerDetails(players: Player[]) {
 
 function isValidPlayerSearchResultsCacheEntry(entry: PlayerSearchResultsCacheEntry | null | undefined) {
   if (!entry || typeof entry.cachedAt !== 'number') {
+    return false
+  }
+
+  if (entry.version !== PLAYER_QUERY_CACHE_VERSION) {
     return false
   }
 
@@ -386,6 +393,7 @@ export default function PlayersPage() {
               players: cached.players,
               seasons: cached.seasons,
               cachedAt: cached.cachedAt,
+              version: cached.version,
             }),
           )
           return
@@ -421,6 +429,7 @@ export default function PlayersPage() {
             players: data.players,
             seasons: data.seasons,
             cachedAt: Date.now(),
+            version: PLAYER_QUERY_CACHE_VERSION,
           }
           sessionStorage.setItem(PLAYER_QUERY_CACHE_KEY, JSON.stringify(parsed))
           sessionStorage.setItem(
@@ -429,6 +438,7 @@ export default function PlayersPage() {
               players: data.players,
               seasons: data.seasons,
               cachedAt: Date.now(),
+              version: PLAYER_QUERY_CACHE_VERSION,
             }),
           )
         } else {
@@ -516,11 +526,7 @@ export default function PlayersPage() {
                       <option value="price">{SORT_PRICE}</option>
                       <option value="pay">{SORT_PAY}</option>
                     </select>
-                    <CaretDown
-                      size={14}
-                      weight="bold"
-                      className="app-player-body pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-                    />
+                    <SelectChevron className="right-3" />
                   </div>
 
                   <div className="relative">
@@ -537,11 +543,7 @@ export default function PlayersPage() {
                         </option>
                       ))}
                     </select>
-                    <CaretDown
-                      size={14}
-                      weight="bold"
-                      className="app-player-body pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-                    />
+                    <SelectChevron className="right-3" />
                   </div>
                 </div>
 

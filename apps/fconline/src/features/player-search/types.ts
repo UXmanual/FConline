@@ -2,6 +2,7 @@ export interface Player {
   id: number
   name: string
   detail?: PlayerDetail | null
+  reviewCount?: number
 }
 
 export interface Season {

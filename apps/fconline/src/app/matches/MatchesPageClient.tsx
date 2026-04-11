@@ -538,16 +538,17 @@ function buildOfficialRecentPlayerLeaders(matches: MatchData[], ouid: string | n
     .slice(0, 5)
 }
 
-function formatPlayerLeaderSubtitle(player: OfficialRecentPlayerLeader) {
-  const positionLabel =
-    player.spPosition != null ? FC_POSITION_LABELS[player.spPosition] ?? `POS ${player.spPosition}` : null
-  const parts = [
-    positionLabel,
+function getPlayerLeaderPositionLabel(player: OfficialRecentPlayerLeader) {
+  return player.spPosition != null ? FC_POSITION_LABELS[player.spPosition] ?? `POS ${player.spPosition}` : null
+}
+
+function formatPlayerLeaderSubtitle(player: OfficialRecentPlayerLeader): ReactNode {
+  const trailingParts = [
     player.enhancement != null ? `${player.enhancement}강` : null,
     player.seasonName || null,
   ].filter((part): part is string => Boolean(part))
 
-  return parts.join(' · ')
+  return trailingParts.join(' · ')
 }
 
 function getVoltaPlayerMetrics(player: MatchPlayerInfo) {
@@ -771,6 +772,32 @@ function MainPositionValue({ value }: { value: string }) {
   )
 }
 
+function PlayerPositionBadge({ position }: { position: string }) {
+  const upper = position.toUpperCase()
+  const style = getPlayerPositionBadgeStyle(upper)
+
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-semibold leading-none"
+      style={style}
+    >
+      {position}
+    </span>
+  )
+}
+
+function getPlayerPositionBadgeStyle(position: string) {
+  if (['ST', 'CF', 'LW', 'RW', 'LF', 'RF'].includes(position)) {
+    return { backgroundColor: 'var(--app-position-fw-bg)', color: 'var(--app-position-fw-fg)' }
+  }
+
+  if (['CAM', 'CM', 'CDM', 'LM', 'RM', 'LAM', 'RAM'].includes(position)) {
+    return { backgroundColor: 'var(--app-position-mf-bg)', color: 'var(--app-position-mf-fg)' }
+  }
+
+  return { backgroundColor: 'var(--app-position-df-bg)', color: 'var(--app-position-df-fg)' }
+}
+
 function parseMainPositionParts(value: string) {
   const position = value.match(/\b(FW|MF|DF)\b/)?.[1] ?? '-'
   const percentages = value.match(/\d+(?:\.\d+)?%/g) ?? []
@@ -896,12 +923,16 @@ function SearchModeTabs({
         const activeStyle =
           option.value === 'voltaLive'
             ? {
-                color: 'var(--app-volta-accent-fg)',
-                backgroundColor: 'var(--app-volta-accent-bg)',
+                color: '#ffffff',
+                background:
+                  'linear-gradient(135deg, #5f36d9 0%, #4a2ab7 100%)',
+                boxShadow: '0 10px 24px rgba(95, 54, 217, 0.22)',
               }
             : {
-                color: 'var(--app-accent-blue)',
-                backgroundColor: 'rgba(37, 110, 244, 0.1)',
+                color: '#ffffff',
+                background:
+                  'linear-gradient(135deg, #457ae5 0%, #256ef4 100%)',
+                boxShadow: '0 10px 24px rgba(37, 110, 244, 0.2)',
               }
 
         return (
@@ -913,7 +944,7 @@ function SearchModeTabs({
               onSelect(option.value)
             }}
             disabled={option.disabled}
-            className="rounded-full px-3 py-1.5 text-[15px] font-semibold tracking-[-0.02em] transition"
+            className="inline-flex h-9 items-center justify-center rounded-full px-3 text-[15px] font-semibold leading-none tracking-[-0.02em] transition"
             style={
               option.disabled
                 ? {
@@ -940,6 +971,7 @@ function SearchModeTabs({
 
 function SearchModePreviewCard({
   selectedMode,
+  onSelectTopNickname,
   officialFormationMetaItems,
   officialFormationMetaLoading,
   officialFormationMetaSampleSize,
@@ -952,6 +984,7 @@ function SearchModePreviewCard({
   voltaTopLoading,
 }: {
   selectedMode: SearchMode
+  onSelectTopNickname: (mode: SearchMode, nickname: string) => void
   officialFormationMetaItems: OfficialFormationMetaItem[]
   officialFormationMetaLoading: boolean
   officialFormationMetaSampleSize: number
@@ -971,7 +1004,11 @@ function SearchModePreviewCard({
             • 현재 시즌 1:1 공식경기 랭킹 기준
           </p>
 
-          <OfficialTopRankCard items={officialTopItems} isLoading={officialTopLoading} />
+          <OfficialTopRankCard
+            items={officialTopItems}
+            isLoading={officialTopLoading}
+            onSelectNickname={(nickname) => onSelectTopNickname('official1on1', nickname)}
+          />
         </section>
 
         <section className="mt-4">
@@ -1032,7 +1069,11 @@ function SearchModePreviewCard({
         </p>
 
         {voltaTopLoading || voltaTopItems.length > 0 ? (
-          <VoltaTopRankCard items={voltaTopItems} isLoading={voltaTopLoading} />
+          <VoltaTopRankCard
+            items={voltaTopItems}
+            isLoading={voltaTopLoading}
+            onSelectNickname={(nickname) => onSelectTopNickname('voltaLive', nickname)}
+          />
         ) : null}
       </section>
 
@@ -2611,12 +2652,18 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     return ouid
   }
 
-  const runSearch = async (nickname: string, shouldUpdateUrl = true, matchIdToKeep?: string | null) => {
+  const runSearch = async (
+    nickname: string,
+    shouldUpdateUrl = true,
+    matchIdToKeep?: string | null,
+    modeOverride?: SearchMode,
+  ) => {
     const trimmed = nickname.trim()
     if (!trimmed) return
+    const effectiveMode = modeOverride ?? selectedSearchMode
 
     if (shouldUpdateUrl) {
-      updateMatchesUrl(trimmed, matchIdToKeep ?? null, selectedSearchMode)
+      updateMatchesUrl(trimmed, matchIdToKeep ?? null, effectiveMode)
     }
 
     const requestId = ++requestIdRef.current
@@ -2637,7 +2684,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
         if (cachedSearch.exactCandidate?.ouid) {
           writeCachedOuid(trimmed, cachedSearch.exactCandidate.ouid)
-          void loadMatches(cachedSearch.exactCandidate.ouid, selectedSearchMode)
+          void loadMatches(cachedSearch.exactCandidate.ouid, effectiveMode)
         }
 
         return
@@ -2670,7 +2717,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
       if (nextExactMatch?.ouid) {
         writeCachedOuid(trimmed, nextExactMatch.ouid)
-        void loadMatches(nextExactMatch.ouid, selectedSearchMode)
+        void loadMatches(nextExactMatch.ouid, effectiveMode)
       }
     } finally {
       if (requestId === requestIdRef.current) {
@@ -2686,6 +2733,17 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     }
 
     await runSearch(query)
+  }
+
+  const handleTopRankSelect = (mode: SearchMode, nickname: string) => {
+    const trimmed = nickname.trim()
+    if (!trimmed) {
+      return
+    }
+
+    setSelectedSearchMode(mode)
+    setQuery(trimmed)
+    void runSearch(trimmed, true, null, mode)
   }
 
   const runInitialSearch = useEffectEvent((nickname: string, matchId?: string) => {
@@ -3049,7 +3107,9 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
                     {(officialScoringSummary || officialTopPlayers.length > 0) && (
                       <section className="app-theme-card rounded-lg border px-5 py-5">
-                        <h2 className="app-theme-title text-base font-semibold">최근 10경기 공격 패턴</h2>
+                        <h2 className="app-theme-title text-base font-semibold">
+                          최근 10경기 <span style={{ color: '#457ae5' }}>공격 패턴</span>
+                        </h2>
 
                         {officialScoringSummary ? (
                           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -3075,7 +3135,9 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
                         {officialTopPlayers.length > 0 && (
                           <>
-                            <h3 className="app-theme-title mt-6 text-sm font-semibold">최근 10경기 주요 선수 TOP 5</h3>
+                            <h3 className="app-theme-title mt-6 text-sm font-semibold">
+                              최근 10경기 주요 선수 <span style={{ color: '#457ae5' }}>TOP 5</span>
+                            </h3>
                             <div className="mt-3 space-y-3">
                               {officialTopPlayers.map((player) => (
                                 <div
@@ -3096,14 +3158,19 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                                     </div>
 
                                     <div className="min-w-0 flex-1">
-                                      <p className="app-theme-title truncate text-sm font-semibold">
-                                        {player.playerName ?? '선수 정보 없음'}
-                                      </p>
+                                      <div className="flex items-center gap-1.5">
+                                        {getPlayerLeaderPositionLabel(player) ? (
+                                          <PlayerPositionBadge position={getPlayerLeaderPositionLabel(player) ?? '-'} />
+                                        ) : null}
+                                        <p className="app-theme-title min-w-0 truncate text-sm font-semibold">
+                                          {player.playerName ?? '선수 정보 없음'}
+                                        </p>
+                                      </div>
                                       <p className="app-theme-body mt-1 text-xs">
                                         {formatPlayerLeaderSubtitle(player)}
                                       </p>
 
-                                      <div className="app-theme-body mt-2 flex flex-wrap items-center gap-1.5 text-xs leading-5">
+                                      <div className="app-theme-body mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-4">
                                         <span>출전 {player.appearances}경기</span>
                                         <MutedDivider />
                                         <span>평점 {formatMetricNumber(player.averageRating, 2)}</span>
@@ -3361,6 +3428,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
             {showHomePanels && (
               <SearchModePreviewCard
                 selectedMode={selectedSearchMode}
+                onSelectTopNickname={handleTopRankSelect}
                 officialFormationMetaItems={officialFormationMetaItems}
                 officialFormationMetaLoading={officialFormationMetaLoading}
                 officialFormationMetaSampleSize={officialFormationMetaSampleSize}
