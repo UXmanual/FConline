@@ -6,6 +6,8 @@ import { type CommunityPostSummary } from '@/lib/community'
 
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
+const PLAYER_SEARCH_RESULTS_KEY = 'player-search-results'
+const PLAYER_QUERY_CACHE_KEY = 'players-query-cache'
 
 type CommunityPageData = {
   items: CommunityPostSummary[]
@@ -168,6 +170,13 @@ export default function PlayerReviewSection({
     onTotalCountChange?.(totalCount)
   }, [onTotalCountChange, totalCount])
 
+  function invalidatePlayerSearchCaches() {
+    if (typeof window === 'undefined') return
+
+    window.sessionStorage.removeItem(PLAYER_SEARCH_RESULTS_KEY)
+    window.sessionStorage.removeItem(PLAYER_QUERY_CACHE_KEY)
+  }
+
   useEffect(() => {
     setSelectedCardLevel(defaultCardLevel)
     setAiSelectedCardLevel(defaultCardLevel)
@@ -287,6 +296,7 @@ export default function PlayerReviewSection({
       setContent('')
       setIsComposerOpen(false)
       setHighlightedPostId(result.item?.id ?? null)
+      invalidatePlayerSearchCaches()
       cacheRef.current.clear()
       setCurrentPage(1)
       setPageWindowStart(1)
@@ -314,6 +324,7 @@ export default function PlayerReviewSection({
         throw new Error(result.message ?? '게시글을 삭제하지 못했습니다.')
       }
 
+      invalidatePlayerSearchCaches()
       cacheRef.current.clear()
       const nextTotalCount = Math.max(0, totalCount - 1)
       const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / POSTS_PER_PAGE))
