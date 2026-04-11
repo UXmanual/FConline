@@ -4,7 +4,7 @@ import { OfficialTopRankItem } from '@/features/match-analysis/types'
 type Props = {
   items: OfficialTopRankItem[]
   isLoading?: boolean
-  onSelectNickname?: (nickname: string) => void
+  onSelectItem?: (item: OfficialTopRankItem) => void
 }
 
 function formatRankPoint(value: number | null) {
@@ -24,7 +24,7 @@ function formatRecord(item: OfficialTopRankItem) {
   return `${wins}\uC2B9 ${draws}\uBB34 ${losses}\uD328`
 }
 
-export default function OfficialTopRankCard({ items, isLoading = false, onSelectNickname }: Props) {
+export default function OfficialTopRankCard({ items, isLoading = false, onSelectItem }: Props) {
   return (
     <section className="app-theme-card rounded-lg border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
@@ -53,7 +53,7 @@ export default function OfficialTopRankCard({ items, isLoading = false, onSelect
             <button
               key={`${item.rank}-${item.nickname}`}
               type="button"
-              onClick={() => onSelectNickname?.(item.nickname)}
+              onClick={() => onSelectItem?.(item)}
               className={`flex w-full items-center justify-between gap-3 py-3 text-left ${index === items.length - 1 ? 'pb-0' : 'app-theme-divider border-b'}`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">

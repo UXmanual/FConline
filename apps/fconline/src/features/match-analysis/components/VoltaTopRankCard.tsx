@@ -4,7 +4,7 @@ import { VoltaTopRankItem } from '@/features/match-analysis/types'
 type Props = {
   items: VoltaTopRankItem[]
   isLoading?: boolean
-  onSelectNickname?: (nickname: string) => void
+  onSelectItem?: (item: VoltaTopRankItem) => void
 }
 
 function formatRankPoint(value: number | null) {
@@ -45,7 +45,7 @@ function getPositionBadgeStyle(position: string | null | undefined) {
   }
 }
 
-export default function VoltaTopRankCard({ items, isLoading = false, onSelectNickname }: Props) {
+export default function VoltaTopRankCard({ items, isLoading = false, onSelectItem }: Props) {
   return (
     <section className="app-theme-card rounded-lg border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
@@ -74,7 +74,7 @@ export default function VoltaTopRankCard({ items, isLoading = false, onSelectNic
             <button
               key={`${item.rank}-${item.nickname}`}
               type="button"
-              onClick={() => onSelectNickname?.(item.nickname)}
+              onClick={() => onSelectItem?.(item)}
               className={`flex w-full items-center justify-between gap-3 py-3 text-left ${index === items.length - 1 ? 'pb-0' : 'app-theme-divider border-b'}`}
             >
               <div className="flex min-w-0 items-center gap-3">

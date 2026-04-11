@@ -181,6 +181,7 @@ export interface MatchData {
 export interface VoltaTopRankItem {
   rank: number
   nickname: string
+  ouid?: string | null
   rankPoint: number | null
   winRate: number | null
   averageRating: number | null
@@ -193,6 +194,7 @@ export interface VoltaTopRankItem {
 export interface OfficialTopRankItem {
   rank: number
   nickname: string
+  ouid?: string | null
   rankPoint: number | null
   winRate: number | null
   wins: number | null

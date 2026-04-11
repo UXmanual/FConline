@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '15.3': [
+    '분석 탭 1:1 공식경기와 볼타 TOP 5 구단주 카드에 ouid를 함께 실어 클릭 직후 검색 데이터와 최근 경기 기록이 더 안정적으로 열리도록 개선',
+    'TOP 5 캐시 키를 갱신하고 짧은 TTL 기준으로 다시 읽도록 정리해 오래된 랭커 데이터가 남아 보이는 문제를 완화',
+    '선수 검색 홈 인기 선수 캐시도 날짜 기준 대신 짧은 TTL 기준으로 정리해 갱신 흐름을 맞춤',
+  ],
   '15.2': [
     '선수 상세에 선수 평가 탭과 AI 선수평가를 추가하고 검색 리스트에도 평가 수가 보이도록 정리',
     '분석 홈과 최근 10경기 주요 선수 영역의 탭·카드·타이틀 스타일을 다듬고 TOP 5 클릭 시 자동 검색되도록 연결',

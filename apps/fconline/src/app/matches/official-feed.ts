@@ -4,6 +4,7 @@ import type {
   OfficialTeamColorMetaItem,
   OfficialTopRankItem,
 } from '@/features/match-analysis/types'
+import { resolveOuidByNickname } from './ouid-lookup'
 
 const OFFICIAL_1VS1_RANK_URL =
   'https://fconline.nexon.com/datacenter/rank_inner?rt=1vs1&n4seasonno=0&n4pageno=1'
@@ -86,6 +87,15 @@ function parseOfficialTopRanks(html: string): OfficialTopRankItem[] {
     .filter((item) => item.rank <= 5)
     .sort((a, b) => a.rank - b.rank)
     .slice(0, 5)
+}
+
+async function attachOuidToOfficialTopRanks(items: OfficialTopRankItem[]) {
+  const ouids = await Promise.all(items.map((item) => resolveOuidByNickname(item.nickname)))
+
+  return items.map((item, index) => ({
+    ...item,
+    ouid: ouids[index],
+  }))
 }
 
 function buildOfficialFormationMeta(items: OfficialTopRankItem[]): OfficialFormationMetaItem[] {
@@ -218,9 +228,9 @@ export const getOfficialTopRanks = unstable_cache(
     if (!response.ok) return []
 
     const buffer = Buffer.from(await response.arrayBuffer())
-    return parseOfficialTopRanks(new TextDecoder('utf-8').decode(buffer))
+    return attachOuidToOfficialTopRanks(parseOfficialTopRanks(new TextDecoder('utf-8').decode(buffer)))
   },
-  ['official-top-rank-1vs1-v2'],
+  ['official-top-rank-1vs1-v3'],
   { revalidate: 60 * 5 },
 )
 

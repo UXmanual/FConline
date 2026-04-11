@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import type { VoltaBestStatItem, VoltaTopRankItem } from '@/features/match-analysis/types'
+import { resolveOuidByNickname } from './ouid-lookup'
 
 const OFFICIAL_VOLTA_TOPPLAYER_URL = 'https://fconline.nexon.com/datacenter/rank_volta_topplayer'
 const OFFICIAL_VOLTA_RANK_URL = 'https://fconline.nexon.com/datacenter/rank_volta?rtype=all'
@@ -86,6 +87,15 @@ function parseVoltaTopRanks(html: string): VoltaTopRankItem[] {
     .slice(0, 5)
 }
 
+async function attachOuidToVoltaTopRanks(items: VoltaTopRankItem[]) {
+  const ouids = await Promise.all(items.map((item) => resolveOuidByNickname(item.nickname)))
+
+  return items.map((item, index) => ({
+    ...item,
+    ouid: ouids[index],
+  }))
+}
+
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
 
@@ -103,8 +113,8 @@ export const getVoltaTopRanks = unstable_cache(
   async (): Promise<VoltaTopRankItem[]> => {
     const response = await fetch(OFFICIAL_VOLTA_RANK_URL, { headers: { 'user-agent': UA } })
     if (!response.ok) return []
-    return parseVoltaTopRanks(await response.text())
+    return attachOuidToVoltaTopRanks(parseVoltaTopRanks(await response.text()))
   },
-  ['volta-top-rank-v4'],
+  ['volta-top-rank-v5'],
   { revalidate: 60 * 5 },
 )

@@ -13,8 +13,10 @@ const STORAGE_KEY = 'player-search-state'
 const RESULTS_KEY = 'player-search-results'
 const RESET_KEY = 'player-search-reset'
 const PRESERVE_KEY = 'player-search-preserve'
-const POPULAR_PLAYERS_CACHE_KEY = 'players-popular-cache'
+const POPULAR_PLAYERS_CACHE_KEY = 'players-popular-cache-v2'
+const LEGACY_POPULAR_PLAYERS_CACHE_KEYS = ['players-popular-cache'] as const
 const PLAYER_QUERY_CACHE_KEY = 'players-query-cache'
+const POPULAR_PLAYERS_CACHE_TTL_MS = 1000 * 60 * 5
 const PLAYER_QUERY_CACHE_TTL_MS = 1000 * 60 * 5
 const PLAYER_QUERY_CACHE_VERSION = 2
 
@@ -143,15 +145,6 @@ function isValidPlayerSearchResultsCacheEntry(entry: PlayerSearchResultsCacheEnt
   return true
 }
 
-function getKstDateKey() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-}
-
 export default function PlayersPage() {
   const [query, setQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -228,6 +221,10 @@ export default function PlayersPage() {
   }
 
   useEffect(() => {
+    for (const key of LEGACY_POPULAR_PLAYERS_CACHE_KEYS) {
+      sessionStorage.removeItem(key)
+    }
+
     const shouldReset = sessionStorage.getItem(RESET_KEY) === '1'
     const shouldPreserve = sessionStorage.getItem(PRESERVE_KEY) === '1'
 
@@ -283,20 +280,21 @@ export default function PlayersPage() {
       return
     }
 
-    const todayKey = getKstDateKey()
     const cached = sessionStorage.getItem(POPULAR_PLAYERS_CACHE_KEY)
 
     if (cached) {
       try {
         const parsed = JSON.parse(cached) as {
-          dateKey?: string
+          cachedAt?: number
           fw?: PopularPlayerCardItem[]
           mf?: PopularPlayerCardItem[]
           df?: PopularPlayerCardItem[]
         }
+        const isCacheFresh =
+          typeof parsed.cachedAt === 'number' && Date.now() - parsed.cachedAt < POPULAR_PLAYERS_CACHE_TTL_MS
 
         if (
-          parsed.dateKey === todayKey &&
+          isCacheFresh &&
           Array.isArray(parsed.fw) &&
           Array.isArray(parsed.mf) &&
           Array.isArray(parsed.df) &&
@@ -326,7 +324,7 @@ export default function PlayersPage() {
         sessionStorage.setItem(
           POPULAR_PLAYERS_CACHE_KEY,
           JSON.stringify({
-            dateKey: todayKey,
+            cachedAt: Date.now(),
             fw,
             mf,
             df,

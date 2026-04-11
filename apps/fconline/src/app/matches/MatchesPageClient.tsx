@@ -21,16 +21,18 @@ import {
 } from '@/features/match-analysis/types'
 
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
-const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v5'
+const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v6'
 const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v5'
 const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-meta-cache.v2'
 const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v7'
-const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v2'
-const VOLTA_TOP_CACHE_KEY = 'fconline.match.volta-top-cache.v2'
+const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v3'
+const VOLTA_TOP_CACHE_KEY = 'fconline.match.volta-top-cache.v3'
+const LEGACY_MATCH_CACHE_KEYS = ['fconline.match.official-top-cache.v2', 'fconline.match.volta-top-cache.v2'] as const
 const MATCH_LIST_LIMIT = 10
 const MATCH_LIST_TIMEOUT_MS = 10000
 const INITIAL_VISIBLE_MATCHES = 3
 const MATCH_RESULTS_CACHE_TTL_MS = 1000 * 60 * 10
+const TOP_RANK_CACHE_TTL_MS = 1000 * 60 * 5
 const POSITION_BADGE_STYLES: Record<string, { backgroundColor: string; color: string }> = {
   FW: { backgroundColor: 'var(--app-position-fw-bg)', color: 'var(--app-position-fw-fg)' },
   MF: { backgroundColor: 'var(--app-position-mf-bg)', color: 'var(--app-position-mf-fg)' },
@@ -54,11 +56,11 @@ type MatchResultsCacheEntry = {
 }
 type MatchResultsCacheStore = Record<string, MatchResultsCacheEntry>
 type VoltaTopRankCacheEntry = {
-  dateKey: string
+  cachedAt: number
   items: VoltaTopRankItem[]
 }
 type OfficialTopRankCacheEntry = {
-  dateKey: string
+  cachedAt: number
   items: OfficialTopRankItem[]
 }
 type OfficialFormationMetaCacheEntry = {
@@ -72,6 +74,7 @@ type OfficialTeamColorMetaCacheEntry = {
   sampleSize: number
 }
 type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
+type TopRankSeedItem = OfficialTopRankItem | VoltaTopRankItem
 
 const SEARCH_MODE_OPTIONS: Array<{
   value: SearchMode
@@ -107,6 +110,170 @@ function getModeLabel(mode: SearchMode) {
 
 function buildMatchCacheKey(ouid: string, mode: SearchMode) {
   return `${ouid}:${mode}`
+}
+
+function createEmptySearchCandidate(nickname: string): MatchSearchCandidate {
+  return {
+    nickname,
+    nexonSn: `seed:${nickname}`,
+    ouid: null,
+    ownerSince: null,
+    representativeTeam: null,
+    representativeTeamEmblemUrl: null,
+    level: null,
+    rank: null,
+    elo: null,
+    rankLabel: null,
+    rankIconUrl: null,
+    winRate: null,
+    wins: null,
+    draws: null,
+    losses: null,
+    teamColors: [],
+    formation: null,
+    price: null,
+    modes: [],
+    source: 'exact',
+    officialRank: null,
+    officialRankPoint: null,
+    officialRankLabel: null,
+    officialRankIconUrl: null,
+    officialWinRate: null,
+    officialWins: null,
+    officialDraws: null,
+    officialLosses: null,
+    officialTeamColors: [],
+    officialFormation: null,
+    voltaRank: null,
+    voltaRankPoint: null,
+    voltaRankIconUrl: null,
+    voltaWinRate: null,
+    voltaWins: null,
+    voltaDraws: null,
+    voltaLosses: null,
+    voltaAverageRating: null,
+    voltaMomCount: null,
+    voltaGoals: null,
+    voltaAssists: null,
+    voltaTackleRate: null,
+    voltaBlockRate: null,
+    voltaEffectiveShots: null,
+    voltaPassRate: null,
+    voltaDribbleRate: null,
+    voltaMainPosition: null,
+  }
+}
+
+function buildTopRankSeedCandidate(mode: SearchMode, item: TopRankSeedItem): MatchSearchCandidate {
+  const base = createEmptySearchCandidate(item.nickname)
+  base.ouid = item.ouid ?? null
+
+  if (mode === 'official1on1') {
+    const officialItem = item as OfficialTopRankItem
+    return {
+      ...base,
+      rank: officialItem.rank,
+      elo: officialItem.rankPoint,
+      rankLabel: '1vs1',
+      rankIconUrl: officialItem.rankIconUrl,
+      winRate: officialItem.winRate,
+      wins: officialItem.wins,
+      draws: officialItem.draws,
+      losses: officialItem.losses,
+      teamColors: officialItem.teamColors,
+      formation: officialItem.formation,
+      price: officialItem.price,
+      modes: ['1vs1'],
+      officialRank: officialItem.rank,
+      officialRankPoint: officialItem.rankPoint,
+      officialRankLabel: '1vs1',
+      officialRankIconUrl: officialItem.rankIconUrl,
+      officialWinRate: officialItem.winRate,
+      officialWins: officialItem.wins,
+      officialDraws: officialItem.draws,
+      officialLosses: officialItem.losses,
+      officialTeamColors: officialItem.teamColors,
+      officialFormation: officialItem.formation,
+    }
+  }
+
+  const voltaItem = item as VoltaTopRankItem
+  return {
+    ...base,
+    price: voltaItem.price,
+    modes: ['volta'],
+    voltaRank: voltaItem.rank,
+    voltaRankPoint: voltaItem.rankPoint,
+    voltaRankIconUrl: voltaItem.rankIconUrl,
+    voltaWinRate: voltaItem.winRate,
+    voltaAverageRating: voltaItem.averageRating,
+    voltaMainPosition: voltaItem.mainPositionDetail ?? voltaItem.mainPosition,
+  }
+}
+
+function mergeSeedCandidate(
+  candidate: MatchSearchCandidate | null,
+  seed: MatchSearchCandidate | null,
+): MatchSearchCandidate | null {
+  if (!seed) {
+    return candidate
+  }
+
+  if (!candidate) {
+    return seed
+  }
+
+  return {
+    ...seed,
+    ...candidate,
+    nexonSn: candidate.nexonSn || seed.nexonSn,
+    ouid: candidate.ouid ?? seed.ouid,
+    ownerSince: candidate.ownerSince ?? seed.ownerSince,
+    representativeTeam: candidate.representativeTeam ?? seed.representativeTeam,
+    representativeTeamEmblemUrl: candidate.representativeTeamEmblemUrl ?? seed.representativeTeamEmblemUrl,
+    level: candidate.level ?? seed.level,
+    rank: candidate.rank ?? seed.rank,
+    elo: candidate.elo ?? seed.elo,
+    rankLabel: candidate.rankLabel ?? seed.rankLabel,
+    rankIconUrl: candidate.rankIconUrl ?? seed.rankIconUrl,
+    winRate: candidate.winRate ?? seed.winRate,
+    wins: candidate.wins ?? seed.wins,
+    draws: candidate.draws ?? seed.draws,
+    losses: candidate.losses ?? seed.losses,
+    teamColors: candidate.teamColors.length > 0 ? candidate.teamColors : seed.teamColors,
+    formation: candidate.formation ?? seed.formation,
+    price: candidate.price ?? seed.price,
+    modes: candidate.modes.length > 0 ? Array.from(new Set([...candidate.modes, ...seed.modes])) : seed.modes,
+    source: candidate.source,
+    officialRank: candidate.officialRank ?? seed.officialRank,
+    officialRankPoint: candidate.officialRankPoint ?? seed.officialRankPoint,
+    officialRankLabel: candidate.officialRankLabel ?? seed.officialRankLabel,
+    officialRankIconUrl: candidate.officialRankIconUrl ?? seed.officialRankIconUrl,
+    officialWinRate: candidate.officialWinRate ?? seed.officialWinRate,
+    officialWins: candidate.officialWins ?? seed.officialWins,
+    officialDraws: candidate.officialDraws ?? seed.officialDraws,
+    officialLosses: candidate.officialLosses ?? seed.officialLosses,
+    officialTeamColors:
+      candidate.officialTeamColors.length > 0 ? candidate.officialTeamColors : seed.officialTeamColors,
+    officialFormation: candidate.officialFormation ?? seed.officialFormation,
+    voltaRank: candidate.voltaRank ?? seed.voltaRank,
+    voltaRankPoint: candidate.voltaRankPoint ?? seed.voltaRankPoint,
+    voltaRankIconUrl: candidate.voltaRankIconUrl ?? seed.voltaRankIconUrl,
+    voltaWinRate: candidate.voltaWinRate ?? seed.voltaWinRate,
+    voltaWins: candidate.voltaWins ?? seed.voltaWins,
+    voltaDraws: candidate.voltaDraws ?? seed.voltaDraws,
+    voltaLosses: candidate.voltaLosses ?? seed.voltaLosses,
+    voltaAverageRating: candidate.voltaAverageRating ?? seed.voltaAverageRating,
+    voltaMomCount: candidate.voltaMomCount ?? seed.voltaMomCount,
+    voltaGoals: candidate.voltaGoals ?? seed.voltaGoals,
+    voltaAssists: candidate.voltaAssists ?? seed.voltaAssists,
+    voltaTackleRate: candidate.voltaTackleRate ?? seed.voltaTackleRate,
+    voltaBlockRate: candidate.voltaBlockRate ?? seed.voltaBlockRate,
+    voltaEffectiveShots: candidate.voltaEffectiveShots ?? seed.voltaEffectiveShots,
+    voltaPassRate: candidate.voltaPassRate ?? seed.voltaPassRate,
+    voltaDribbleRate: candidate.voltaDribbleRate ?? seed.voltaDribbleRate,
+    voltaMainPosition: candidate.voltaMainPosition ?? seed.voltaMainPosition,
+  }
 }
 
 function formatDate(dateStr: string) {
@@ -971,7 +1138,7 @@ function SearchModeTabs({
 
 function SearchModePreviewCard({
   selectedMode,
-  onSelectTopNickname,
+  onSelectTopRankItem,
   officialFormationMetaItems,
   officialFormationMetaLoading,
   officialFormationMetaSampleSize,
@@ -984,7 +1151,7 @@ function SearchModePreviewCard({
   voltaTopLoading,
 }: {
   selectedMode: SearchMode
-  onSelectTopNickname: (mode: SearchMode, nickname: string) => void
+  onSelectTopRankItem: (mode: SearchMode, item: TopRankSeedItem) => void
   officialFormationMetaItems: OfficialFormationMetaItem[]
   officialFormationMetaLoading: boolean
   officialFormationMetaSampleSize: number
@@ -1007,7 +1174,7 @@ function SearchModePreviewCard({
           <OfficialTopRankCard
             items={officialTopItems}
             isLoading={officialTopLoading}
-            onSelectNickname={(nickname) => onSelectTopNickname('official1on1', nickname)}
+            onSelectItem={(item) => onSelectTopRankItem('official1on1', item)}
           />
         </section>
 
@@ -1072,7 +1239,7 @@ function SearchModePreviewCard({
           <VoltaTopRankCard
             items={voltaTopItems}
             isLoading={voltaTopLoading}
-            onSelectNickname={(nickname) => onSelectTopNickname('voltaLive', nickname)}
+            onSelectItem={(item) => onSelectTopRankItem('voltaLive', item)}
           />
         ) : null}
       </section>
@@ -2415,13 +2582,24 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   const [activeMatchId, setActiveMatchId] = useState(initialMatchId)
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    for (const key of LEGACY_MATCH_CACHE_KEYS) {
+      window.localStorage.removeItem(key)
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
 
     const loadVoltaTopRanks = async () => {
-      const todayKey = getKstDateKey()
       const cached = readJsonStorage<VoltaTopRankCacheEntry>(VOLTA_TOP_CACHE_KEY)
+      const isCacheFresh =
+        typeof cached?.cachedAt === 'number' && Date.now() - cached.cachedAt < TOP_RANK_CACHE_TTL_MS
 
-      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5) {
+      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 5) {
         setVoltaTopItems(cached.items)
         setVoltaTopLoading(false)
         return
@@ -2444,7 +2622,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
         if (items.length > 0) {
           writeJsonStorage(VOLTA_TOP_CACHE_KEY, {
-            dateKey: todayKey,
+            cachedAt: Date.now(),
             items,
           } satisfies VoltaTopRankCacheEntry)
         }
@@ -2456,10 +2634,11 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     }
 
     const loadOfficialTopRanks = async () => {
-      const todayKey = getKstDateKey()
       const cached = readJsonStorage<OfficialTopRankCacheEntry>(OFFICIAL_TOP_CACHE_KEY)
+      const isCacheFresh =
+        typeof cached?.cachedAt === 'number' && Date.now() - cached.cachedAt < TOP_RANK_CACHE_TTL_MS
 
-      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5) {
+      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 5) {
         setOfficialTopItems(cached.items)
         setOfficialTopLoading(false)
         return
@@ -2482,7 +2661,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
         if (items.length > 0) {
           writeJsonStorage(OFFICIAL_TOP_CACHE_KEY, {
-            dateKey: todayKey,
+            cachedAt: Date.now(),
             items,
           } satisfies OfficialTopRankCacheEntry)
         }
@@ -2657,6 +2836,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     shouldUpdateUrl = true,
     matchIdToKeep?: string | null,
     modeOverride?: SearchMode,
+    seedCandidate?: MatchSearchCandidate | null,
   ) => {
     const trimmed = nickname.trim()
     if (!trimmed) return
@@ -2675,16 +2855,31 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     setCandidates([])
     setMatches([])
 
+    if (seedCandidate) {
+      setExactCandidate(seedCandidate)
+
+      if (seedCandidate.ouid) {
+        writeCachedOuid(trimmed, seedCandidate.ouid)
+        void loadMatches(seedCandidate.ouid, effectiveMode)
+      }
+    }
+
     try {
       const cachedSearch = readCachedSearch(trimmed)
       if (cachedSearch) {
-        setExactCandidate(cachedSearch.exactCandidate)
+        const mergedExactCandidate = mergeSeedCandidate(cachedSearch.exactCandidate, seedCandidate ?? null)
+        setExactCandidate(mergedExactCandidate)
         setCandidates(cachedSearch.candidates)
         setHasPendingRouteSearch(false)
 
-        if (cachedSearch.exactCandidate?.ouid) {
-          writeCachedOuid(trimmed, cachedSearch.exactCandidate.ouid)
-          void loadMatches(cachedSearch.exactCandidate.ouid, effectiveMode)
+        writeCachedSearch(trimmed, {
+          exactCandidate: mergedExactCandidate,
+          candidates: cachedSearch.candidates,
+        })
+
+        if (mergedExactCandidate?.ouid) {
+          writeCachedOuid(trimmed, mergedExactCandidate.ouid)
+          void loadMatches(mergedExactCandidate.ouid, effectiveMode)
         }
 
         return
@@ -2707,17 +2902,27 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
         }
       }
 
-      setExactCandidate(nextExactMatch)
+      const mergedExactCandidate = mergeSeedCandidate(nextExactMatch, seedCandidate ?? null)
+      setExactCandidate(mergedExactCandidate)
       setCandidates(rankCandidates)
       setHasPendingRouteSearch(false)
       writeCachedSearch(trimmed, {
-        exactCandidate: nextExactMatch,
+        exactCandidate: mergedExactCandidate,
         candidates: rankCandidates,
       })
 
-      if (nextExactMatch?.ouid) {
-        writeCachedOuid(trimmed, nextExactMatch.ouid)
-        void loadMatches(nextExactMatch.ouid, effectiveMode)
+      if (mergedExactCandidate?.ouid) {
+        writeCachedOuid(trimmed, mergedExactCandidate.ouid)
+        void loadMatches(mergedExactCandidate.ouid, effectiveMode)
+      }
+    } catch {
+      if (requestId !== requestIdRef.current) return
+
+      setHasPendingRouteSearch(false)
+
+      if (!seedCandidate) {
+        setExactCandidate(null)
+        setCandidates([])
       }
     } finally {
       if (requestId === requestIdRef.current) {
@@ -2735,15 +2940,20 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     await runSearch(query)
   }
 
-  const handleTopRankSelect = (mode: SearchMode, nickname: string) => {
+  const handleTopRankSelect = (mode: SearchMode, nickname: string, seedItem?: TopRankSeedItem) => {
     const trimmed = nickname.trim()
     if (!trimmed) {
       return
     }
 
+    const seedCandidate = seedItem ? buildTopRankSeedCandidate(mode, seedItem) : null
     setSelectedSearchMode(mode)
     setQuery(trimmed)
-    void runSearch(trimmed, true, null, mode)
+    void runSearch(trimmed, true, null, mode, seedCandidate)
+  }
+
+  const handleTopRankItemSelect = (mode: SearchMode, item: TopRankSeedItem) => {
+    handleTopRankSelect(mode, item.nickname, item)
   }
 
   const runInitialSearch = useEffectEvent((nickname: string, matchId?: string) => {
@@ -3428,7 +3638,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
             {showHomePanels && (
               <SearchModePreviewCard
                 selectedMode={selectedSearchMode}
-                onSelectTopNickname={handleTopRankSelect}
+                onSelectTopRankItem={handleTopRankItemSelect}
                 officialFormationMetaItems={officialFormationMetaItems}
                 officialFormationMetaLoading={officialFormationMetaLoading}
                 officialFormationMetaSampleSize={officialFormationMetaSampleSize}
