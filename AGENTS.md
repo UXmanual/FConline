@@ -78,8 +78,12 @@ npm run lint
 - Windows 환경에서는 로컬 Node.js 개발 서버 실행 안정성을 위해 Cygwin bash보다 PowerShell로 앱을 시작합니다.
 - Preferred command from the repo root: `npm run dev --workspace apps/fconline`
 - 저장소 루트 기준 권장 명령은 `npm run dev --workspace apps/fconline`입니다.
+- If PowerShell execution policy blocks `npm`, use `npm.cmd run dev --workspace apps/fconline` instead of assuming the app is broken.
+- PowerShell 실행 정책 때문에 `npm`이 막히면 앱 문제로 단정하지 말고 `npm.cmd run dev --workspace apps/fconline`을 사용합니다.
 - The default local dev address for `apps/fconline` is `http://localhost:4000`.
 - `apps/fconline`의 기본 로컬 개발 주소는 `http://localhost:4000`입니다.
+- Before blaming the app, check whether port `4000` is already in use by an existing `node` process and stop the stale process if needed.
+- 앱 문제로 단정하기 전에 `4000` 포트를 기존 `node` 프로세스가 점유 중인지 확인하고 필요하면 남아 있는 프로세스를 정리합니다.
 - The agent should try to start the dev server directly first before assuming a local environment issue.
 - 에이전트는 로컬 환경 문제라고 가정하기 전에 먼저 개발 서버를 직접 실행해 봅니다.
 - If the agent cannot start the dev server, it should tell the user that the attempt failed and provide a direct local shell command for `cmd` or PowerShell.
@@ -88,8 +92,10 @@ npm run lint
 - `cmd` 기준 권장 대체 명령: `cd /d C:\Users\Rich\FConline && npm run dev --workspace apps/fconline`
 - Recommended fallback for PowerShell: `Set-Location 'C:\Users\Rich\FConline'; npm run dev --workspace apps/fconline`
 - PowerShell 기준 권장 대체 명령: `Set-Location 'C:\Users\Rich\FConline'; npm run dev --workspace apps/fconline`
-- Before starting the dev server, make sure NEXON Launcher is not running.
-- 개발 서버를 시작하기 전에 NEXON Launcher가 실행 중이 아닌지 확인합니다.
+- Before starting the dev server, make sure NEXON Launcher and AnySign4PC-related processes are not running.
+- 개발 서버를 시작하기 전에 NEXON Launcher와 AnySign4PC 관련 프로세스가 실행 중이 아닌지 확인합니다.
+- Do not rely only on Windows Startup Apps: NEXON-related interference may come from Windows services or background processes even when no startup entry is visible.
+- Windows 시작 프로그램 목록만으로 판단하지 않습니다. 시작 항목이 보여도 보이지 않아도 NEXON 관련 서비스나 백그라운드 프로세스가 개발 서버에 간섭할 수 있습니다.
 - If the user reports Themida or WinLicense errors, debugger detection warnings, missing `SHLWAPI.dll`, or freezes when starting the dev server, suspect NEXON Launcher auto-start and advise disabling it from Windows startup apps.
 - 개발 서버 시작 시 Themida/WinLicense 오류, 디버거 감지 경고, `SHLWAPI.dll` 관련 오류, 프리징이 발생하면 NEXON Launcher 자동 시작을 의심하고 Windows 시작 프로그램에서 비활성화하도록 안내합니다.
 
