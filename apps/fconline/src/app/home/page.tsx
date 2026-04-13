@@ -5,7 +5,7 @@ import HomeControllerUsageCard from './HomeControllerUsageCard'
 import HomeCommunityCard from './HomeCommunityCard'
 import HomeSettingsCard from './HomeSettingsCard'
 import HomeLogo from './HomeLogo'
-import HomeInitialSplashClient from './HomeInitialSplashClient'
+import HomeInitialSplash from './HomeInitialSplash'
 import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
 const weekdayMap = ['일', '월', '화', '수', '목', '금', '토']
@@ -40,7 +40,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <HomeInitialSplashClient />
+      <HomeInitialSplash />
       <div className="space-y-4 pt-5">
         <header className="flex items-center justify-between gap-3">
           <div className="flex h-6 items-center gap-3">

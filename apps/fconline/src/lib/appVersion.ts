@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '15.6': [
+    '홈 스플래시 처리 방식을 다시 정리해 개발 서버와 로컬 프리뷰에서 나타나던 "This page couldn’t load" 오류를 해결',
+    '홈 첫 진입 스플래시 1회 표시 규칙은 유지하면서, 클라이언트 렌더 bailout 없이 안정적으로 동작하도록 수정',
+  ],
   '15.5': [
     '홈 스플래시를 클라이언트 전용으로 분리해 라이브 홈 첫 진입에서도 로고 스플래시가 다시 보이도록 수정',
     '홈 첫 진입 1회 표시 규칙은 유지하면서, 서버 렌더링과 하이드레이션 타이밍 때문에 스플래시가 사라지던 흐름을 정리',

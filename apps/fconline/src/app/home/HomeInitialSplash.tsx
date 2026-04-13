@@ -8,42 +8,39 @@ const SPLASH_FADE_MS = 420
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
 
 export default function HomeInitialSplash() {
-  const [shouldRender] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false
-    }
+  const [isFadingOut, setIsFadingOut] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
 
+  useEffect(() => {
     const hasSeenSplash = window.sessionStorage.getItem(HOME_SPLASH_SESSION_KEY) === '1'
+
     if (hasSeenSplash) {
-      return false
+      const hideFrame = window.requestAnimationFrame(() => {
+        setIsVisible(false)
+      })
+
+      return () => {
+        window.cancelAnimationFrame(hideFrame)
+      }
     }
 
     window.sessionStorage.setItem(HOME_SPLASH_SESSION_KEY, '1')
-    return true
-  })
-  const [isFadingOut, setIsFadingOut] = useState(false)
-  const [isHidden, setIsHidden] = useState(false)
-
-  useEffect(() => {
-    if (!shouldRender) {
-      return
-    }
 
     const fadeTimer = window.setTimeout(() => {
       setIsFadingOut(true)
     }, SPLASH_VISIBLE_MS)
 
     const hideTimer = window.setTimeout(() => {
-      setIsHidden(true)
+      setIsVisible(false)
     }, SPLASH_VISIBLE_MS + SPLASH_FADE_MS)
 
     return () => {
       window.clearTimeout(fadeTimer)
       window.clearTimeout(hideTimer)
     }
-  }, [shouldRender])
+  }, [])
 
-  if (!shouldRender || isHidden) {
+  if (!isVisible) {
     return null
   }
 
