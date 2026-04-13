@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '15.5': [
+    '홈 스플래시를 클라이언트 전용으로 분리해 라이브 홈 첫 진입에서도 로고 스플래시가 다시 보이도록 수정',
+    '홈 첫 진입 1회 표시 규칙은 유지하면서, 서버 렌더링과 하이드레이션 타이밍 때문에 스플래시가 사라지던 흐름을 정리',
+  ],
   '15.4': [
     '홈 탭 첫 진입에만 로고 스플래시가 짧게 보이고, 같은 세션에서 다시 들어오면 홈 화면이 바로 열리도록 정리',
     '홈 상단 공지 카드의 긴 제목이 두 줄까지 자연스럽게 보이도록 줄바꿈과 정렬을 개선',
