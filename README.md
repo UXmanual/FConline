@@ -37,6 +37,13 @@ npm run build
 npm run lint
 ```
 
+## 개발 서버 문제 해결
+
+- Windows에서는 PowerShell에서 `npm.cmd run dev --workspace apps/fconline` 실행을 권장합니다.
+- 개발 서버 시작 전에 `NexonLauncher64`, `AnySign4PC`, `AnySign4PCLauncher`가 실행 중이면 앱이 멈추거나 프리징될 수 있습니다.
+- 이제 `apps/fconline`의 `dev` 실행 전 프리체크가 자동으로 돌아가며, 충돌 프로세스나 `4000` 포트 점유를 발견하면 서버 시작을 막고 안내 메시지를 출력합니다.
+- 프로세스가 자동으로 다시 뜨면 Windows 시작 프로그램이나 서비스에서 NEXON Launcher 자동 시작을 꺼두고 재부팅한 뒤 다시 시도합니다.
+
 ## 버전과 릴리스
 
 - 실제 서비스 버전은 `apps/fconline/package.json`에서 관리합니다.

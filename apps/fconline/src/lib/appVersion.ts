@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '15.4': [
+    '홈 탭 첫 진입에만 로고 스플래시가 짧게 보이고, 같은 세션에서 다시 들어오면 홈 화면이 바로 열리도록 정리',
+    '홈 상단 공지 카드의 긴 제목이 두 줄까지 자연스럽게 보이도록 줄바꿈과 정렬을 개선',
+    'Windows 개발 서버 시작 전에 NEXON Launcher, AnySign4PC, 4000 포트 충돌을 미리 감지해 안내하는 프리체크를 추가',
+  ],
   '15.3': [
     '분석 탭 1:1 공식경기와 볼타 TOP 5 구단주 카드에 ouid를 함께 실어 클릭 직후 검색 데이터와 최근 경기 기록이 더 안정적으로 열리도록 개선',
     'TOP 5 캐시 키를 갱신하고 짧은 TTL 기준으로 다시 읽도록 정리해 오래된 랭커 데이터가 남아 보이는 문제를 완화',

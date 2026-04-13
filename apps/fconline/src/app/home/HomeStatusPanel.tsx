@@ -157,11 +157,11 @@ export default async function HomeStatusPanel() {
                 rel="noreferrer"
                 className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
               >
-                <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium leading-6" style={titleStyle}>
-                  <span className="shrink-0 text-[0.9em] leading-none" style={bodyStyle}>
+                <p className="flex min-w-0 flex-1 items-start gap-1.5 text-sm font-medium leading-6" style={titleStyle}>
+                  <span className="shrink-0 pt-1 text-[0.9em] leading-none" style={bodyStyle}>
                     {'\u2197'}
                   </span>
-                  <span className="min-w-0">{notice.title}</span>
+                  <span className="line-clamp-2 min-w-0 break-words">{notice.title}</span>
                 </p>
                 <span className="shrink-0 text-xs" style={bodyStyle}>{notice.date}</span>
               </a>

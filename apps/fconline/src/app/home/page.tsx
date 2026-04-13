@@ -5,9 +5,9 @@ import HomeControllerUsageCard from './HomeControllerUsageCard'
 import HomeCommunityCard from './HomeCommunityCard'
 import HomeSettingsCard from './HomeSettingsCard'
 import HomeLogo from './HomeLogo'
+import HomeInitialSplash from './HomeInitialSplash'
 import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
-const version = process.env.NEXT_PUBLIC_APP_VERSION
 const weekdayMap = ['일', '월', '화', '수', '목', '금', '토']
 
 function getKoreaDateLabel() {
@@ -39,22 +39,25 @@ export default async function HomePage() {
   const bodyStyle = { color: 'var(--app-body-text)' }
 
   return (
-    <div className="space-y-4 pt-5">
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex h-6 items-center gap-3">
-          <HomeLogo />
-        </div>
-        <span className="text-[13px] font-medium" style={bodyStyle}>{todayLabel}</span>
-      </header>
+    <>
+      <HomeInitialSplash />
+      <div className="space-y-4 pt-5">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex h-6 items-center gap-3">
+            <HomeLogo />
+          </div>
+          <span className="text-[13px] font-medium" style={bodyStyle}>{todayLabel}</span>
+        </header>
 
-      <main className="space-y-3">
-        <HomeStatusPanel />
-        <HomeEventCarousel events={events} />
-        <HomeTipsSection />
-        {controllerUsage ? <HomeControllerUsageCard usage={controllerUsage} /> : null}
-        <HomeCommunityCard />
-        <HomeSettingsCard />
-      </main>
-    </div>
+        <main className="space-y-3">
+          <HomeStatusPanel />
+          <HomeEventCarousel events={events} />
+          <HomeTipsSection />
+          {controllerUsage ? <HomeControllerUsageCard usage={controllerUsage} /> : null}
+          <HomeCommunityCard />
+          <HomeSettingsCard />
+        </main>
+      </div>
+    </>
   )
 }
