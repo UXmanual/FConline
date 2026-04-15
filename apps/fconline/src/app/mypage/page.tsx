@@ -4,7 +4,6 @@ import { FormEvent, useState } from 'react'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
 import {
-  sendPushTestNotification,
   requestAppNotificationsPermission,
   unsubscribeFromPushNotifications,
   useAppNotificationsEnabled,
@@ -148,7 +147,6 @@ export default function MyPage() {
   const [contactContent, setContactContent] = useState('')
   const [contactValue, setContactValue] = useState('')
   const [isSendingContact, setIsSendingContact] = useState(false)
-  const [isSendingPushTest, setIsSendingPushTest] = useState(false)
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
 
   const handleDarkModeToggle = () => {
@@ -187,28 +185,6 @@ export default function MyPage() {
     }
 
     window.alert('앱 알림 권한이 허용되지 않았습니다.')
-  }
-
-  const handleSendPushTest = async () => {
-    if (isSendingPushTest) {
-      return
-    }
-
-    try {
-      setIsSendingPushTest(true)
-      const response = await sendPushTestNotification()
-      const result = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        throw new Error(result?.message ?? '테스트 알림 발송에 실패했습니다.')
-      }
-
-      window.alert('테스트 알림 발송을 요청했습니다. 잠시 후 기기 알림을 확인해 주세요.')
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : '테스트 알림 발송에 실패했습니다.')
-    } finally {
-      setIsSendingPushTest(false)
-    }
   }
 
   const resetContactForm = () => {
@@ -419,49 +395,32 @@ export default function MyPage() {
         </section>
 
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-1">
-                <p className="text-sm font-semibold" style={titleStyle}>
-                  앱 알림
-                </p>
-                <p className="text-sm font-semibold" style={appNotificationLabelStyle}>
-                  {isAppNotificationsEnabled ? '허용중' : '미허용'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                aria-label="앱 알림 토글"
-                aria-pressed={isAppNotificationsEnabled}
-                onClick={handleAppNotificationToggle}
-                className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
-                style={{
-                  backgroundColor: isAppNotificationsEnabled ? '#457ae5' : '#d5dbe3',
-                }}
-              >
-                <span
-                  className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
-                  style={{ transform: `translateX(${isAppNotificationsEnabled ? '24px' : '0px'})` }}
-                  aria-hidden="true"
-                />
-              </button>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-semibold" style={titleStyle}>
+                앱 알림
+              </p>
+              <p className="text-sm font-semibold" style={appNotificationLabelStyle}>
+                {isAppNotificationsEnabled ? '허용중' : '미허용'}
+              </p>
             </div>
 
-            {isAppNotificationsEnabled ? (
-              <button
-                type="button"
-                onClick={handleSendPushTest}
-                disabled={isSendingPushTest}
-                className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-opacity disabled:cursor-default disabled:opacity-60"
-                style={{
-                  backgroundColor: 'rgba(69, 122, 229, 0.12)',
-                  color: '#457ae5',
-                }}
-              >
-                {isSendingPushTest ? '전송중...' : '테스트 알림 보내기'}
-              </button>
-            ) : null}
+            <button
+              type="button"
+              aria-label="앱 알림 토글"
+              aria-pressed={isAppNotificationsEnabled}
+              onClick={handleAppNotificationToggle}
+              className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
+              style={{
+                backgroundColor: isAppNotificationsEnabled ? '#457ae5' : '#d5dbe3',
+              }}
+            >
+              <span
+                className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+                style={{ transform: `translateX(${isAppNotificationsEnabled ? '24px' : '0px'})` }}
+                aria-hidden="true"
+              />
+            </button>
           </div>
         </section>
 

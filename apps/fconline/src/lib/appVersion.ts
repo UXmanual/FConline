@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '16.2': [
+    '마이페이지에서 테스트 알림 버튼을 제거했습니다.',
+    '운영 공지와 테스트 발송은 푸시 전용 화면에서만 사용할 수 있습니다.',
+  ],
   '16.1': [
     '운영 공지 푸시 화면을 마이페이지와 분리했습니다.',
     '마이페이지에서는 앱 알림과 테스트 알림만 확인할 수 있습니다.',
