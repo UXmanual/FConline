@@ -291,7 +291,7 @@ export default function MyPage() {
           <div className="flex items-center gap-1">
             <p className="text-sm font-semibold" style={titleStyle}>
               <span style={{ color: '#457ae5' }}>로그인</span>
-              <span>{' 개발 준비중입니다'}</span>
+              <span>{' 준비중입니다'}</span>
             </p>
           </div>
         </section>
@@ -299,10 +299,10 @@ export default function MyPage() {
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm leading-[1.45]" style={bodyStyle}>
+              <p className="text-sm leading-[1.35]" style={bodyStyle}>
                 현재 베타 테스트 중입니다.
               </p>
-              <p className="text-sm leading-[1.45]" style={bodyStyle}>
+              <p className="text-sm leading-[1.35]" style={bodyStyle}>
                 문의나 요청사항은 쪽지로 남겨주세요.
               </p>
             </div>

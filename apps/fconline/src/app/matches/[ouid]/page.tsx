@@ -9,6 +9,10 @@ import { MatchData, MATCH_TYPE_NAMES, VOLTA_MATCH_TYPES } from '@/features/match
 
 const MATCH_PAGE_CACHE_KEY = 'fconline.match.page-cache'
 
+function scheduleStateUpdate(callback: () => void) {
+  queueMicrotask(callback)
+}
+
 const RESULT_COLOR: Record<string, string> = {
   승: '#256ef4',
   패: '#f64f5e',
@@ -44,15 +48,19 @@ export default function MatchListPage() {
         const parsed = JSON.parse(raw) as Record<string, MatchData[]>
         const cached = parsed[cacheKey]
         if (cached) {
-          setMatches(cached)
-          setLoading(false)
+          scheduleStateUpdate(() => {
+            setMatches(cached)
+            setLoading(false)
+          })
           return
         }
       }
     } catch {}
 
-    setLoading(true)
-    setMatches([])
+    scheduleStateUpdate(() => {
+      setLoading(true)
+      setMatches([])
+    })
 
     fetch(`/api/nexon/matches/list?ouid=${ouid}&matchtype=${matchType}&limit=10`)
       .then((r) => r.json())

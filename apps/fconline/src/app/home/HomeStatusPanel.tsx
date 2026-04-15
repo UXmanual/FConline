@@ -1,7 +1,9 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { formatRelativeTime } from '@/lib/community'
 import PlayerImage from '@/features/player-search/components/PlayerImage'
+import { getPlayerDetail } from '@/features/player-search/player-detail'
 import HomeDateCard from './HomeDateCard'
 import HomeQuickActions from './HomeQuickActions'
 
@@ -13,6 +15,7 @@ type LatestPlayerReviewRow = {
   player_id: string
   player_name: string
   nickname: string
+  season_img: string | null
   title: string
   created_at: string
 }
@@ -58,7 +61,18 @@ async function getLatestPlayerReviews() {
       return [] as LatestPlayerReviewRow[]
     }
 
-    return (data ?? []) as LatestPlayerReviewRow[]
+    const reviews = (data ?? []) as Omit<LatestPlayerReviewRow, 'season_img'>[]
+
+    return Promise.all(
+      reviews.map(async (review) => {
+        const detail = await getPlayerDetail(review.player_id)
+
+        return {
+          ...review,
+          season_img: detail?.seasonImg ?? null,
+        }
+      }),
+    )
   } catch {
     return [] as LatestPlayerReviewRow[]
   }
@@ -230,24 +244,38 @@ export default async function HomeStatusPanel() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+                      {review.season_img ? (
+                        <span className="relative h-5 w-5 shrink-0">
+                          <img
+                            src={review.season_img}
+                            alt=""
+                            className="h-full w-full object-contain"
+                          />
+                        </span>
+                      ) : null}
                       <span className="truncate" style={{ color: '#457ae5' }}>
                         {review.player_name}
                       </span>
                       {getCardLevelLabel(review.title) ? (
-                        <span className="shrink-0" style={mutedStyle}>
+                        <span className="hidden" style={mutedStyle}>
+                          /
+                        </span>
+                      ) : null}
+                      {getCardLevelLabel(review.title) ? (
+                        <span className="hidden" style={mutedStyle}>
                           ·
                         </span>
                       ) : null}
                       {getCardLevelLabel(review.title) ? (
                         <span className="shrink-0" style={titleStyle}>
+                          <span className="mr-1" style={mutedStyle}>
+                            ·
+                          </span>
                           {getCardLevelLabel(review.title)}
                         </span>
                       ) : null}
-                      <span className="shrink-0" style={mutedStyle}>
+                      <span className="hidden" style={mutedStyle}>
                         ·
-                      </span>
-                      <span className="truncate font-medium" style={mutedStyle}>
-                        {review.nickname}
                       </span>
                     </div>
                     <p className="mt-1 line-clamp-1 pr-2 text-[13px] font-semibold leading-5" style={titleStyle}>

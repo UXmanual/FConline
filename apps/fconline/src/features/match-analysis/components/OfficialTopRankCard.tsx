@@ -31,7 +31,7 @@ export default function OfficialTopRankCard({ items, isLoading = false, onSelect
         <div>
           <h2 className="app-theme-title text-sm font-semibold">
             <span style={{ color: 'var(--app-accent-blue)' }}>{'1:1 \uACF5\uC2DD\uACBD\uAE30'}</span>
-            <span>{' \uB7AD\uD0B9 TOP 5'}</span>
+            <span>{' \uB7AD\uD0B9 TOP 3'}</span>
           </h2>
         </div>
         <span
@@ -46,7 +46,7 @@ export default function OfficialTopRankCard({ items, isLoading = false, onSelect
       </div>
 
       {isLoading ? (
-        <CardListSkeleton className="mt-3" rows={5} iconSizeClassName="h-11 w-11" />
+        <CardListSkeleton className="mt-3" rows={3} iconSizeClassName="h-11 w-11" />
       ) : (
         <div className="mt-3">
           {items.map((item, index) => (

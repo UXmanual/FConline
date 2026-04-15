@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import type { CSSProperties } from 'react'
 import { AnalysisIcon, PlayerIcon } from '@/components/icons/NavIcons'
 import { useDarkModeEnabled } from '@/lib/darkMode'
 
@@ -22,14 +23,14 @@ const quickActions = [
 
 export default function HomeQuickActions() {
   const isDarkModeEnabled = useDarkModeEnabled()
-  const cardStyle = {
+  const cardStyle: CSSProperties & { '--tw-ring-offset-color': string } = {
     backgroundColor: 'var(--app-card-bg)',
     color: 'var(--app-title)',
     borderWidth: '1px',
     borderStyle: 'solid',
     borderColor: 'var(--app-card-border)',
     transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
-    ['--tw-ring-offset-color' as '--tw-ring-offset-color']: 'var(--app-card-bg)',
+    '--tw-ring-offset-color': 'var(--app-card-bg)',
   }
 
   return (

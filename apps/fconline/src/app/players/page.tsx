@@ -145,6 +145,10 @@ function isValidPlayerSearchResultsCacheEntry(entry: PlayerSearchResultsCacheEnt
   return true
 }
 
+function scheduleStateUpdate(callback: () => void) {
+  queueMicrotask(callback)
+}
+
 export default function PlayersPage() {
   const [query, setQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -233,7 +237,9 @@ export default function PlayersPage() {
 
     if (shouldReset || !shouldPreserve) {
       sessionStorage.removeItem(STORAGE_KEY)
-      setHydrated(true)
+      scheduleStateUpdate(() => {
+        setHydrated(true)
+      })
       return
     }
 
@@ -249,17 +255,21 @@ export default function PlayersPage() {
           sortBy?: SortBy
         }
 
-        setQuery(parsed.query ?? '')
-        setSearchQuery(parsed.searchQuery ?? '')
-        setStrongLevel(parsed.strongLevel ?? 1)
-        setSortBy(parsed.sortBy ?? 'latest')
+        scheduleStateUpdate(() => {
+          setQuery(parsed.query ?? '')
+          setSearchQuery(parsed.searchQuery ?? '')
+          setStrongLevel(parsed.strongLevel ?? 1)
+          setSortBy(parsed.sortBy ?? 'latest')
+        })
 
         if (savedResults) {
           try {
             const results = JSON.parse(savedResults) as PlayerSearchResultsCacheEntry
             if (isValidPlayerSearchResultsCacheEntry(results)) {
-              setPlayers(results.players)
-              setSeasons(results.seasons)
+              scheduleStateUpdate(() => {
+                setPlayers(results.players)
+                setSeasons(results.seasons)
+              })
             } else {
               sessionStorage.removeItem(RESULTS_KEY)
             }
@@ -272,7 +282,9 @@ export default function PlayersPage() {
       }
     }
 
-    setHydrated(true)
+    scheduleStateUpdate(() => {
+      setHydrated(true)
+    })
   }, [])
 
   useEffect(() => {
@@ -300,10 +312,16 @@ export default function PlayersPage() {
           Array.isArray(parsed.df) &&
           (parsed.fw.length > 0 || parsed.mf.length > 0 || parsed.df.length > 0)
         ) {
-          setPopularFwPlayers(parsed.fw)
-          setPopularMfPlayers(parsed.mf)
-          setPopularDfPlayers(parsed.df)
-          setPopularPlayersLoading(false)
+          const fw = parsed.fw
+          const mf = parsed.mf
+          const df = parsed.df
+
+          scheduleStateUpdate(() => {
+            setPopularFwPlayers(fw)
+            setPopularMfPlayers(mf)
+            setPopularDfPlayers(df)
+            setPopularPlayersLoading(false)
+          })
           return
         }
       } catch {
@@ -311,7 +329,9 @@ export default function PlayersPage() {
       }
     }
 
-    setPopularPlayersLoading(true)
+    scheduleStateUpdate(() => {
+      setPopularPlayersLoading(true)
+    })
     fetch('/api/nexon/popular-players')
       .then((res) => res.json())
       .then((data) => {
@@ -370,8 +390,10 @@ export default function PlayersPage() {
     isInitialRestoreRef.current = false
 
     if (!searchQuery.trim()) {
-      setPlayers([])
-      setSeasons([])
+      scheduleStateUpdate(() => {
+        setPlayers([])
+        setSeasons([])
+      })
       return
     }
 
@@ -382,9 +404,11 @@ export default function PlayersPage() {
         const cached = parsed[searchQuery]
 
         if (isValidPlayerSearchResultsCacheEntry(cached)) {
-          setPlayers(cached.players)
-          setSeasons(cached.seasons)
-          setLoading(false)
+          scheduleStateUpdate(() => {
+            setPlayers(cached.players)
+            setSeasons(cached.seasons)
+            setLoading(false)
+          })
           sessionStorage.setItem(
             RESULTS_KEY,
             JSON.stringify({
@@ -406,7 +430,9 @@ export default function PlayersPage() {
       }
     }
 
-    setLoading(true)
+    scheduleStateUpdate(() => {
+      setLoading(true)
+    })
     fetch(`/api/nexon/players?q=${encodeURIComponent(searchQuery)}`)
       .then((res) => res.json())
       .then((data) => {

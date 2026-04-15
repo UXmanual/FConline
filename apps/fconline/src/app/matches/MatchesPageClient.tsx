@@ -97,7 +97,7 @@ const SEARCH_MODE_OPTIONS: Array<{
 ]
 
 function normalizeSearchMode(value: string | null | undefined): SearchMode {
-  return value === 'official1on1' || value === 'manager' ? value : 'voltaLive'
+  return value === 'voltaLive' || value === 'manager' ? value : 'official1on1'
 }
 
 function getMatchTypeForMode(mode: SearchMode) {
@@ -887,7 +887,7 @@ function writeCachedMatches(cacheKey: string, matches: MatchData[]) {
   writeJsonStorage(MATCH_RESULTS_CACHE_KEY, parsed)
 }
 
-function buildMatchesUrl(nickname: string | null, matchId?: string | null, mode: SearchMode = 'voltaLive') {
+function buildMatchesUrl(nickname: string | null, matchId?: string | null, mode: SearchMode = 'official1on1') {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
 
@@ -903,7 +903,7 @@ function buildMatchesUrl(nickname: string | null, matchId?: string | null, mode:
     url.searchParams.delete('matchId')
   }
 
-  if (mode !== 'voltaLive') {
+  if (mode !== 'official1on1') {
     url.searchParams.set('mode', mode)
   } else {
     url.searchParams.delete('mode')
@@ -912,7 +912,7 @@ function buildMatchesUrl(nickname: string | null, matchId?: string | null, mode:
   return `${url.pathname}${url.search}`
 }
 
-function updateMatchesUrl(nickname: string | null, matchId?: string | null, mode: SearchMode = 'voltaLive') {
+function updateMatchesUrl(nickname: string | null, matchId?: string | null, mode: SearchMode = 'official1on1') {
   if (typeof window === 'undefined') return
   const nextUrl = buildMatchesUrl(nickname, matchId, mode)
   if (!nextUrl) return
@@ -2638,8 +2638,8 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
       const isCacheFresh =
         typeof cached?.cachedAt === 'number' && Date.now() - cached.cachedAt < TOP_RANK_CACHE_TTL_MS
 
-      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 5) {
-        setOfficialTopItems(cached.items)
+      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 3) {
+        setOfficialTopItems(cached.items.slice(0, 3))
         setOfficialTopLoading(false)
         return
       }
@@ -2651,7 +2651,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
         }
 
         const data = await res.json().catch(() => null)
-        const items = Array.isArray(data?.items) ? (data.items as OfficialTopRankItem[]) : []
+        const items = Array.isArray(data?.items) ? (data.items as OfficialTopRankItem[]).slice(0, 3) : []
 
         if (cancelled) {
           return

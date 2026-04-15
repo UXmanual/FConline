@@ -72,8 +72,8 @@ export default function OfficialFormationMetaCard({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="app-theme-title text-sm font-semibold">
-            <span>{'\uD3EC\uBA54\uC774\uC158 '}</span>
-            <span style={{ color: 'var(--app-accent-blue)' }}>{'\uC0C1\uC704\uAD8C \uC0AC\uC6A9 \uBE44\uC728'}</span>
+            <span style={{ color: 'var(--app-accent-blue)' }}>{'\uD3EC\uBA54\uC774\uC158 '}</span>
+            <span>{'\uC0C1\uC704\uAD8C \uC0AC\uC6A9 \uBE44\uC728'}</span>
           </h2>
         </div>
         <span
@@ -137,7 +137,7 @@ export default function OfficialFormationMetaCard({
                       ease: [0.22, 1, 0.36, 1],
                     }}
                     style={{
-                      backgroundColor: 'rgba(78, 132, 232, 0.72)',
+                      backgroundColor: 'rgba(190, 197, 208, 0.94)',
                       transformOrigin: 'left center',
                     }}
                   />

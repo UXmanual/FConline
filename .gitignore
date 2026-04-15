@@ -30,6 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 apps/fconline/dev-server*.log
 apps/fconline/.logs/
+.bkit/
+apps/fconline/.codex-logs/
 
 # vercel
 .vercel

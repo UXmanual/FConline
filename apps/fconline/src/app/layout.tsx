@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 import AppChrome from '@/components/layout/AppChrome'
+import PwaBootstrap from '@/components/pwa/PwaBootstrap'
 
 const pretendard = localFont({
   src: [
@@ -21,7 +22,7 @@ const metadataBase = (() => {
     process.env.VERCEL_URL
 
   if (!siteUrl) {
-    return new URL('http://localhost:3000')
+    return new URL('http://localhost:4000')
   }
 
   const normalizedUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
   title: siteTitle,
   applicationName: siteName,
   description: siteDescription,
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: [
       { url: '/icons/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -97,6 +98,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full" style={{ backgroundColor: 'var(--app-body-bg)' }}>
+        <PwaBootstrap />
         <div
           className="relative mx-auto min-h-[100dvh] w-full pt-[env(safe-area-inset-top)] sm:max-w-[480px]"
           style={{

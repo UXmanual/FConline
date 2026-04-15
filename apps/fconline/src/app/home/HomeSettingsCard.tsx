@@ -22,7 +22,7 @@ export default function HomeSettingsCard() {
           className="flex w-full items-center justify-between gap-3 text-left"
         >
           <div className="flex items-center gap-1.5 text-sm font-semibold" style={titleStyle}>
-            <span>{'\uC5EC\uB7EC\uAC00\uC9C0 \uB354\uBCF4\uAE30'}</span>
+            <span>{'\uD654\uBA74 \uC124\uC815'}</span>
             <span aria-hidden="true">{'\u2699\uFE0F'}</span>
           </div>
 

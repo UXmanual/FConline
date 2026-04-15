@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { TouchEvent as ReactTouchEvent } from 'react'
 import type { HomeEventItem } from './home-feed'
@@ -15,8 +16,8 @@ const TRANSITION_MS = 360
 const IMAGE_LOAD_TIMEOUT_MS = 2500
 const SWIPE_THRESHOLD = 18
 const AXIS_LOCK_THRESHOLD = 6
-const FIXED_BANNER_ASPECT_RATIO_CSS = '440 / 124'
-const FIXED_BANNER_ASPECT_RATIO = 440 / 124
+const FIXED_BANNER_ASPECT_RATIO_CSS = '440 / 112'
+const FIXED_BANNER_ASPECT_RATIO = 440 / 112
 
 export default function HomeEventCarousel({ events }: Props) {
   const [activeLoopIndex, setActiveLoopIndex] = useState(events.length > 1 ? 1 : 0)
@@ -89,7 +90,7 @@ export default function HomeEventCarousel({ events }: Props) {
     clearResumeTimeout()
   }
 
-  const scheduleAutoAdvance = () => {
+  const scheduleAutoAdvance = useCallback(() => {
     if (events.length <= 1) {
       return
     }
@@ -104,7 +105,7 @@ export default function HomeEventCarousel({ events }: Props) {
       setTransitionEnabled(true)
       setActiveLoopIndex((current) => Math.min(current + 1, events.length + 1))
     }, AUTO_ADVANCE_MS)
-  }
+  }, [events.length])
 
   const resumeAutoAdvance = () => {
     if (events.length <= 1) {
@@ -170,15 +171,22 @@ export default function HomeEventCarousel({ events }: Props) {
   }, [])
 
   useEffect(() => {
-    setActiveLoopIndex(events.length > 1 ? 1 : 0)
-    setDragOffset(0)
-    setTransitionEnabled(false)
     isAnimatingRef.current = false
     isDraggingRef.current = false
     dragDirectionRef.current = null
     startXRef.current = null
     startYRef.current = null
-  }, [events.length])
+
+    const resetFrame = window.requestAnimationFrame(() => {
+      setActiveLoopIndex(events.length > 1 ? 1 : 0)
+      setDragOffset(0)
+      setTransitionEnabled(false)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(resetFrame)
+    }
+  }, [events.length, scheduleAutoAdvance])
 
   useEffect(() => {
     scheduleAutoAdvance()
@@ -189,7 +197,7 @@ export default function HomeEventCarousel({ events }: Props) {
       clearTransitionFallback()
       clearImageLoadTimeout()
     }
-  }, [events.length])
+  }, [events.length, scheduleAutoAdvance])
 
   useEffect(() => {
     if (!transitionEnabled) {
@@ -387,7 +395,7 @@ export default function HomeEventCarousel({ events }: Props) {
     suppressClickRef.current = false
   }
 
-  const finalizeTransition = () => {
+  const finalizeTransition = useCallback(() => {
     clearTransitionFallback()
 
     if (events.length <= 1) {
@@ -410,7 +418,7 @@ export default function HomeEventCarousel({ events }: Props) {
     }
 
     isAnimatingRef.current = false
-  }
+  }, [activeLoopIndex, events.length])
 
   const currentEvent = events[displayIndex]
   const currentImageKey = currentEvent?.imageUrl ?? currentEvent?.href ?? currentEvent?.id ?? ''
@@ -436,7 +444,7 @@ export default function HomeEventCarousel({ events }: Props) {
     return () => {
       clearTransitionFallback()
     }
-  }, [activeLoopIndex, events.length, transitionEnabled])
+  }, [activeLoopIndex, events.length, finalizeTransition, transitionEnabled])
 
   useEffect(() => {
     if (!currentImageKey || isCurrentImageLoaded) {

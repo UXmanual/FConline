@@ -6,7 +6,7 @@ import BottomNav from '@/components/layout/BottomNav'
 
 export default function AppChrome() {
   const pathname = usePathname()
-  const hideFooter = pathname.startsWith('/community')
+  const showFooter = pathname.startsWith('/mypage')
   const [isStandaloneDisplayMode, setIsStandaloneDisplayMode] = useState(false)
   const footerBottomCompensation = isStandaloneDisplayMode ? 30 : 0
 
@@ -72,7 +72,7 @@ export default function AppChrome() {
 
   return (
     <>
-      {!hideFooter ? (
+      {showFooter ? (
         <>
           <div
             className="px-5 pb-0.5 text-left text-[11px] leading-5"
