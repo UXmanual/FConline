@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
+import Image from 'next/image'
 import './globals.css'
 import AppChrome from '@/components/layout/AppChrome'
 import PwaBootstrap from '@/components/pwa/PwaBootstrap'
@@ -7,6 +8,38 @@ import PwaBootstrap from '@/components/pwa/PwaBootstrap'
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
 const HOME_SPLASH_VISIBLE_MS = 520
 const HOME_SPLASH_FADE_MS = 420
+const APPLE_STARTUP_IMAGES = [
+  {
+    href: '/icons/apple-startup-1170x2532.png',
+    media:
+      '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/icons/apple-startup-1179x2556.png',
+    media:
+      '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/icons/apple-startup-1284x2778.png',
+    media:
+      '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/icons/apple-startup-1290x2796.png',
+    media:
+      '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/icons/apple-startup-1125x2436.png',
+    media:
+      '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/icons/apple-startup-1242x2688.png',
+    media:
+      '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+] as const
 
 const pretendard = localFont({
   src: [
@@ -95,6 +128,14 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#f0f3f5" />
+        {APPLE_STARTUP_IMAGES.map((image) => (
+          <link
+            key={image.href}
+            rel="apple-touch-startup-image"
+            href={image.href}
+            media={image.media}
+          />
+        ))}
         <style>{`
           #startup-splash {
             position: fixed;
@@ -153,7 +194,7 @@ export default function RootLayout({
       <body className="min-h-full" style={{ backgroundColor: 'var(--app-body-bg)' }}>
         <PwaBootstrap />
         <div id="startup-splash" aria-hidden="true">
-          <img src="/logo-dark.svg" alt="" />
+          <Image src="/logo-dark.svg" alt="" width={151} height={32} priority />
         </div>
         <div
           id="app-shell"
