@@ -18,12 +18,96 @@ const APP_SHELL_ROUTES = [
   '/icons/icon-512.png',
 ]
 
+const DEFAULT_NOTIFICATION_TITLE = 'FCO Ground'
+const DEFAULT_NOTIFICATION_OPTIONS = {
+  body: '새로운 알림이 도착했습니다.',
+  icon: '/icons/icon-192.png',
+  badge: '/icons/icon-192.png',
+  data: {
+    url: '/home',
+  },
+}
+
+function buildNotificationPayload(event) {
+  if (!event.data) {
+    return {
+      title: DEFAULT_NOTIFICATION_TITLE,
+      options: DEFAULT_NOTIFICATION_OPTIONS,
+    }
+  }
+
+  try {
+    const payload = event.data.json()
+    const title =
+      typeof payload?.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : DEFAULT_NOTIFICATION_TITLE
+
+    const options = {
+      ...DEFAULT_NOTIFICATION_OPTIONS,
+      ...(payload?.options ?? {}),
+      body:
+        typeof payload?.body === 'string' && payload.body.trim()
+          ? payload.body.trim()
+          : payload?.options?.body ?? DEFAULT_NOTIFICATION_OPTIONS.body,
+      data: {
+        ...DEFAULT_NOTIFICATION_OPTIONS.data,
+        ...(payload?.data ?? {}),
+        ...(payload?.options?.data ?? {}),
+      },
+    }
+
+    return { title, options }
+  } catch (_error) {
+    const text = event.data.text()
+
+    return {
+      title: DEFAULT_NOTIFICATION_TITLE,
+      options: {
+        ...DEFAULT_NOTIFICATION_OPTIONS,
+        body: text || DEFAULT_NOTIFICATION_OPTIONS.body,
+      },
+    }
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(STATIC_CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL_ROUTES))
       .then(() => self.skipWaiting()),
+  )
+})
+
+self.addEventListener('push', (event) => {
+  const { title, options } = buildNotificationPayload(event)
+
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+
+  const targetUrl =
+    typeof event.notification?.data?.url === 'string' && event.notification.data.url.trim()
+      ? event.notification.data.url.trim()
+      : '/home'
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          const clientUrl = new URL(client.url)
+
+          if (clientUrl.pathname === new URL(targetUrl, self.location.origin).pathname) {
+            return client.focus()
+          }
+        }
+      }
+
+      return self.clients.openWindow(targetUrl)
+    }),
   )
 })
 

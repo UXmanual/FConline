@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '16.0': [
+    '앱 알림 허용과 테스트 알림 보내기 기능을 추가했습니다.',
+    '웹 푸시 구독과 테스트 발송 준비를 마쳤습니다.',
+  ],
   '15.9': [
     '마이페이지에 다크모드 카드와 동일한 스타일의 앱 알림 토글 블록을 추가하고 허용중/미허용 상태를 바로 확인할 수 있게 정리',
     '앱 알림 토글과 연동되는 브라우저 알림 권한 요청 흐름을 붙이고, 차단되었거나 미지원인 경우 안내 문구를 분기 처리',
