@@ -37,6 +37,8 @@ interface Props {
   seasonName?: string | null
   seasonImageUrl?: string | null
   initialStrongLevel?: number
+  initialTab?: 'detail' | 'review'
+  initialHighlightedPostId?: string | null
 }
 
 export default function PlayerDetailPanel({
@@ -46,10 +48,12 @@ export default function PlayerDetailPanel({
   seasonName,
   seasonImageUrl,
   initialStrongLevel = 1,
+  initialTab = 'detail',
+  initialHighlightedPostId = null,
 }: Props) {
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
   const [isChemistryApplied, setIsChemistryApplied] = useState(false)
-  const [activeTab, setActiveTab] = useState<'detail' | 'review'>('detail')
+  const [activeTab, setActiveTab] = useState<'detail' | 'review'>(initialTab)
   const [reviewCount, setReviewCount] = useState(0)
   const [imageSrcIndex, setImageSrcIndex] = useState(0)
   const [showLeftFade, setShowLeftFade] = useState(false)
@@ -151,6 +155,10 @@ export default function PlayerDetailPanel({
   useEffect(() => {
     setStrongLevel(initialStrongLevel)
   }, [initialStrongLevel])
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab, spid])
 
   useEffect(() => {
     let isCancelled = false
@@ -719,6 +727,7 @@ export default function PlayerDetailPanel({
           defaultCardLevel={strongLevel}
           aiReviewSummariesByLevel={aiReviewSummariesByLevel}
           onTotalCountChange={setReviewCount}
+          initialHighlightedPostId={initialHighlightedPostId}
         />
       )}
     </div>

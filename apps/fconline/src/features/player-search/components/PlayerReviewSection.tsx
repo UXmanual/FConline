@@ -22,6 +22,7 @@ type Props = {
   defaultCardLevel?: number
   aiReviewSummariesByLevel?: Record<number, string>
   onTotalCountChange?: (count: number) => void
+  initialHighlightedPostId?: string | null
 }
 
 function ReviewSkeletonList({ rows = 5 }: { rows?: number }) {
@@ -143,6 +144,7 @@ export default function PlayerReviewSection({
   defaultCardLevel = 1,
   aiReviewSummariesByLevel,
   onTotalCountChange,
+  initialHighlightedPostId = null,
 }: Props) {
   const listTopRef = useRef<HTMLElement | null>(null)
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map())
@@ -190,9 +192,9 @@ export default function PlayerReviewSection({
     setTotalCount(0)
     setCurrentPage(1)
     setPageWindowStart(1)
-    setHighlightedPostId(null)
-    void fetchPostsPage(1)
-  }, [playerId])
+    setHighlightedPostId(initialHighlightedPostId)
+    void fetchPostsPage(1, { highlightPostId: initialHighlightedPostId })
+  }, [initialHighlightedPostId, playerId])
 
   useEffect(() => {
     if (!highlightedPostId) return
@@ -209,22 +211,40 @@ export default function PlayerReviewSection({
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  async function fetchPostsPage(page: number, useSkeleton = true) {
-    const cached = cacheRef.current.get(page)
+  async function fetchPostsPage(
+    page: number,
+    options?: {
+      useSkeleton?: boolean
+      highlightPostId?: string | null
+    },
+  ) {
+    const useSkeleton = options?.useSkeleton ?? true
+    const highlightPostId = options?.highlightPostId ?? null
+    const shouldBypassCache = Boolean(highlightPostId)
+    const cached = shouldBypassCache ? null : cacheRef.current.get(page)
 
     if (cached) {
       setPosts(cached.items)
       setTotalCount(cached.totalCount)
+      setCurrentPage(cached.page)
+      setPageWindowStart(Math.max(1, Math.min(cached.page, Math.max(1, Math.ceil(cached.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1))))
       setIsLoadingPosts(false)
       return
     }
 
     try {
       setIsLoadingPosts(useSkeleton)
-      const response = await fetch(
-        `/api/player-reviews/posts?page=${page}&pageSize=${POSTS_PER_PAGE}&playerId=${encodeURIComponent(playerId)}`,
-        { cache: 'no-store' },
-      )
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(POSTS_PER_PAGE),
+        playerId,
+      })
+
+      if (highlightPostId) {
+        params.set('postId', highlightPostId)
+      }
+
+      const response = await fetch(`/api/player-reviews/posts?${params.toString()}`, { cache: 'no-store' })
       const result = await response.json()
 
       if (!response.ok) {
@@ -238,9 +258,13 @@ export default function PlayerReviewSection({
         pageSize: result.pageSize ?? POSTS_PER_PAGE,
       }
 
-      cacheRef.current.set(page, data)
+      cacheRef.current.set(data.page, data)
       setPosts(data.items)
       setTotalCount(data.totalCount)
+      setCurrentPage(data.page)
+      setPageWindowStart(
+        Math.max(1, Math.min(data.page, Math.max(1, Math.ceil(data.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1))),
+      )
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.')
     } finally {
@@ -300,7 +324,7 @@ export default function PlayerReviewSection({
       cacheRef.current.clear()
       setCurrentPage(1)
       setPageWindowStart(1)
-      await fetchPostsPage(1, false)
+      await fetchPostsPage(1, { useSkeleton: false })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 등록하지 못했습니다.')
     } finally {
@@ -331,7 +355,7 @@ export default function PlayerReviewSection({
       const targetPage = Math.min(currentPage, nextTotalPages)
       setCurrentPage(targetPage)
       setPageWindowStart((current) => Math.min(current, Math.max(1, nextTotalPages - MAX_VISIBLE_PAGES + 1)))
-      await fetchPostsPage(targetPage, false)
+      await fetchPostsPage(targetPage, { useSkeleton: false })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 삭제하지 못했습니다.')
     }

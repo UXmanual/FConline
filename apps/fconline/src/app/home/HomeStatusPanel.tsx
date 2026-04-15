@@ -1,10 +1,68 @@
-import { getLatestNotices } from './home-feed'
+import Link from 'next/link'
+import { createSupabaseAdminClient } from '@/lib/supabase/server'
+import { formatRelativeTime } from '@/lib/community'
+import PlayerImage from '@/features/player-search/components/PlayerImage'
 import HomeDateCard from './HomeDateCard'
 import HomeQuickActions from './HomeQuickActions'
 
-const NOTICE_FALLBACK =
-  '\uACF5\uC9C0 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'
 const RECURRING_SEASON_DAYS = 70
+const LATEST_REVIEW_LIMIT = 3
+
+type LatestPlayerReviewRow = {
+  id: string
+  player_id: string
+  player_name: string
+  nickname: string
+  title: string
+  created_at: string
+}
+
+function parseCardLevel(title: string) {
+  const match = title.match(/^\[(\d+)카\]/)
+  return match ? match[1] : null
+}
+
+function trimPlayerReviewTitle(title: string) {
+  return title.replace(/^\[\d+카\]\s*/, '').trim() || title
+}
+
+function getCardLevelLabel(title: string) {
+  const level = parseCardLevel(title)
+  return level ? `${level}카` : null
+}
+
+function getPlayerReviewHref(post: LatestPlayerReviewRow) {
+  const params = new URLSearchParams({
+    tab: 'review',
+    postId: post.id,
+  })
+  const level = parseCardLevel(post.title)
+
+  if (level) {
+    params.set('level', level)
+  }
+
+  return `/players/${post.player_id}?${params.toString()}`
+}
+
+async function getLatestPlayerReviews() {
+  try {
+    const supabase = createSupabaseAdminClient()
+    const { data, error } = await supabase
+      .from('player_review_posts')
+      .select('id, player_id, player_name, nickname, title, created_at')
+      .order('created_at', { ascending: false })
+      .limit(LATEST_REVIEW_LIMIT)
+
+    if (error) {
+      return [] as LatestPlayerReviewRow[]
+    }
+
+    return (data ?? []) as LatestPlayerReviewRow[]
+  } catch {
+    return [] as LatestPlayerReviewRow[]
+  }
+}
 
 function getKstToday() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -121,7 +179,7 @@ function getSeasonCardContent(today: Date) {
 }
 
 export default async function HomeStatusPanel() {
-  const notices = await getLatestNotices()
+  const latestReviews = await getLatestPlayerReviews()
   const { seasonLabel, seasonPeriod, seasonCountdownDays } = getSeasonCardContent(getKstToday())
   const cardStyle = {
     backgroundColor: 'var(--app-card-bg)',
@@ -132,6 +190,7 @@ export default async function HomeStatusPanel() {
   }
   const titleStyle = { color: 'var(--app-title)' }
   const bodyStyle = { color: 'var(--app-body-text)' }
+  const mutedStyle = { color: 'var(--app-muted-text)' }
 
   return (
     <section className="space-y-3">
@@ -147,28 +206,66 @@ export default async function HomeStatusPanel() {
       </div>
 
       <div className="rounded-lg px-5 py-4" style={cardStyle}>
-        {notices.length > 0 ? (
+        {latestReviews.length > 0 ? (
           <div>
-            {notices.map((notice) => (
-              <a
-                key={notice.href}
-                href={notice.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+            {latestReviews.map((review) => (
+              <Link
+                key={review.id}
+                href={getPlayerReviewHref(review)}
+                className="block border-b py-3 first:pt-0 last:border-b-0 last:pb-0"
+                style={{ borderColor: 'color-mix(in srgb, var(--app-card-border) 80%, transparent)' }}
               >
-                <p className="flex min-w-0 flex-1 items-start gap-1.5 text-sm font-medium leading-6" style={titleStyle}>
-                  <span className="shrink-0 pt-1 text-[0.9em] leading-none" style={bodyStyle}>
-                    {'\u2197'}
-                  </span>
-                  <span className="line-clamp-2 min-w-0 break-words">{notice.title}</span>
-                </p>
-                <span className="shrink-0 text-xs" style={bodyStyle}>{notice.date}</span>
-              </a>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg"
+                    style={{ backgroundColor: 'var(--app-player-soft-strong)' }}
+                  >
+                    <PlayerImage
+                      spid={review.player_id}
+                      alt={review.player_name}
+                      className="object-contain"
+                      sizes="48px"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+                      <span className="truncate" style={{ color: '#457ae5' }}>
+                        {review.player_name}
+                      </span>
+                      {getCardLevelLabel(review.title) ? (
+                        <span className="shrink-0" style={mutedStyle}>
+                          ·
+                        </span>
+                      ) : null}
+                      {getCardLevelLabel(review.title) ? (
+                        <span className="shrink-0" style={titleStyle}>
+                          {getCardLevelLabel(review.title)}
+                        </span>
+                      ) : null}
+                      <span className="shrink-0" style={mutedStyle}>
+                        ·
+                      </span>
+                      <span className="truncate font-medium" style={mutedStyle}>
+                        {review.nickname}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-1 pr-2 text-[13px] font-semibold leading-5" style={titleStyle}>
+                      {trimPlayerReviewTitle(review.title)}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1.5 self-start pt-0.5">
+                    <span className="text-[11px] font-medium" style={mutedStyle}>
+                      {formatRelativeTime(review.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         ) : (
-          <p className="text-sm" style={bodyStyle}>{NOTICE_FALLBACK}</p>
+          <p className="pt-2 text-sm" style={bodyStyle}>아직 등록된 선수 평가가 없어요.</p>
         )}
       </div>
     </section>

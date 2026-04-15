@@ -63,6 +63,10 @@ function getPlayerIdParam(request: NextRequest) {
   return request.nextUrl.searchParams.get('playerId')?.trim() ?? ''
 }
 
+function getPostIdParam(request: NextRequest) {
+  return request.nextUrl.searchParams.get('postId')?.trim() ?? ''
+}
+
 async function fetchPostsPage(
   supabase: SupabaseClient,
   playerId: string,
@@ -86,6 +90,40 @@ async function fetchPostsPage(
   }
 
   return fetchPostsPage(supabase, playerId, from, to, false)
+}
+
+async function resolvePageForPost(
+  supabase: SupabaseClient,
+  playerId: string,
+  postId: string,
+  pageSize: number,
+) {
+  if (!postId) {
+    return null
+  }
+
+  const { data: targetPost, error: targetPostError } = await supabase
+    .from('player_review_posts')
+    .select('id, created_at')
+    .eq('id', postId)
+    .eq('player_id', playerId)
+    .maybeSingle()
+
+  if (targetPostError || !targetPost) {
+    return null
+  }
+
+  const { count, error: countError } = await supabase
+    .from('player_review_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('player_id', playerId)
+    .gt('created_at', targetPost.created_at)
+
+  if (countError) {
+    return null
+  }
+
+  return Math.floor((count ?? 0) / pageSize) + 1
 }
 
 async function fetchCommentCounts(supabase: SupabaseClient, postIds: string[]) {
@@ -112,14 +150,19 @@ async function fetchCommentCounts(supabase: SupabaseClient, postIds: string[]) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { page, pageSize, from, to } = getPaginationParams(request)
+    const { page: requestedPage, pageSize } = getPaginationParams(request)
     const playerId = getPlayerIdParam(request)
+    const postId = getPostIdParam(request)
 
     if (!playerId) {
       return Response.json({ message: 'playerId가 필요합니다.' }, { status: 400 })
     }
 
     const supabase = createSupabaseAdminClient()
+    const resolvedPage =
+      (await resolvePageForPost(supabase, playerId, postId, pageSize)) ?? requestedPage
+    const from = (resolvedPage - 1) * pageSize
+    const to = resolvedPage * pageSize - 1
     const { data: posts, error: postsError, count } = await fetchPostsPage(supabase, playerId, from, to)
 
     if (postsError) {
@@ -137,7 +180,7 @@ export async function GET(request: NextRequest) {
     return Response.json({
       items,
       totalCount: count ?? 0,
-      page,
+      page: resolvedPage,
       pageSize,
     })
   } catch (error) {

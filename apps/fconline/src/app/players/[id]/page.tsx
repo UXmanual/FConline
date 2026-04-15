@@ -6,7 +6,7 @@ import { getSeasonMetaItem, getSpidMetaItem } from '@/lib/nexon'
 
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ level?: string }>
+  searchParams: Promise<{ level?: string; tab?: string; postId?: string }>
 }
 
 async function getPlayerData(spid: string) {
@@ -23,8 +23,9 @@ async function getPlayerData(spid: string) {
 
 export default async function PlayerDetailPage({ params, searchParams }: Props) {
   const { id } = await params
-  const { level } = await searchParams
+  const { level, tab, postId } = await searchParams
   const initialStrongLevel = Math.min(13, Math.max(1, Number(level) || 1))
+  const initialTab = tab === 'review' ? 'review' : 'detail'
   const { player, season, detail } = await getPlayerData(id)
 
   if (!player) {
@@ -58,6 +59,8 @@ export default async function PlayerDetailPage({ params, searchParams }: Props) 
           seasonName={season?.className ?? null}
           seasonImageUrl={season?.seasonImg ?? null}
           initialStrongLevel={initialStrongLevel}
+          initialTab={initialTab}
+          initialHighlightedPostId={postId?.trim() || null}
         />
       )}
     </div>

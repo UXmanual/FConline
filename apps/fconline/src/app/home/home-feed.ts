@@ -7,7 +7,7 @@ export type NoticeItem = {
 export type HomeEventItem = {
   id: string
   title: string
-  href: string
+  href?: string
   imageUrl?: string
 }
 
@@ -24,14 +24,21 @@ export type HomeControllerUsage = {
 }
 
 const NOTICE_LIST_URL = 'https://fconline.nexon.com/news/notice/list'
-const EVENT_LIST_URL = 'https://fconline.nexon.com/news/events/list'
 const DAILY_SQUAD_URL = 'https://fconline.nexon.com/datacenter/dailysquad'
-const EVENT_PAGES = [1, 2, 3]
-const TEXT_NEW = '\uC0C8 \uAE00'
-const STATUS_ONGOING = '\uC9C4\uD589'
-const STATUS_PENDING = '\uC900\uBE44 \uC911'
-const STATUS_ENDED = '\uC885\uB8CC'
 const FETCH_TIMEOUT_MS = 5000
+const LOCAL_HOME_EVENTS: HomeEventItem[] = [
+  {
+    id: 'home-main-banner-01',
+    title: '메인 배너 1',
+    imageUrl: '/banners/home-main-banner01@3x.png',
+  },
+  {
+    id: 'home-main-banner-02',
+    title: '메인 배너 2',
+    href: 'https://fconline.nexon.com/news/notice/list',
+    imageUrl: '/banners/home-main-banner02@3x.png',
+  },
+]
 
 function decodeHtml(value: string) {
   return value
@@ -205,87 +212,8 @@ export async function getLatestNotices(): Promise<NoticeItem[]> {
   }
 }
 
-function parseEventListItems(html: string) {
-  const anchors = [
-    ...html.matchAll(/<a[^>]+href=(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi),
-  ]
-
-  return anchors
-    .map((match, index) => {
-      const hrefValue = match[1] ?? match[2] ?? match[3] ?? ''
-      const href = toAbsoluteUrl(decodeHtml(hrefValue), 'https://fconline.nexon.com')
-      const innerHtml = match[4]
-      const imageSrcMatch = innerHtml.match(
-        /<img[^>]+src=(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>/i,
-      )
-      const imageSrc = imageSrcMatch
-        ? decodeHtml(imageSrcMatch[1] ?? imageSrcMatch[2] ?? imageSrcMatch[3] ?? '')
-        : ''
-      const text = stripTags(innerHtml)
-
-      if (!href || !imageSrc) {
-        return null
-      }
-
-      if (
-        !href.includes('events.fconline.nexon.com') &&
-        !href.includes('shop.fconline.nexon.com') &&
-        !href.includes('fconline.nexon.com/news/notice/view')
-      ) {
-        return null
-      }
-
-      if (
-        !text.includes(STATUS_ONGOING) ||
-        text.includes(STATUS_PENDING) ||
-        text.includes(STATUS_ENDED)
-      ) {
-        return null
-      }
-
-      const title = text
-        .replace(TEXT_NEW, '')
-        .replace(/\d{4}-\d{2}-\d{2}/g, '')
-        .replace(STATUS_ONGOING, '')
-        .replace(STATUS_PENDING, '')
-        .replace(STATUS_ENDED, '')
-        .replace(/~/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-
-      if (!title) {
-        return null
-      }
-
-      return {
-        id: `event-${index}`,
-        title,
-        href,
-        imageUrl: toAbsoluteUrl(imageSrc, href),
-      }
-    })
-    .filter(
-      (item): item is { id: string; title: string; href: string; imageUrl: string } => item !== null,
-    )
-}
-
 export async function getHomeEvents(): Promise<HomeEventItem[]> {
-  try {
-    const pages = await Promise.all(
-      EVENT_PAGES.map((page) =>
-        fetchHtml(page === 1 ? EVENT_LIST_URL : `${EVENT_LIST_URL}?n4PageNo=${page}`),
-      ),
-    )
-
-    const items = pages.flatMap((html) => parseEventListItems(html))
-    const deduped = items.filter(
-      (item, index, array) => array.findIndex((candidate) => candidate.href === item.href) === index,
-    )
-
-    return deduped
-  } catch {
-    return []
-  }
+  return LOCAL_HOME_EVENTS
 }
 
 export async function getHomeControllerUsage(): Promise<HomeControllerUsage | null> {

@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '15.7': [
+    '홈 탭 오늘의 팁을 제거하고, 최신 선수 평가를 바로 진입할 수 있는 카드 영역으로 개편',
+    '홈 최신 선수 평가는 제목 중심의 컴팩트한 리스트와 선수 썸네일로 정리하고, 클릭 시 해당 선수 평가 글로 바로 이동하도록 연결',
+    '메인 배너 영역을 로컬 배너 2장 기준으로 교체하고 홈 콘텐츠 전체 폭에 맞춰 안정적으로 노출되도록 조정',
+  ],
   '15.6': [
     '홈 스플래시 처리 방식을 다시 정리해 개발 서버와 로컬 프리뷰에서 나타나던 "This page couldn’t load" 오류를 해결',
     '홈 첫 진입 스플래시 1회 표시 규칙은 유지하면서, 클라이언트 렌더 bailout 없이 안정적으로 동작하도록 수정',

@@ -1,6 +1,5 @@
 import HomeStatusPanel from './HomeStatusPanel'
 import HomeEventCarousel from './HomeEventCarousel'
-import HomeTipsSection from './HomeTipsSection'
 import HomeControllerUsageCard from './HomeControllerUsageCard'
 import HomeCommunityCard from './HomeCommunityCard'
 import HomeSettingsCard from './HomeSettingsCard'
@@ -52,7 +51,6 @@ export default async function HomePage() {
         <main className="space-y-3">
           <HomeStatusPanel />
           <HomeEventCarousel events={events} />
-          <HomeTipsSection />
           {controllerUsage ? <HomeControllerUsageCard usage={controllerUsage} /> : null}
           <HomeCommunityCard />
           <HomeSettingsCard />

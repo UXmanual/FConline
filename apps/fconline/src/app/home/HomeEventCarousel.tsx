@@ -15,15 +15,14 @@ const TRANSITION_MS = 360
 const IMAGE_LOAD_TIMEOUT_MS = 2500
 const SWIPE_THRESHOLD = 18
 const AXIS_LOCK_THRESHOLD = 6
-const FALLBACK_ASPECT_RATIO_CSS = '1066 / 300'
-const FALLBACK_ASPECT_RATIO = 1066 / 300
+const FIXED_BANNER_ASPECT_RATIO_CSS = '440 / 124'
+const FIXED_BANNER_ASPECT_RATIO = 440 / 124
 
 export default function HomeEventCarousel({ events }: Props) {
   const [activeLoopIndex, setActiveLoopIndex] = useState(events.length > 1 ? 1 : 0)
   const [dragOffset, setDragOffset] = useState(0)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({})
-  const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({})
   const [transitionEnabled, setTransitionEnabled] = useState(false)
   const viewportRef = useRef<HTMLDivElement>(null)
   const autoAdvanceRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -132,21 +131,7 @@ export default function HomeEventCarousel({ events }: Props) {
   }
 
   const registerImageElement = (element: HTMLImageElement | null, key: string) => {
-    if (!element) {
-      return
-    }
-
-    if (element.complete && element.naturalWidth > 0) {
-      setImageAspectRatios((current) => {
-        if (current[key]) {
-          return current
-        }
-
-        return {
-          ...current,
-          [key]: element.naturalWidth / element.naturalHeight,
-        }
-      })
+    if (element?.complete && element.naturalWidth > 0) {
       markImageLoaded(key)
     }
   }
@@ -428,12 +413,12 @@ export default function HomeEventCarousel({ events }: Props) {
   }
 
   const currentEvent = events[displayIndex]
-  const currentImageKey = currentEvent?.imageUrl ?? currentEvent?.href ?? ''
-  const currentAspectRatio = imageAspectRatios[currentImageKey] ?? FALLBACK_ASPECT_RATIO
+  const currentImageKey = currentEvent?.imageUrl ?? currentEvent?.href ?? currentEvent?.id ?? ''
+  const currentAspectRatio = FIXED_BANNER_ASPECT_RATIO
   const viewportHeight = viewportWidth > 0 ? viewportWidth / currentAspectRatio : undefined
   const viewportStyle = viewportHeight
     ? { height: `${viewportHeight}px` }
-    : { aspectRatio: FALLBACK_ASPECT_RATIO_CSS }
+    : { aspectRatio: FIXED_BANNER_ASPECT_RATIO_CSS }
   const isCurrentImageLoaded = currentImageKey ? Boolean(loadedImages[currentImageKey]) : false
   const translateX = viewportWidth === 0 ? 0 : -activeLoopIndex * viewportWidth + dragOffset
 
@@ -510,10 +495,42 @@ export default function HomeEventCarousel({ events }: Props) {
             onTransitionEnd={finalizeTransition}
           >
             {loopedEvents.map((event, index) => {
-              const imageKey = event.imageUrl ?? event.href
+              const imageKey = event.imageUrl ?? event.href ?? event.id
               const slideKey = `${event.id}-${index}`
               const isLoaded = Boolean(loadedImages[imageKey])
               const shouldPrioritizeImage = index === activeLoopIndex
+
+              const slideContent = (
+                <div className="relative h-full w-full">
+                  {event.imageUrl ? (
+                    <img
+                      ref={(element) => registerImageElement(element, imageKey)}
+                      src={event.imageUrl}
+                      alt={event.title}
+                      draggable={false}
+                      className={`block h-full w-full object-cover transition-opacity duration-200 ${
+                        isLoaded ? 'relative z-0 opacity-100' : 'relative z-0 opacity-0'
+                      }`}
+                      loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
+                      fetchPriority={shouldPrioritizeImage ? 'high' : 'auto'}
+                      onLoad={() => {
+                        markImageLoaded(imageKey)
+                      }}
+                      onError={() => markImageLoaded(imageKey)}
+                    />
+                  ) : (
+                    <div className="h-full w-full" style={softStyle} />
+                  )}
+                </div>
+              )
+
+              if (!event.href) {
+                return (
+                  <div key={slideKey} className="block w-full min-w-full" draggable={false}>
+                    {slideContent}
+                  </div>
+                )
+              }
 
               return (
                 <a
@@ -525,38 +542,7 @@ export default function HomeEventCarousel({ events }: Props) {
                   draggable={false}
                   className="block w-full min-w-full"
                 >
-                  <div className="relative w-full">
-                    {event.imageUrl ? (
-                      <img
-                        ref={(element) => registerImageElement(element, imageKey)}
-                        src={event.imageUrl}
-                        alt={event.title}
-                        draggable={false}
-                        className={`block h-auto w-full transition-opacity duration-200 ${
-                          isLoaded ? 'relative z-0 opacity-100' : 'relative z-0 opacity-0'
-                        }`}
-                        loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
-                        fetchPriority={shouldPrioritizeImage ? 'high' : 'auto'}
-                        onLoad={(event) => {
-                          const element = event.currentTarget
-                          setImageAspectRatios((current) => {
-                            if (current[imageKey]) {
-                              return current
-                            }
-
-                            return {
-                              ...current,
-                              [imageKey]: element.naturalWidth / element.naturalHeight,
-                            }
-                          })
-                          markImageLoaded(imageKey)
-                        }}
-                        onError={() => markImageLoaded(imageKey)}
-                      />
-                    ) : (
-                      <div className="h-full w-full" style={softStyle} />
-                    )}
-                  </div>
+                  {slideContent}
                 </a>
               )
             })}
