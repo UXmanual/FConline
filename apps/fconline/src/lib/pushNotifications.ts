@@ -1,9 +1,18 @@
 import webpush, { type PushSubscription } from 'web-push'
 
 export type StoredPushSubscription = {
+  id?: string
   endpoint: string
   p256dh: string
   auth: string
+}
+
+export type PushNotificationPayload = {
+  title: string
+  body: string
+  data?: {
+    url?: string
+  }
 }
 
 export function getVapidConfig() {
@@ -31,5 +40,36 @@ export function mapStoredSubscriptionToWebPushPayload(subscription: StoredPushSu
       p256dh: subscription.p256dh,
       auth: subscription.auth,
     },
+  }
+}
+
+export async function sendPushNotificationBatch(
+  subscriptions: StoredPushSubscription[],
+  payload: PushNotificationPayload,
+) {
+  const failedEndpointIds: string[] = []
+  const serializedPayload = JSON.stringify(payload)
+
+  for (const subscription of subscriptions) {
+    try {
+      await webpush.sendNotification(mapStoredSubscriptionToWebPushPayload(subscription), serializedPayload)
+    } catch (error) {
+      const statusCode =
+        typeof error === 'object' && error !== null && 'statusCode' in error
+          ? Number((error as { statusCode?: number }).statusCode)
+          : null
+
+      if ((statusCode === 404 || statusCode === 410) && subscription.id) {
+        failedEndpointIds.push(subscription.id)
+        continue
+      }
+
+      throw error
+    }
+  }
+
+  return {
+    sent: subscriptions.length - failedEndpointIds.length,
+    failedEndpointIds,
   }
 }
