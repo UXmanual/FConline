@@ -4,6 +4,10 @@ import './globals.css'
 import AppChrome from '@/components/layout/AppChrome'
 import PwaBootstrap from '@/components/pwa/PwaBootstrap'
 
+const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
+const HOME_SPLASH_VISIBLE_MS = 520
+const HOME_SPLASH_FADE_MS = 420
+
 const pretendard = localFont({
   src: [
     { path: '../../public/fonts/Pretendard-Regular.woff2', weight: '400' },
@@ -91,15 +95,68 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#f0f3f5" />
+        <style>{`
+          #startup-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: #121318;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity ${HOME_SPLASH_FADE_MS}ms ease-out;
+          }
+
+          #app-shell {
+            visibility: hidden;
+          }
+
+          #startup-splash img {
+            height: 32px;
+            width: auto;
+          }
+
+          html.home-startup-splash-active #startup-splash {
+            display: flex;
+            opacity: 1;
+          }
+
+          html.home-startup-splash-active #app-shell {
+            visibility: hidden;
+          }
+
+          html.home-startup-splash-fading #startup-splash {
+            display: flex;
+            opacity: 0;
+          }
+
+          html.home-startup-splash-ready #startup-splash,
+          html.home-startup-splash-hidden #startup-splash {
+            display: none;
+            opacity: 0;
+          }
+
+          html.home-startup-splash-ready #app-shell,
+          html.home-startup-splash-fading #app-shell,
+          html.home-startup-splash-hidden #app-shell {
+            visibility: visible;
+          }
+        `}</style>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';document.documentElement.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',isDarkModeEnabled?'#121318':'#f0f3f5');}}catch(_error){}})();`,
+            __html: `(function(){try{var root=document.documentElement;var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&!hasSeenHomeSplash){root.style.backgroundColor='#121318';root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.backgroundColor='#121318';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
           }}
         />
       </head>
       <body className="min-h-full" style={{ backgroundColor: 'var(--app-body-bg)' }}>
         <PwaBootstrap />
+        <div id="startup-splash" aria-hidden="true">
+          <img src="/logo-dark.svg" alt="" />
+        </div>
         <div
+          id="app-shell"
           className="relative mx-auto min-h-[100dvh] w-full pt-[env(safe-area-inset-top)] sm:max-w-[480px]"
           style={{
             backgroundColor: 'var(--app-shell-bg)',

@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '16.3': [
+    '홈 첫 진입 스플래시 노출 방식을 개선했습니다.',
+  ],
   '16.2': [
     '마이페이지에서 테스트 알림 버튼을 제거했습니다.',
     '운영 공지와 테스트 발송은 푸시 전용 화면에서만 사용할 수 있습니다.',
