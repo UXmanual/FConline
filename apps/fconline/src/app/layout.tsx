@@ -6,40 +6,9 @@ import AppChrome from '@/components/layout/AppChrome'
 import PwaBootstrap from '@/components/pwa/PwaBootstrap'
 
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
-const HOME_SPLASH_VISIBLE_MS = 520
+const HOME_SPLASH_VISIBLE_MS = 1000
 const HOME_SPLASH_FADE_MS = 420
-const APPLE_STARTUP_IMAGES = [
-  {
-    href: '/icons/apple-startup-1170x2532.png',
-    media:
-      '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/icons/apple-startup-1179x2556.png',
-    media:
-      '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/icons/apple-startup-1284x2778.png',
-    media:
-      '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/icons/apple-startup-1290x2796.png',
-    media:
-      '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/icons/apple-startup-1125x2436.png',
-    media:
-      '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/icons/apple-startup-1242x2688.png',
-    media:
-      '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-] as const
+const HOME_SPLASH_BG = '#121318'
 
 const pretendard = localFont({
   src: [
@@ -128,14 +97,6 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#f0f3f5" />
-        {APPLE_STARTUP_IMAGES.map((image) => (
-          <link
-            key={image.href}
-            rel="apple-touch-startup-image"
-            href={image.href}
-            media={image.media}
-          />
-        ))}
         <style>{`
           #startup-splash {
             position: fixed;
@@ -144,19 +105,20 @@ export default function RootLayout({
             display: none;
             align-items: center;
             justify-content: center;
-            background: #121318;
+            background: ${HOME_SPLASH_BG};
             opacity: 0;
             pointer-events: none;
             transition: opacity ${HOME_SPLASH_FADE_MS}ms ease-out;
           }
 
-          #app-shell {
-            visibility: hidden;
+          .startup-splash-logo {
+            width: 151px;
+            max-width: calc(100vw - 80px);
+            height: auto;
           }
 
-          #startup-splash img {
-            height: 32px;
-            width: auto;
+          #app-shell {
+            visibility: hidden;
           }
 
           html.home-startup-splash-active #startup-splash {
@@ -171,6 +133,7 @@ export default function RootLayout({
           html.home-startup-splash-fading #startup-splash {
             display: flex;
             opacity: 0;
+            transition-duration: ${HOME_SPLASH_FADE_MS}ms;
           }
 
           html.home-startup-splash-ready #startup-splash,
@@ -187,14 +150,21 @@ export default function RootLayout({
         `}</style>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var root=document.documentElement;var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&!hasSeenHomeSplash){root.style.backgroundColor='#121318';root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.backgroundColor='#121318';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
+            __html: `(function(){try{var root=document.documentElement;var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&!hasSeenHomeSplash){root.style.backgroundColor='${HOME_SPLASH_BG}';root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.backgroundColor='${HOME_SPLASH_BG}';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
           }}
         />
       </head>
       <body className="min-h-full" style={{ backgroundColor: 'var(--app-body-bg)' }}>
         <PwaBootstrap />
         <div id="startup-splash" aria-hidden="true">
-          <Image src="/logo-dark.svg" alt="" width={151} height={32} priority />
+          <Image
+            src="/logo-dark.svg"
+            alt=""
+            width={151}
+            height={32}
+            priority
+            className="startup-splash-logo"
+          />
         </div>
         <div
           id="app-shell"

@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '16.5': [
+    '홈 스플래시 표시 시간을 조정했습니다.',
+  ],
   '16.4': [
     'iPhone 홈 화면 실행 화면을 개선했습니다.',
   ],
