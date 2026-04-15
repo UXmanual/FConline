@@ -3,6 +3,11 @@
 import { FormEvent, useState } from 'react'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
+import {
+  requestAppNotificationsPermission,
+  setAppNotificationsEnabled,
+  useAppNotificationsEnabled,
+} from '@/lib/appNotifications'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 
 const openSourceLicenses = [
@@ -132,6 +137,7 @@ const privacyContent = [
 
 export default function MyPage() {
   const isDarkModeEnabled = useDarkModeEnabled()
+  const isAppNotificationsEnabled = useAppNotificationsEnabled()
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false)
@@ -146,6 +152,31 @@ export default function MyPage() {
   const handleDarkModeToggle = () => {
     const nextValue = !isDarkModeEnabled
     setDarkModeEnabled(nextValue)
+  }
+
+  const handleAppNotificationToggle = async () => {
+    if (isAppNotificationsEnabled) {
+      setAppNotificationsEnabled(false)
+      return
+    }
+
+    const result = await requestAppNotificationsPermission()
+
+    if (result.ok) {
+      return
+    }
+
+    if (result.reason === 'unsupported') {
+      window.alert('이 브라우저에서는 앱 알림을 지원하지 않습니다.')
+      return
+    }
+
+    if (result.reason === 'denied') {
+      window.alert('브라우저 알림 권한이 차단되어 있습니다. 브라우저 설정에서 알림을 허용한 뒤 다시 시도해 주세요.')
+      return
+    }
+
+    window.alert('앱 알림 권한이 허용되지 않았습니다.')
   }
 
   const resetContactForm = () => {
@@ -217,6 +248,10 @@ export default function MyPage() {
   }
   const darkModeLabelStyle = {
     color: isDarkModeEnabled ? '#457ae5' : 'var(--app-muted-text)',
+    transition: 'color 180ms ease',
+  }
+  const appNotificationLabelStyle = {
+    color: isAppNotificationsEnabled ? '#457ae5' : 'var(--app-muted-text)',
     transition: 'color 180ms ease',
   }
 
@@ -345,6 +380,36 @@ export default function MyPage() {
               <span
                 className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
                 style={{ transform: `translateX(${isDarkModeEnabled ? '24px' : '0px'})` }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-1">
+              <p className="text-sm font-semibold" style={titleStyle}>
+                앱 알림
+              </p>
+              <p className="text-sm font-semibold" style={appNotificationLabelStyle}>
+                {isAppNotificationsEnabled ? '허용중' : '미허용'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              aria-label="앱 알림 토글"
+              aria-pressed={isAppNotificationsEnabled}
+              onClick={handleAppNotificationToggle}
+              className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
+              style={{
+                backgroundColor: isAppNotificationsEnabled ? '#457ae5' : '#d5dbe3',
+              }}
+            >
+              <span
+                className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+                style={{ transform: `translateX(${isAppNotificationsEnabled ? '24px' : '0px'})` }}
                 aria-hidden="true"
               />
             </button>
