@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
+import LoadingDots from '@/components/ui/LoadingDots'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
 import {
@@ -147,6 +148,7 @@ export default function MyPage() {
   const [contactContent, setContactContent] = useState('')
   const [contactValue, setContactValue] = useState('')
   const [isSendingContact, setIsSendingContact] = useState(false)
+  const [isAppNotificationPending, setIsAppNotificationPending] = useState(false)
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
 
   const handleDarkModeToggle = () => {
@@ -155,36 +157,46 @@ export default function MyPage() {
   }
 
   const handleAppNotificationToggle = async () => {
-    if (isAppNotificationsEnabled) {
-      const unsubscribed = await unsubscribeFromPushNotifications()
-      if (!unsubscribed) {
-        window.alert('앱 알림 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+    if (isAppNotificationPending) {
+      return
+    }
+
+    try {
+      setIsAppNotificationPending(true)
+
+      if (isAppNotificationsEnabled) {
+        const unsubscribed = await unsubscribeFromPushNotifications()
+        if (!unsubscribed) {
+          window.alert('앱 알림 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+        }
+        return
       }
-      return
+
+      const result = await requestAppNotificationsPermission()
+
+      if (result.ok) {
+        return
+      }
+
+      if (result.reason === 'unsupported') {
+        window.alert('이 브라우저에서는 앱 알림을 지원하지 않습니다.')
+        return
+      }
+
+      if (result.reason === 'subscription_failed') {
+        window.alert('알림 권한은 허용되었지만 구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+        return
+      }
+
+      if (result.reason === 'denied') {
+        window.alert('브라우저 알림 권한이 차단되어 있습니다. 브라우저 설정에서 알림을 허용한 뒤 다시 시도해 주세요.')
+        return
+      }
+
+      window.alert('앱 알림 권한이 허용되지 않았습니다.')
+    } finally {
+      setIsAppNotificationPending(false)
     }
-
-    const result = await requestAppNotificationsPermission()
-
-    if (result.ok) {
-      return
-    }
-
-    if (result.reason === 'unsupported') {
-      window.alert('이 브라우저에서는 앱 알림을 지원하지 않습니다.')
-      return
-    }
-
-    if (result.reason === 'subscription_failed') {
-      window.alert('알림 권한은 허용되었지만 구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
-      return
-    }
-
-    if (result.reason === 'denied') {
-      window.alert('브라우저 알림 권한이 차단되어 있습니다. 브라우저 설정에서 알림을 허용한 뒤 다시 시도해 주세요.')
-      return
-    }
-
-    window.alert('앱 알림 권한이 허용되지 않았습니다.')
   }
 
   const resetContactForm = () => {
@@ -259,9 +271,18 @@ export default function MyPage() {
     transition: 'color 180ms ease',
   }
   const appNotificationLabelStyle = {
-    color: isAppNotificationsEnabled ? '#457ae5' : 'var(--app-muted-text)',
+    color: isAppNotificationPending
+      ? '#457ae5'
+      : isAppNotificationsEnabled
+        ? '#457ae5'
+        : 'var(--app-muted-text)',
     transition: 'color 180ms ease',
   }
+  const appNotificationStatusLabel = isAppNotificationPending
+    ? '처리중'
+    : isAppNotificationsEnabled
+      ? '허용중'
+      : '미허용'
 
   const renderPolicyLine = (item: string) => {
     const linkedServices = [
@@ -394,14 +415,22 @@ export default function MyPage() {
           </div>
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className={`rounded-lg px-5 py-4 ${isAppNotificationPending ? 'pointer-events-none' : ''}`}
+          style={{
+            ...cardStyle,
+            ...surfaceTransitionStyle,
+            opacity: isAppNotificationPending ? 0.76 : 1,
+          }}
+          aria-busy={isAppNotificationPending}
+        >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1">
               <p className="text-sm font-semibold" style={titleStyle}>
                 앱 알림
               </p>
               <p className="text-sm font-semibold" style={appNotificationLabelStyle}>
-                {isAppNotificationsEnabled ? '허용중' : '미허용'}
+                {appNotificationStatusLabel}
               </p>
             </div>
 
@@ -410,16 +439,27 @@ export default function MyPage() {
               aria-label="앱 알림 토글"
               aria-pressed={isAppNotificationsEnabled}
               onClick={handleAppNotificationToggle}
+              disabled={isAppNotificationPending}
               className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
               style={{
-                backgroundColor: isAppNotificationsEnabled ? '#457ae5' : '#d5dbe3',
+                backgroundColor: isAppNotificationPending
+                  ? 'var(--app-surface-soft)'
+                  : isAppNotificationsEnabled
+                    ? '#457ae5'
+                    : '#d5dbe3',
               }}
             >
-              <span
-                className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
-                style={{ transform: `translateX(${isAppNotificationsEnabled ? '24px' : '0px'})` }}
-                aria-hidden="true"
-              />
+              {isAppNotificationPending ? (
+                <span className="flex h-full w-full items-center justify-center" aria-hidden="true">
+                  <LoadingDots size="sm" showLabel={false} />
+                </span>
+              ) : (
+                <span
+                  className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+                  style={{ transform: `translateX(${isAppNotificationsEnabled ? '24px' : '0px'})` }}
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </div>
         </section>
