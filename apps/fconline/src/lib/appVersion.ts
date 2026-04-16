@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '17.1': [
+    'favicon.ico를 원본 브랜드 PNG와 동일한 표현으로 다시 생성해 브라우저 탭 아이콘 색상 차이를 바로잡았습니다.',
+  ],
   '17.0': [
     '앱 파비콘과 OG 이미지를 새 브랜드 원본으로 교체했습니다.',
     '브라우저 파비콘, Apple 터치 아이콘, PWA 192·512 아이콘을 한 세트로 다시 생성해 적용했습니다.',
