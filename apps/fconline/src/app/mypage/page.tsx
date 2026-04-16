@@ -323,7 +323,7 @@ export default function MyPage() {
         transition: 'background-color 180ms ease',
       }}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex h-6 items-center">
           <h1 className="text-[18px] font-bold tracking-[-0.02em]" style={titleStyle}>
             마이페이지

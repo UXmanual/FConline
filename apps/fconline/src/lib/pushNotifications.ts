@@ -15,6 +15,12 @@ export type PushNotificationPayload = {
   }
 }
 
+export type PushNotificationBatchTransientFailure = {
+  endpoint: string
+  subscriptionId?: string
+  statusCode: number | null
+}
+
 export function getVapidConfig() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim()
   const privateKey = process.env.VAPID_PRIVATE_KEY?.trim()
@@ -48,6 +54,7 @@ export async function sendPushNotificationBatch(
   payload: PushNotificationPayload,
 ) {
   const failedEndpointIds: string[] = []
+  const transientFailures: PushNotificationBatchTransientFailure[] = []
   const serializedPayload = JSON.stringify(payload)
 
   for (const subscription of subscriptions) {
@@ -64,12 +71,17 @@ export async function sendPushNotificationBatch(
         continue
       }
 
-      throw error
+      transientFailures.push({
+        endpoint: subscription.endpoint,
+        subscriptionId: subscription.id,
+        statusCode,
+      })
     }
   }
 
   return {
-    sent: subscriptions.length - failedEndpointIds.length,
+    sent: subscriptions.length - failedEndpointIds.length - transientFailures.length,
     failedEndpointIds,
+    transientFailures,
   }
 }

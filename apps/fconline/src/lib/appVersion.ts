@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '16.6': [
+    '푸시 알림 발송 실패가 전체 공지를 중단하지 않도록 보완했습니다.',
+    '알림 클릭 시 기존 탭을 정확한 경로로 이동시키도록 개선했습니다.',
+    '관리자 페이지 문구와 간격을 정리하고, 개발 서버 포트 복구 명령을 추가했습니다.',
+  ],
   '16.5': [
     '홈 스플래시 표시 시간을 조정했습니다.',
   ],

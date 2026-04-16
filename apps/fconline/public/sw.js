@@ -28,6 +28,14 @@ const DEFAULT_NOTIFICATION_OPTIONS = {
   },
 }
 
+function normalizeNotificationUrl(url) {
+  try {
+    return new URL(url, self.location.origin).toString()
+  } catch {
+    return new URL('/home', self.location.origin).toString()
+  }
+}
+
 function buildNotificationPayload(event) {
   if (!event.data) {
     return {
@@ -89,24 +97,34 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const targetUrl =
+  const rawTargetUrl =
     typeof event.notification?.data?.url === 'string' && event.notification.data.url.trim()
       ? event.notification.data.url.trim()
       : '/home'
+  const normalizedTargetUrl = normalizeNotificationUrl(rawTargetUrl)
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
           const clientUrl = new URL(client.url)
 
-          if (clientUrl.pathname === new URL(targetUrl, self.location.origin).pathname) {
+          if (clientUrl.origin !== self.location.origin) {
+            continue
+          }
+
+          if (client.url === normalizedTargetUrl) {
             return client.focus()
+          }
+
+          if ('navigate' in client) {
+            await client.focus()
+            return client.navigate(normalizedTargetUrl)
           }
         }
       }
 
-      return self.clients.openWindow(targetUrl)
+      return self.clients.openWindow(normalizedTargetUrl)
     }),
   )
 })

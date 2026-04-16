@@ -81,44 +81,43 @@ export default function MyPageAdminPushPage() {
       <div className="space-y-4">
         <div className="flex h-6 items-center">
           <h1 className="text-[18px] font-bold tracking-[-0.02em]" style={titleStyle}>
-            푸시
+            Administrator Page
           </h1>
         </div>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section className="rounded-lg px-5 pt-7 pb-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold" style={titleStyle}>
-                운영 공지 푸시
+                푸시 알림
               </p>
               <button
                 type="button"
                 onClick={fillVersionPushTemplate}
-                className="inline-flex h-8 items-center justify-center rounded-lg px-3 text-[12px] font-semibold"
+                className="inline-flex items-center justify-center text-[12px] font-semibold"
                 style={{
-                  backgroundColor: 'rgba(69, 122, 229, 0.12)',
                   color: '#457ae5',
                 }}
               >
-                버전업 템플릿
+                버전업 안내 공지 입력
               </button>
             </div>
 
             <label className="block">
               <span className="text-[12px] font-medium" style={mutedStyle}>
-                운영 토큰
+                푸시 패스워드
               </span>
               <input
                 type="password"
                 value={pushAdminToken}
                 onChange={(event) => setPushAdminToken(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border px-3 text-sm outline-none"
+                className="mt-1 h-12 w-full rounded-lg border px-3 text-sm outline-none"
                 style={{
                   backgroundColor: 'var(--app-input-bg)',
                   borderColor: 'var(--app-input-border)',
                   color: 'var(--app-title)',
                 }}
-                placeholder="운영용 PUSH_ADMIN_TOKEN 입력"
+                placeholder="패스워드를 입력해주세요"
               />
             </label>
 
@@ -130,7 +129,7 @@ export default function MyPageAdminPushPage() {
                 type="text"
                 value={broadcastTitle}
                 onChange={(event) => setBroadcastTitle(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border px-3 text-sm outline-none"
+                className="mt-1 h-12 w-full rounded-lg border px-3 text-sm outline-none"
                 style={{
                   backgroundColor: 'var(--app-input-bg)',
                   borderColor: 'var(--app-input-border)',
@@ -165,7 +164,7 @@ export default function MyPageAdminPushPage() {
                 type="text"
                 value={broadcastUrl}
                 onChange={(event) => setBroadcastUrl(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border px-3 text-sm outline-none"
+                className="mt-1 h-12 w-full rounded-lg border px-3 text-sm outline-none"
                 style={{
                   backgroundColor: 'var(--app-input-bg)',
                   borderColor: 'var(--app-input-border)',
@@ -179,13 +178,13 @@ export default function MyPageAdminPushPage() {
               type="button"
               onClick={handleBroadcastPush}
               disabled={isSendingBroadcast}
-              className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-opacity disabled:cursor-default disabled:opacity-60"
+              className="mt-3 mb-3 inline-flex h-12 w-full items-center justify-center rounded-lg px-4 text-sm font-semibold transition-opacity disabled:cursor-default disabled:opacity-60"
               style={{
                 backgroundColor: '#457ae5',
                 color: '#ffffff',
               }}
             >
-              {isSendingBroadcast ? '발송중...' : '전체 공지 발송'}
+              {isSendingBroadcast ? '발송중...' : '푸시 알림 보내기'}
             </button>
           </div>
         </section>

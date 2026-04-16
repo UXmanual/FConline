@@ -152,9 +152,11 @@ function printPortMessage(portListener) {
   console.error(`- ${portListener.imageName} (PID ${portListener.pid})`)
   console.error('')
   console.error('Stop the stale process, then retry `npm run dev`.')
+  console.error('If this is a stuck local dev server, run `npm run dev:reset --workspace apps/fconline`.')
   console.error("Quick PowerShell checks:")
   console.error("- `netstat -ano | findstr :4000`")
   console.error("- `Get-Process -Id <PID>`")
+  console.error("- `taskkill /PID <PID> /T /F`")
   console.error('')
 }
 

@@ -1,10 +1,11 @@
 {
   "name": "fconlinemanual",
-  "version": "16.5",
+  "version": "16.6",
   "private": true,
   "scripts": {
     "predev": "node ./scripts/check-dev-environment.mjs",
     "dev": "next dev --hostname 0.0.0.0 --port 4000",
+    "dev:reset": "node ./scripts/reset-dev-port.mjs && next dev --hostname 0.0.0.0 --port 4000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

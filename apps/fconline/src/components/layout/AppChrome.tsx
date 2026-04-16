@@ -6,7 +6,7 @@ import BottomNav from '@/components/layout/BottomNav'
 
 export default function AppChrome() {
   const pathname = usePathname()
-  const showFooter = pathname.startsWith('/mypage')
+  const showFooter = pathname === '/mypage'
   const [isStandaloneDisplayMode, setIsStandaloneDisplayMode] = useState(false)
   const footerBottomCompensation = isStandaloneDisplayMode ? 30 : 0
 
