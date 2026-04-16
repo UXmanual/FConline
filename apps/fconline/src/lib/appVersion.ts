@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '16.7': [
+    '홈과 루트 진입 페이지의 ISR 재검증 주기를 1분으로 줄여 최신 선수 평가 반영이 더 빠르게 보이도록 조정했습니다.',
+    '메인 선수 평가 카드는 전체 홈을 완전 동적으로 바꾸지 않고도 짧은 주기로 새 글이 반영되도록 운영 효율을 맞췄습니다.',
+  ],
   '16.6': [
     '푸시 알림 발송 실패가 전체 공지를 중단하지 않도록 보완했습니다.',
     '알림 클릭 시 기존 탭을 정확한 경로로 이동시키도록 개선했습니다.',

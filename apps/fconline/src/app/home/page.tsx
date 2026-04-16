@@ -6,6 +6,8 @@ import HomeSettingsCard from './HomeSettingsCard'
 import HomeLogo from './HomeLogo'
 import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
+export const revalidate = 60
+
 const weekdayMap = ['일', '월', '화', '수', '목', '금', '토']
 
 function getKoreaDateLabel() {
