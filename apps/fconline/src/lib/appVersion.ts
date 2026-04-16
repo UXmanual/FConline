@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '17.0': [
+    '앱 파비콘과 OG 이미지를 새 브랜드 원본으로 교체했습니다.',
+    '브라우저 파비콘, Apple 터치 아이콘, PWA 192·512 아이콘을 한 세트로 다시 생성해 적용했습니다.',
+    '서비스워커 정적 캐시 버전을 갱신해 기존 기기에서도 새 아이콘 리소스가 더 안정적으로 반영되도록 정리했습니다.',
+  ],
   '16.9': [
     '불필요한 변수와 훅 의존성 경고를 정리해 린트 경고를 0건으로 맞췄습니다.',
     '매치·선수 카드에서 사용하던 외부 이미지를 Next 이미지 컴포넌트 기준으로 정리하고 관련 호스트 설정을 보완했습니다.',

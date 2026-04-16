@@ -1,6 +1,6 @@
-const STATIC_CACHE_NAME = 'fco-ground-static-v1'
-const PAGE_CACHE_NAME = 'fco-ground-pages-v1'
-const ASSET_CACHE_NAME = 'fco-ground-assets-v1'
+const STATIC_CACHE_NAME = 'fco-ground-static-v2'
+const PAGE_CACHE_NAME = 'fco-ground-pages-v2'
+const ASSET_CACHE_NAME = 'fco-ground-assets-v2'
 
 const APP_SHELL_ROUTES = [
   '/',
@@ -11,6 +11,7 @@ const APP_SHELL_ROUTES = [
   '/mypage',
   '/manifest.webmanifest',
   '/favicon.ico',
+  '/favicon.png',
   '/icons/favicon-16x16.png',
   '/icons/favicon-32x32.png',
   '/icons/apple-touch-icon.png',
