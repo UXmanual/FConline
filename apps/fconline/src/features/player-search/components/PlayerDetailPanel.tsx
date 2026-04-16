@@ -147,7 +147,7 @@ export default function PlayerDetailPanel({
           ]
         }),
       ),
-    [chemistryBoost, detail.abilities, detail.overall, detail.position, playerName],
+    [chemistryBoost, detail.abilities, detail.overall, detail.position, detail.traits, playerName],
   )
 
   const imageCandidates = useMemo(() => getPlayerImageCandidates(spid), [spid])

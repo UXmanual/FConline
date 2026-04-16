@@ -35,72 +35,6 @@ const SORT_PRICE = '\uAE08\uC561\uC21C'
 const SORT_PAY = '\uAE09\uC5EC\uC21C'
 const STRONG_LEVEL_LABEL = '\uAC15\uD654 \uB2E8\uACC4'
 
-const MF_TOP_PLAYERS = [
-  {
-    rank: 1,
-    name: '\uCF00\uBE48 \uB354\uBE0C\uB77C\uC704\uB108',
-    summary: 'UT \u00B7 CM \u00B7 OVR 114 \u00B7 \uAE09\uC5EC 28',
-    metric: '4,280\uC5B5',
-  },
-  {
-    rank: 2,
-    name: '\uB8E8\uB4DC \uAD74\uB9AC\uD2B8',
-    summary: 'WB \u00B7 CAM \u00B7 OVR 116 \u00B7 \uAE09\uC5EC 31',
-    metric: '14\uC870 2,000\uC5B5',
-  },
-  {
-    rank: 3,
-    name: '\uC8FC\uB4DC \uBCA8\uB9C1\uC5C4',
-    summary: '24UCL \u00B7 CM \u00B7 OVR 113 \u00B7 \uAE09\uC5EC 27',
-    metric: '3,720\uC5B5',
-  },
-  {
-    rank: 4,
-    name: '\uC9C0\uB124\uB527 \uC9C0\uB2E8',
-    summary: 'DC \u00B7 CAM \u00B7 OVR 113 \u00B7 \uAE09\uC5EC 29',
-    metric: '2,940\uC5B5',
-  },
-  {
-    rank: 5,
-    name: '\uD329\uD2B8\uB9AD \uBE44\uC5D0\uC774\uB77C',
-    summary: 'RTN \u00B7 CDM \u00B7 OVR 114 \u00B7 \uAE09\uC5EC 28',
-    metric: '5,610\uC5B5',
-  },
-] as const
-
-const DF_TOP_PLAYERS = [
-  {
-    rank: 1,
-    name: '\uBC84\uC9C8 \uBC18\uB370\uC774\uD06C',
-    summary: '25TOTN \u00B7 CB \u00B7 OVR 115 \u00B7 \uAE09\uC5EC 28',
-    metric: '6,140\uC5B5',
-  },
-  {
-    rank: 2,
-    name: '\uD30C\uC62C\uB85C \uB9D0\uB514\uB2C8',
-    summary: 'RTN \u00B7 CB \u00B7 OVR 116 \u00B7 \uAE09\uC5EC 29',
-    metric: '8,900\uC5B5',
-  },
-  {
-    rank: 3,
-    name: '\uB8E8\uC2DC\uC6B0',
-    summary: 'DC \u00B7 CB \u00B7 OVR 114 \u00B7 \uAE09\uC5EC 27',
-    metric: '3,880\uC5B5',
-  },
-  {
-    rank: 4,
-    name: '\uD398\uB97C\uB791 \uBA58\uB514',
-    summary: 'WB \u00B7 LB \u00B7 OVR 113 \u00B7 \uAE09\uC5EC 26',
-    metric: '2,760\uC5B5',
-  },
-  {
-    rank: 5,
-    name: '\uCE74\uB974\uBC14\uD560',
-    summary: '24UCL \u00B7 RB \u00B7 OVR 112 \u00B7 \uAE09\uC5EC 25',
-    metric: '2,180\uC5B5',
-  },
-] as const
-
 type SortBy = 'latest' | 'price' | 'pay'
 
 type PopularPlayerCardItem = {
@@ -163,6 +97,7 @@ export default function PlayersPage() {
   const [loading, setLoading] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   const isInitialRestoreRef = useRef(true)
+  const skipNextSearchEffectRef = useRef(false)
 
   const handleSearch = () => {
     const trimmed = query.trim()
@@ -266,6 +201,7 @@ export default function PlayersPage() {
           try {
             const results = JSON.parse(savedResults) as PlayerSearchResultsCacheEntry
             if (isValidPlayerSearchResultsCacheEntry(results)) {
+              skipNextSearchEffectRef.current = true
               scheduleStateUpdate(() => {
                 setPlayers(results.players)
                 setSeasons(results.seasons)
@@ -382,8 +318,9 @@ export default function PlayersPage() {
       return
     }
 
-    if (isInitialRestoreRef.current && players.length > 0) {
+    if (isInitialRestoreRef.current && skipNextSearchEffectRef.current) {
       isInitialRestoreRef.current = false
+      skipNextSearchEffectRef.current = false
       return
     }
 

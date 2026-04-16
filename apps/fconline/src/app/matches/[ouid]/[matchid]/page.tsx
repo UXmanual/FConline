@@ -5,12 +5,6 @@ import { MatchData, MatchPlayerInfo, MATCH_TYPE_NAMES, calcPassTotal } from '@/f
 const NEXON_API_KEY = process.env.NEXON_API_KEY!
 const NEXON_HEADERS = { 'x-nxopen-api-key': NEXON_API_KEY }
 
-const RESULT_COLOR: Record<string, string> = {
-  승: '#256ef4',
-  패: '#f64f5e',
-  무: '#8a949e',
-}
-
 interface Props {
   params: Promise<{ ouid: string; matchid: string }>
   searchParams: Promise<{ nickname?: string }>

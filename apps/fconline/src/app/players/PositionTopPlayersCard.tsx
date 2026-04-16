@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import CardListSkeleton from '@/components/ui/CardListSkeleton'
 
 type TopPlayerItem = {
@@ -77,10 +78,13 @@ export default function PositionTopPlayersCard({
               <div className="flex min-w-0 items-center gap-3">
                 {item.imageUrl ? (
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
-                    <img
+                    <Image
                       src={item.imageUrl}
                       alt={item.name}
+                      width={48}
+                      height={48}
                       className="h-full w-full object-contain"
+                      unoptimized
                       draggable={false}
                     />
                   </div>
@@ -93,11 +97,14 @@ export default function PositionTopPlayersCard({
                   <p className="app-player-title truncate text-sm font-semibold">{item.name}</p>
                   <div className="app-player-body mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4">
                     {item.seasonBadgeUrl ? (
-                      <img
+                      <Image
                         src={item.seasonBadgeUrl}
                         alt=""
                         aria-hidden="true"
+                        width={16}
+                        height={16}
                         className="h-4 w-auto shrink-0 object-contain"
+                        unoptimized
                         draggable={false}
                       />
                     ) : null}

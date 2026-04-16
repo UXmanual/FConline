@@ -66,7 +66,7 @@ function buildNotificationPayload(event) {
     }
 
     return { title, options }
-  } catch (_error) {
+  } catch {
     const text = event.data.text()
 
     return {

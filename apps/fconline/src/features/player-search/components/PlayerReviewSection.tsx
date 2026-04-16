@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useRef, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityPostSummary } from '@/lib/community'
 
@@ -186,38 +186,13 @@ export default function PlayerReviewSection({
 
   const aiReviewSummary = aiReviewSummariesByLevel?.[aiSelectedCardLevel] ?? null
 
-  useEffect(() => {
-    cacheRef.current.clear()
-    setPosts([])
-    setTotalCount(0)
-    setCurrentPage(1)
-    setPageWindowStart(1)
-    setHighlightedPostId(initialHighlightedPostId)
-    void fetchPostsPage(1, { highlightPostId: initialHighlightedPostId })
-  }, [initialHighlightedPostId, playerId])
-
-  useEffect(() => {
-    if (!highlightedPostId) return
-
-    const frameId = window.requestAnimationFrame(() => {
-      const target = document.querySelector<HTMLElement>(`[data-post-id="${highlightedPostId}"]`)
-      target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
-
-    return () => window.cancelAnimationFrame(frameId)
-  }, [highlightedPostId, posts])
-
-  function scrollToListTop() {
-    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  async function fetchPostsPage(
+  const fetchPostsPage = useCallback(async (
     page: number,
     options?: {
       useSkeleton?: boolean
       highlightPostId?: string | null
     },
-  ) {
+  ) => {
     const useSkeleton = options?.useSkeleton ?? true
     const highlightPostId = options?.highlightPostId ?? null
     const shouldBypassCache = Boolean(highlightPostId)
@@ -270,6 +245,31 @@ export default function PlayerReviewSection({
     } finally {
       setIsLoadingPosts(false)
     }
+  }, [playerId])
+
+  useEffect(() => {
+    cacheRef.current.clear()
+    setPosts([])
+    setTotalCount(0)
+    setCurrentPage(1)
+    setPageWindowStart(1)
+    setHighlightedPostId(initialHighlightedPostId)
+    void fetchPostsPage(1, { highlightPostId: initialHighlightedPostId })
+  }, [fetchPostsPage, initialHighlightedPostId, playerId])
+
+  useEffect(() => {
+    if (!highlightedPostId) return
+
+    const frameId = window.requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(`[data-post-id="${highlightedPostId}"]`)
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [highlightedPostId, posts])
+
+  function scrollToListTop() {
+    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   async function goToPage(page: number) {

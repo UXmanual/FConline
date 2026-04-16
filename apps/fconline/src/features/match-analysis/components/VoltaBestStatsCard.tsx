@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import CardListSkeleton from '@/components/ui/CardListSkeleton'
 import { VoltaBestStatItem } from '@/features/match-analysis/types'
 
@@ -39,11 +40,14 @@ export default function VoltaBestStatsCard({ items, isLoading = false }: Props) 
               <div className="flex min-w-0 items-center gap-3">
                 <div className="app-theme-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
                   {item.iconUrl ? (
-                    <img
+                    <Image
                       src={item.iconUrl}
                       alt=""
                       aria-hidden="true"
+                      width={32}
+                      height={32}
                       className="h-8 w-8 object-contain"
+                      unoptimized
                       draggable={false}
                     />
                   ) : (

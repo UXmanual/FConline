@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 const VOLTA_RECOMMENDED_COACHES = [
   {
     id: '64',
@@ -59,10 +61,13 @@ export default function VoltaPopularCoachCard() {
             className={`flex items-start justify-between gap-3 py-3 ${index === VOLTA_RECOMMENDED_COACHES.length - 1 ? 'pb-0' : 'app-theme-divider border-b'}`}
           >
             <div className="flex min-w-0 items-start gap-3">
-              <img
+              <Image
                 src={item.imageSrc}
                 alt={item.name}
+                width={44}
+                height={44}
                 className="h-11 w-11 shrink-0 rounded-lg object-cover"
+                unoptimized
                 draggable={false}
               />
 

@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import CardListSkeleton from '@/components/ui/CardListSkeleton'
 import { OfficialTeamColorMetaItem } from '@/features/match-analysis/types'
 
@@ -56,10 +57,13 @@ export default function OfficialTeamColorMetaCard({
                   title={item.teamColor}
                 >
                   {item.emblemUrl ? (
-                    <img
+                    <Image
                       src={item.emblemUrl}
                       alt={item.teamColor}
+                      width={32}
+                      height={32}
                       className="h-8 w-8 object-contain"
+                      unoptimized
                       draggable={false}
                     />
                   ) : (

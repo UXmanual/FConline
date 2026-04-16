@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'file.nexon.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'ssl.nexon.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fco.dn.nexoncdn.co.kr',
+      },
     ],
   },
 }

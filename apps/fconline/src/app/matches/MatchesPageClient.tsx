@@ -1,5 +1,6 @@
 ﻿'use client'
 
+import Image from 'next/image'
 import { ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowLeft, LinkSimple, MagnifyingGlass, XLogo } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
@@ -3148,10 +3149,13 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                     <section className="app-theme-card rounded-lg border px-5 py-5">
                       <div className="flex items-start gap-4">
                         {officialBadgeImageUrl ? (
-                          <img
+                          <Image
                             src={officialBadgeImageUrl}
                             alt={officialDisplay.rankIconUrl ? '공식경기 등급' : '대표팀 엠블럼'}
+                            width={40}
+                            height={40}
                             className="mt-0.5 h-10 w-10 shrink-0 object-contain"
+                            unoptimized
                           />
                         ) : (
                           <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
@@ -3408,10 +3412,13 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                     <section className="app-theme-card rounded-lg border px-5 py-5">
                       <div className="flex items-start gap-4">
                         {exactCandidate.voltaRankIconUrl ? (
-                          <img
+                          <Image
                             src={exactCandidate.voltaRankIconUrl}
                             alt="볼타 등급"
+                            width={40}
+                            height={40}
                             className="mt-0.5 h-10 w-10 shrink-0 object-contain"
+                            unoptimized
                           />
                         ) : (
                           <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">

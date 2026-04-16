@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import CardListSkeleton from '@/components/ui/CardListSkeleton'
 import { OfficialTopRankItem } from '@/features/match-analysis/types'
 
@@ -59,11 +60,14 @@ export default function OfficialTopRankCard({ items, isLoading = false, onSelect
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="app-theme-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
                   {item.rankIconUrl ? (
-                    <img
+                    <Image
                       src={item.rankIconUrl}
                       alt=""
                       aria-hidden="true"
+                      width={32}
+                      height={32}
                       className="h-8 w-8 object-contain"
+                      unoptimized
                       draggable={false}
                     />
                   ) : (

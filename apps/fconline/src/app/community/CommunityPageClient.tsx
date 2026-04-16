@@ -1,6 +1,13 @@
 'use client'
 
-import { FormEvent, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { COMMUNITY_CATEGORIES, type CommunityCategory, type CommunityCommentItem, type CommunityPostSummary } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
 
@@ -154,6 +161,21 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const visiblePages = Array.from({ length: pageGroupEnd - safePageWindowStart + 1 }, (_, index) => safePageWindowStart + index)
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 
+  const resetCommentSheetState = useCallback(() => {
+    setActiveCommentPost(null)
+    setComments([])
+    setCommentNickname('')
+    setCommentDraft('')
+    setCommentSheetOffsetY(0)
+    setIsDraggingCommentSheet(false)
+    setIsCommentSheetVisible(false)
+    dragPointerIdRef.current = null
+  }, [])
+
+  const closeCommentSheet = useCallback(() => {
+    resetCommentSheetState()
+  }, [resetCommentSheetState])
+
   useEffect(() => {
     const isOverlayOpen = isComposerOpen || activeCommentPost !== null
     const previousHtmlOverflow = document.documentElement.style.overflow
@@ -217,7 +239,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       window.removeEventListener('pointerup', handlePointerEnd)
       window.removeEventListener('pointercancel', handlePointerEnd)
     }
-  }, [commentSheetOffsetY, isDraggingCommentSheet])
+  }, [closeCommentSheet, commentSheetOffsetY, isDraggingCommentSheet])
 
   useEffect(() => {
     if (isLoadingPosts) return
@@ -263,21 +285,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
 
   function scrollToListTop() {
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  function resetCommentSheetState() {
-    setActiveCommentPost(null)
-    setComments([])
-    setCommentNickname('')
-    setCommentDraft('')
-    setCommentSheetOffsetY(0)
-    setIsDraggingCommentSheet(false)
-    setIsCommentSheetVisible(false)
-    dragPointerIdRef.current = null
-  }
-
-  function closeCommentSheet() {
-    resetCommentSheetState()
   }
 
   function handleCommentSheetDragStart(event: ReactPointerEvent<HTMLElement>) {
