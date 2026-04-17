@@ -34,7 +34,7 @@ Recommended initial Android package name:
 
 Current release fingerprint:
 
-- `08:ED:79:DC:76:BC:33:F4:69:4C:FA:DB:42:3F:41:9D:61:5A:40:D5:A1:B2:BB:07:76:BA:59:92:CB:40:40:F3`
+- `7D:A5:04:17:2C:C0:BA:4D:92:51:F4:25:76:ED:9F:9E:5D:B2:9D:D3:D9:96:B7:B1:54:EB:F1:58:02:26:0C:74`
 
 ## Release Fingerprint
 

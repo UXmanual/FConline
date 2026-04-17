@@ -18,8 +18,8 @@
     "path": "C:\\Users\\Rich\\FConline\\.local\\android\\fcoground-release.keystore",
     "alias": "fcoground"
   },
-  "appVersionCode": 172,
-  "appVersion": "17.2",
+  "appVersionCode": 173,
+  "appVersion": "17.3",
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://fconlinemanual.vercel.app/manifest.webmanifest",
   "fallbackType": "customtabs",
@@ -34,7 +34,7 @@
   "orientation": "portrait",
   "fingerprints": [
     {
-      "value": "08:ED:79:DC:76:BC:33:F4:69:4C:FA:DB:42:3F:41:9D:61:5A:40:D5:A1:B2:BB:07:76:BA:59:92:CB:40:40:F3"
+      "value": "7D:A5:04:17:2C:C0:BA:4D:92:51:F4:25:76:ED:9F:9E:5D:B2:9D:D3:D9:96:B7:B1:54:EB:F1:58:02:26:0C:74"
     }
   ],
   "additionalTrustedOrigins": [],

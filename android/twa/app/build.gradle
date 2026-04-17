@@ -20,6 +20,34 @@ plugins {
     id 'com.android.application'
 }
 
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { stream ->
+        keystoreProperties.load(stream)
+    }
+}
+
+def envOrProperty = { envName, propertyName ->
+    def envValue = System.getenv(envName)
+    if (envValue != null && envValue.trim()) {
+        return envValue.trim()
+    }
+
+    def propertyValue = keystoreProperties.getProperty(propertyName)
+    if (propertyValue != null && propertyValue.trim()) {
+        return propertyValue.trim()
+    }
+
+    return null
+}
+
+def releaseStoreFile = envOrProperty('ANDROID_KEYSTORE_PATH', 'storeFile')
+def releaseStorePassword = envOrProperty('ANDROID_KEYSTORE_PASSWORD', 'storePassword')
+def releaseKeyAlias = envOrProperty('ANDROID_KEY_ALIAS', 'keyAlias')
+def releaseKeyPassword = envOrProperty('ANDROID_KEY_PASSWORD', 'keyPassword')
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
 def twaManifest = [
     applicationId: 'com.fcoground.app',
     hostName: 'fconlinemanual.vercel.app', // The domain being opened in the TWA.
@@ -53,12 +81,24 @@ def twaManifest = [
 android {
     compileSdkVersion 36
     namespace "com.fcoground.app"
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.fcoground.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 172
-        versionName "17.2"
+        versionCode 173
+        versionName "17.3"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -150,6 +190,9 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
@@ -207,4 +250,12 @@ dependencies {
     
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
     
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    if (!hasReleaseSigning && taskGraph.allTasks.any { task ->
+        task.project.path == ':app' && task.name.toLowerCase().contains('release')
+    }) {
+        logger.lifecycle('Release signing is not configured. Create android/twa/keystore.properties or set ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD to produce a Play-uploadable signed build.')
+    }
 }
