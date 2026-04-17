@@ -1,0 +1,42 @@
+{
+  "packageId": "com.fcoground.app",
+  "host": "fconlinemanual.vercel.app",
+  "name": "FCO Ground",
+  "launcherName": "FCO Ground",
+  "display": "standalone",
+  "themeColor": "#f0f3f5",
+  "themeColorDark": "#121318",
+  "navigationColor": "#f0f3f5",
+  "navigationColorDark": "#121318",
+  "backgroundColor": "#121318",
+  "enableNotifications": true,
+  "startUrl": "/home",
+  "iconUrl": "https://fconlinemanual.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://fconlinemanual.vercel.app/icons/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:\\Users\\Rich\\FConline\\.local\\android\\fcoground-release.keystore",
+    "alias": "fcoground"
+  },
+  "appVersionCode": 172,
+  "appVersion": "17.2",
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://fconlinemanual.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [
+    {
+      "value": "08:ED:79:DC:76:BC:33:F4:69:4C:FA:DB:42:3F:41:9D:61:5A:40:D5:A1:B2:BB:07:76:BA:59:92:CB:40:40:F3"
+    }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}

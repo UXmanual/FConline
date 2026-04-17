@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.fcoground.app",
+      "sha256_cert_fingerprints": [
+        "08:ED:79:DC:76:BC:33:F4:69:4C:FA:DB:42:3F:41:9D:61:5A:40:D5:A1:B2:BB:07:76:BA:59:92:CB:40:40:F3"
+      ]
+    }
+  }
+]

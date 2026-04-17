@@ -50,6 +50,23 @@ npm run lint
 - 릴리스 노트는 `apps/fconline/src/lib/appVersion.ts`에서 관리합니다.
 - 운영 배포 전에는 버전과 릴리스 노트 항목을 함께 맞춰두는 것을 권장합니다.
 
+## Android TWA
+
+- Android TWA 프로젝트는 `android/twa`에 있습니다.
+- Play Console 업로드용 번들은 로컬에서 `android/twa/app-release-bundle.aab`로 생성합니다.
+- TWA 작업 상세 문서는 `docs/twa-setup.md`를 기준으로 봅니다.
+
+## 다른 PC에서 이어서 작업할 때
+
+- 이 저장소를 받은 뒤 먼저 `npm install`을 실행합니다.
+- JDK 17과 Android command-line tools를 설치합니다.
+- `docs/twa-setup.md`의 경로를 기준으로 Bubblewrap 환경을 다시 맞춥니다.
+- 가장 중요하게는 기존 배포에 사용한 키스토어를 새 PC로 안전하게 복사해야 합니다.
+  - 키스토어가 바뀌면 같은 앱 패키지명으로 업데이트를 이어갈 수 없습니다.
+- 현재 릴리스 키스토어 파일은 Git에 포함되지 않으며 별도로 안전하게 보관해야 합니다.
+- 새 PC에서는 `android/twa/local.properties`를 로컬 환경에 맞게 다시 만들어야 합니다.
+- 웹 운영 도메인과 `assetlinks.json` 값은 그대로 유지해야 TWA 검증이 이어집니다.
+
 ## 문서 운영 원칙
 
 - 에이전트에게 코드 수정, 배포, 개발 서버 실행을 요청할 때는 먼저 `AGENTS.md`를 기준으로 봅니다.

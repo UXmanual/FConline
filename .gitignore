@@ -32,6 +32,12 @@ apps/fconline/dev-server*.log
 apps/fconline/.logs/
 .bkit/
 apps/fconline/.codex-logs/
+.local/
+local.properties
+android/twa/.gradle/
+android/twa/app-release-*.aab
+android/twa/app-release-*.apk
+android/twa/app-release-*.idsig
 
 # vercel
 .vercel

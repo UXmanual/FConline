@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '17.2': [
+    'Google Play TWA 배포를 위한 Android 래퍼 프로젝트와 assetlinks 설정을 추가했습니다.',
+    '운영 도메인과 연결되는 앱 서명 fingerprint 기준을 정리하고 Play Console 업로드용 AAB 준비 흐름을 문서화했습니다.',
+    '다른 PC에서도 JDK·Android SDK·키스토어만 맞추면 같은 TWA 프로젝트를 이어서 빌드할 수 있도록 저장소 가이드를 보강했습니다.',
+  ],
   '17.1': [
     'favicon.ico를 원본 브랜드 PNG와 동일한 표현으로 다시 생성해 브라우저 탭 아이콘 색상 차이를 바로잡았습니다.',
   ],
