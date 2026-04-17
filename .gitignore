@@ -35,6 +35,7 @@ apps/fconline/.codex-logs/
 .local/
 local.properties
 android/twa/.gradle/
+android/twa/.idea/
 android/twa/app-release-*.aab
 android/twa/app-release-*.apk
 android/twa/app-release-*.idsig

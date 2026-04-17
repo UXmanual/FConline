@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '17.3': [
+    '메인 홈 배너를 4장 구성으로 확장하고 교체한 로컬 배너 이미지를 기준으로 캐러셀 노출을 정리했습니다.',
+    '2번 배너는 분석 탭 홈으로, 3번 배너는 선수 탭 홈으로 바로 이동하도록 내부 진입 동선을 연결했습니다.',
+    '기존 외부 새창 링크는 4번 배너로 옮기고, 배너별로 내부 이동과 외부 새창 동작이 각각 맞게 분기되도록 정리했습니다.',
+  ],
   '17.2': [
     'Google Play TWA 배포를 위한 Android 래퍼 프로젝트와 assetlinks 설정을 추가했습니다.',
     '운영 도메인과 연결되는 앱 서명 fingerprint 기준을 정리하고 Play Console 업로드용 AAB 준비 흐름을 문서화했습니다.',

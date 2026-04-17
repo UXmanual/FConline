@@ -9,6 +9,7 @@ export type HomeEventItem = {
   title: string
   href?: string
   imageUrl?: string
+  openInNewTab?: boolean
 }
 
 export type ControllerUsageItem = {
@@ -35,8 +36,21 @@ const LOCAL_HOME_EVENTS: HomeEventItem[] = [
   {
     id: 'home-main-banner-02',
     title: '메인 배너 2',
-    href: 'https://fconline.nexon.com/news/notice/list',
+    href: '/matches',
     imageUrl: '/banners/home-main-banner02@3x.png',
+  },
+  {
+    id: 'home-main-banner-03',
+    title: '메인 배너 3',
+    href: '/players',
+    imageUrl: '/banners/home-main-banner03@3x.png',
+  },
+  {
+    id: 'home-main-banner-04',
+    title: '메인 배너 4',
+    href: 'https://fconline.nexon.com/news/notice/list',
+    imageUrl: '/banners/home-main-banner04@3x.png',
+    openInNewTab: true,
   },
 ]
 

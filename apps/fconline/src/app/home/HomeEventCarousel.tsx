@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import Link from 'next/link'
 import type { TouchEvent as ReactTouchEvent } from 'react'
 import type { HomeEventItem } from './home-feed'
 
@@ -541,17 +542,17 @@ export default function HomeEventCarousel({ events }: Props) {
               }
 
               return (
-                <a
+                <Link
                   key={slideKey}
                   href={event.href}
-                  target="_blank"
-                  rel="noreferrer"
+                  target={event.openInNewTab ? '_blank' : undefined}
+                  rel={event.openInNewTab ? 'noreferrer' : undefined}
                   onClick={handleBannerClick}
                   draggable={false}
                   className="block w-full min-w-full"
                 >
                   {slideContent}
-                </a>
+                </Link>
               )
             })}
           </div>
