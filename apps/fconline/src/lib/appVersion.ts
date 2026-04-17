@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '17.6': [
+    '개인정보처리방침 전용 페이지를 추가했습니다.',
+  ],
   '17.5': [
     '알림과 안드로이드 앱 아이콘 구성을 정리했습니다.',
   ],
