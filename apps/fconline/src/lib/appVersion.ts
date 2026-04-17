@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '17.8': [
+    '데이터 삭제 요청 페이지를 추가했습니다.',
+  ],
   '17.7': [
     '개인정보처리방침 페이지 경로를 정리했습니다.',
   ],
