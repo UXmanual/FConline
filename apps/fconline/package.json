@@ -1,6 +1,6 @@
 {
   "name": "fconlinemanual",
-  "version": "17.6",
+  "version": "17.7",
   "private": true,
   "scripts": {
     "predev": "node ./scripts/check-dev-environment.mjs",

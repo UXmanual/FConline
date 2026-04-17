@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useLayoutEffect, useRef, useState } from 'react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
@@ -136,12 +136,13 @@ export const privacyContent = [
   '중요한 변경이 있는 경우 앱 또는 관련 페이지를 통해 안내합니다.',
 ]
 
-export default function MyPage() {
+export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const isDarkModeEnabled = useDarkModeEnabled()
   const isAppNotificationsEnabled = useAppNotificationsEnabled()
+  const privacySectionRef = useRef<HTMLElement | null>(null)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
-  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false)
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(initialPrivacyOpen)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [contactCategory, setContactCategory] = useState('앱 문의')
   const [contactTitle, setContactTitle] = useState('')
@@ -150,6 +151,46 @@ export default function MyPage() {
   const [isSendingContact, setIsSendingContact] = useState(false)
   const [isAppNotificationPending, setIsAppNotificationPending] = useState(false)
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
+
+  useLayoutEffect(() => {
+    if (!initialPrivacyOpen || !privacySectionRef.current) {
+      return
+    }
+
+    let frameId = 0
+    let timeoutId = 0
+    let attemptCount = 0
+
+    const scrollToPrivacy = () => {
+      const sectionTop = privacySectionRef.current?.getBoundingClientRect().top
+
+      if (typeof sectionTop !== 'number') {
+        return
+      }
+
+      const targetTop = Math.max(window.scrollY + sectionTop - 16, 0)
+      window.scrollTo({ top: targetTop, behavior: 'auto' })
+    }
+
+    const syncScrollPosition = () => {
+      scrollToPrivacy()
+      attemptCount += 1
+
+      if (attemptCount < 12) {
+        frameId = window.requestAnimationFrame(syncScrollPosition)
+        return
+      }
+
+      timeoutId = window.setTimeout(scrollToPrivacy, 180)
+    }
+
+    frameId = window.requestAnimationFrame(syncScrollPosition)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.clearTimeout(timeoutId)
+    }
+  }, [initialPrivacyOpen])
 
   const handleDarkModeToggle = () => {
     const nextValue = !isDarkModeEnabled
@@ -351,7 +392,10 @@ export default function MyPage() {
           </h1>
         </div>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <div className="flex items-center gap-1">
             <p className="text-sm font-semibold" style={titleStyle}>
               <span style={{ color: '#457ae5' }}>로그인</span>
@@ -360,7 +404,10 @@ export default function MyPage() {
           </div>
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="text-sm leading-[1.35]" style={bodyStyle}>
@@ -383,7 +430,10 @@ export default function MyPage() {
           </div>
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1">
               <p className="text-sm font-semibold" style={titleStyle}>
@@ -464,7 +514,10 @@ export default function MyPage() {
           </div>
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <p className="text-sm font-medium" style={mutedStyle}>
             {`버전 ${APP_VERSION} (Beta)`}
           </p>
@@ -477,7 +530,10 @@ export default function MyPage() {
           </div>
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <button
             type="button"
             onClick={() => setIsLicenseOpen((current) => !current)}
@@ -513,7 +569,10 @@ export default function MyPage() {
           ) : null}
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <button
             type="button"
             onClick={() => setIsTermsOpen((current) => !current)}
@@ -539,7 +598,11 @@ export default function MyPage() {
           ) : null}
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section
+          ref={privacySectionRef}
+          className="rounded-lg px-5 py-4"
+          style={{ ...cardStyle, ...surfaceTransitionStyle }}
+        >
           <button
             type="button"
             onClick={() => setIsPrivacyOpen((current) => !current)}
@@ -690,4 +753,8 @@ export default function MyPage() {
       ) : null}
     </div>
   )
+}
+
+export default function MyPage() {
+  return <MyPageContent />
 }
