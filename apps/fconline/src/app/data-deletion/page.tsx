@@ -1,7 +1,7 @@
 'use client'
 
 const deletedDataItems = [
-  '커뮤니티 게시글 및 댓글 등 사용자가 직접 작성한 콘텐츠',
+  'Google 로그인으로 생성된 연동 계정 정보',
   '문의 접수 시 사용자가 직접 입력한 연락 정보와 문의 내용',
   '푸시 알림 구독 정보와 기기 식별 정보',
 ]
@@ -9,6 +9,7 @@ const deletedDataItems = [
 const retainedDataItems = [
   '법령 준수, 보안 대응, 분쟁 확인을 위해 필요한 최소 로그는 관련 목적 달성 시점까지 보관될 수 있습니다.',
   '삭제 요청이 접수된 뒤에도 법적 의무 또는 정당한 보관 사유가 있는 데이터는 해당 사유가 끝날 때까지 별도 보관될 수 있습니다.',
+  '기존에 작성한 커뮤니티 글, 댓글, 선수 평가는 서비스 운영, 분쟁 대응 또는 게시물 맥락 유지를 위해 남아 있을 수 있으며, 이 경우 계정과의 연결은 해제됩니다.',
 ]
 
 export default function DataDeletionPage() {
@@ -34,6 +35,9 @@ export default function DataDeletionPage() {
           <p className="text-[13px] leading-[1.6]" style={{ color: 'var(--app-body-text)' }}>
             FCO Ground 또는 개발자 uxdmanual은 사용자의 삭제 요청을 접수하고 처리할 수 있는 방편을 제공합니다.
           </p>
+          <p className="text-[13px] leading-[1.6]" style={{ color: 'var(--app-body-text)' }}>
+            앱 내 마이페이지에서도 연동 계정 삭제를 직접 진행할 수 있습니다.
+          </p>
         </div>
 
         <div className="mt-5 space-y-5">
@@ -42,9 +46,10 @@ export default function DataDeletionPage() {
               삭제 요청 방법
             </p>
             <ol className="space-y-2 text-[13px] leading-[1.6]" style={{ color: 'var(--app-body-text)' }}>
-              <li>1. 아래 이메일 주소로 삭제 요청을 보냅니다.</li>
-              <li>2. 요청 본문에 삭제를 원하는 데이터 유형 또는 계정/기기 식별 정보를 함께 적어주세요.</li>
-              <li>3. 운영팀이 요청 내용을 확인한 뒤 삭제 또는 보관 대상 정보를 안내합니다.</li>
+              <li>1. 앱 내 마이페이지에서 연동 계정 삭제를 진행할 수 있습니다.</li>
+              <li>2. 또는 아래 이메일 주소로 삭제 요청을 보낼 수 있습니다.</li>
+              <li>3. 요청 본문에 삭제를 원하는 데이터 유형 또는 계정/기기 식별 정보를 함께 적어주세요.</li>
+              <li>4. 운영팀이 요청 내용을 확인한 뒤 삭제 또는 보관 대상 정보를 안내합니다.</li>
             </ol>
             <p className="text-[13px] leading-[1.6]" style={{ color: 'var(--app-body-text)' }}>
               이메일:

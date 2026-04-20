@@ -97,8 +97,8 @@ android {
         applicationId "com.fcoground.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 175
-        versionName "17.5"
+        versionCode 178
+        versionName "18.1"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

@@ -28,7 +28,7 @@ const openSourceLicenses = [
 ]
 
 const termsContent = [
-  '최종 업데이트: 2026.04.06',
+  '최종 업데이트: 2026.04.20',
   '본 약관은 FCO Ground(이하 "서비스")의 이용과 관련하여 서비스 운영자와 이용자 간의 권리, 의무 및 책임사항을 정하는 것을 목적으로 합니다.',
   '1. 서비스 소개',
   'FCO Ground는 FC Online 관련 정보 탐색을 지원하는 앱입니다.',
@@ -38,10 +38,10 @@ const termsContent = [
   '운영자는 관련 법령 및 서비스 운영 정책에 따라 약관 내용을 변경할 수 있으며, 중요한 변경이 있는 경우 앱 또는 관련 안내 페이지를 통해 공지합니다.',
   '3. 회원가입 및 계정 이용',
   '이 서비스는 회원가입 시 실제 이름, 생년월일, 휴대전화번호 등 실명 기반 개인정보 입력을 요구하지 않습니다.',
-  '회원가입이 가능한 경우에도 이용자는 익명의 아이디(ID)와 비밀번호를 설정하여 가입할 수 있습니다.',
+  '현재 서비스는 Google 로그인 기반 계정 연동 기능을 제공할 수 있으며, 이용자는 Google 계정을 통해 로그인하고 커뮤니티 및 선수 평가 기능을 이용할 수 있습니다.',
   '이용자는 다음 사항을 준수해야 합니다.',
   '- 타인을 사칭하거나 타인의 계정을 무단으로 사용해서는 안 됩니다.',
-  '- 계정 정보는 이용자 본인이 관리해야 하며, 비밀번호 보안 책임은 이용자에게 있습니다.',
+  '- 연동 계정 정보는 이용자 본인이 관리해야 하며, Google 계정 및 기기 보안 책임은 이용자에게 있습니다.',
   '- 서비스 운영을 방해하거나 비정상적인 접근을 시도해서는 안 됩니다.',
   '운영자는 아래와 같은 경우 계정 이용을 제한할 수 있습니다.',
   '- 약관 또는 운영 정책을 위반한 경우',
@@ -69,25 +69,27 @@ const termsContent = [
   '운영자는 천재지변, 시스템 장애, 외부 API 장애, 통신망 문제 등 불가항력적 사유로 인해 서비스를 제공할 수 없는 경우 책임을 지지 않습니다.',
   '운영자는 이용자의 귀책 사유로 발생한 손해에 대하여 책임을 지지 않습니다.',
   '10. 서비스 종료 및 탈퇴',
-  '이용자는 언제든지 계정 삭제 또는 탈퇴를 요청할 수 있습니다.',
+  '이용자는 언제든지 앱 내 계정 삭제 기능 또는 별도 안내된 경로를 통해 연동 계정 삭제를 요청할 수 있습니다.',
+  '계정 삭제 후에도 기존에 작성한 게시글, 댓글, 선수 평가 등 일부 공개 콘텐츠는 서비스 운영, 분쟁 대응 또는 게시물 맥락 유지를 위해 남아 있을 수 있으며, 이 경우 계정과의 연결은 해제됩니다.',
   '운영자는 서비스 종료 또는 장기 중단이 필요한 경우 가능한 범위 내에서 사전에 안내합니다.',
   '11. 문의',
   '서비스 이용 중 문의가 필요한 경우 운영자가 별도로 안내하는 연락 수단을 통해 문의할 수 있습니다.',
 ]
 
 export const privacyContent = [
-  '최종 업데이트: 2026.04.06',
+  '최종 업데이트: 2026.04.20',
   'FCO Ground(이하 "서비스")는 이용자의 개인정보를 중요하게 생각하며, 관련 법령을 준수하기 위해 노력합니다.',
   '본 방침은 서비스가 어떤 정보를 수집하고, 왜 이용하며, 어떻게 보관 및 삭제하는지 설명합니다.',
   '1. 기본 원칙',
   '서비스는 회원가입 또는 서비스 이용 과정에서 꼭 필요한 최소한의 정보만 수집하는 것을 원칙으로 합니다.',
   '특히 이 서비스는 실제 이름, 생년월일, 휴대전화번호 등 실명 기반 개인정보를 회원가입 필수 정보로 요구하지 않는 방향으로 운영합니다.',
-  '가입 기능이 제공되는 경우에도 익명의 아이디(ID)와 비밀번호를 통해 회원가입할 수 있도록 설계하는 것을 원칙으로 합니다.',
+  '현재 서비스는 Google 로그인 기반 계정 연동을 제공할 수 있으며, Google 계정을 통해 로그인한 이용자에게 커뮤니티 및 선수 평가 작성 기능을 제공합니다.',
   '2. 수집하는 개인정보 항목',
   '서비스는 아래 정보를 수집하거나 처리할 수 있습니다.',
-  '- 회원가입 시: 익명 아이디(ID), 인증을 위한 비밀번호 정보',
+  '- 로그인 시: Google 계정 이메일 주소, 사용자 식별자(User ID), 프로필 이름 또는 닉네임 정보',
   '- 커뮤니티 이용 시: 닉네임, 게시글, 댓글 등 이용자가 직접 입력한 정보',
   '- 서비스 이용 과정에서 자동 생성되는 정보: 접속 기록, IP 일부 정보, 기기/브라우저 정보, 오류 기록, 이용 로그',
+  '- 알림 기능 이용 시: 푸시 알림 구독 정보 및 기기 식별 정보',
   '- 문의 또는 신고 접수 시: 이용자가 직접 제출한 정보',
   '서비스는 원칙적으로 주민등록번호, 실명, 생년월일, 휴대전화번호와 같은 민감하거나 불필요한 개인정보를 수집하지 않는 방향으로 운영합니다. 다만 추후 기능 변경으로 수집 항목이 달라질 경우, 앱 또는 관련 문서를 통해 고지합니다.',
   '3. 개인정보의 처리 목적',
@@ -100,10 +102,11 @@ export const privacyContent = [
   '4. 개인정보의 처리 및 보유 기간',
   '서비스는 개인정보 수집 및 이용 목적이 달성되면 지체 없이 삭제하는 것을 원칙으로 합니다.',
   '다만 아래와 같은 경우에는 필요한 기간 동안 보관할 수 있습니다.',
-  '- 회원 정보: 탈퇴 전까지',
+  '- 회원 정보: 연동 계정 삭제 전까지',
   '- 게시글/댓글 관련 기록: 분쟁 방지 또는 운영 기록 확인이 필요한 기간 동안',
   '- 접속 로그 및 보안 기록: 보안 대응 및 비정상 이용 방지에 필요한 기간 동안',
   '- 법령상 보관 의무가 있는 정보: 해당 법령이 정한 기간 동안',
+  '연동 계정이 삭제되더라도 기존에 작성한 공개 게시글, 댓글, 선수 평가 등은 서비스 운영, 분쟁 대응 또는 게시물 맥락 유지를 위해 남아 있을 수 있으며, 이 경우 계정과의 연결은 해제됩니다.',
   '구체적인 보관 기간은 실제 서비스 운영 환경과 저장 구조에 맞춰 추후 세부화할 수 있습니다.',
   '5. 개인정보의 파기절차 및 파기방법',
   '이용자는 탈퇴 또는 삭제를 요청할 수 있으며, 서비스는 관련 법령 또는 정당한 보관 사유가 없는 한 지체 없이 개인정보를 삭제하거나 더 이상 개인을 식별할 수 없는 형태로 처리합니다.',
@@ -124,6 +127,7 @@ export const privacyContent = [
   '8. 정보주체의 권리와 행사 방법',
   '이용자는 자신의 계정정보, 게시글, 댓글 등 서비스 내에서 생성하거나 제공한 정보에 대해 조회, 수정, 삭제, 처리 정지 또는 회원 탈퇴를 요청할 수 있습니다.',
   '운영자는 관련 법령상 제한이 없는 범위에서 이러한 요청을 검토하고 처리합니다.',
+  '이용자는 앱 내 마이페이지의 계정 삭제 기능 또는 별도 안내된 데이터 삭제 요청 경로를 통해 연동 계정 삭제를 요청할 수 있습니다.',
   '9. 개인정보의 안전성 확보 조치',
   '서비스는 개인정보 보호를 위해 합리적인 수준의 보호 조치를 적용하도록 노력합니다.',
   '예를 들어 접근 제한, 인증 정보 보호, 관리 범위 최소화, 로그 확인 등의 방법을 사용할 수 있습니다.',
@@ -157,6 +161,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(initialPrivacyOpen)
+  const [isAccountDeleteOpen, setIsAccountDeleteOpen] = useState(false)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [contactCategory, setContactCategory] = useState('앱 문의')
   const [contactTitle, setContactTitle] = useState('')
@@ -350,6 +355,50 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       window.alert(error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.')
     } finally {
       setIsSavingNickname(false)
+    }
+  }
+
+  const handleDeleteLinkedAccount = async () => {
+    if (!authUser || isAuthPending) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      '연동 계정을 삭제할까요?\n계정 정보는 삭제되지만 기존에 작성한 커뮤니티 글, 댓글, 선수 평가는 삭제되지 않고 남아 있을 수 있습니다.\n계정 삭제 후에는 기존 작성 글을 직접 삭제할 수 없습니다.',
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setIsAuthPending(true)
+
+      const response = await fetch('/api/mypage/account', {
+        method: 'DELETE',
+      })
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.message ?? '연동 계정을 삭제하지 못했습니다.')
+      }
+
+      const supabase = getSupabaseBrowserClient()
+      await supabase.auth.signOut().catch(() => undefined)
+
+      setAuthUser(null)
+      setCommunityNickname('')
+      setIsEditingNickname(false)
+      window.alert('연동 계정이 삭제되었습니다.')
+
+      startTransition(() => {
+        router.replace('/mypage')
+        router.refresh()
+      })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '연동 계정을 삭제하지 못했습니다.')
+    } finally {
+      setIsAuthPending(false)
     }
   }
 
@@ -871,7 +920,42 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               ))}
             </div>
           ) : null}
+
         </section>
+
+        {authUser ? (
+          <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+            <button
+              type="button"
+              onClick={() => setIsAccountDeleteOpen((current) => !current)}
+              className="block w-full text-left"
+              aria-expanded={isAccountDeleteOpen}
+            >
+              <p className="text-sm font-medium" style={mutedStyle}>
+                계정 삭제
+              </p>
+            </button>
+
+            {isAccountDeleteOpen ? (
+              <div className="mt-3 space-y-3">
+                <p className="text-[12px] font-medium leading-[1.5]" style={bodyStyle}>
+                  연동 계정을 삭제하면 계정 정보는 삭제되지만 기존에 작성한 글과 댓글은 남아 있을 수 있습니다.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleDeleteLinkedAccount}
+                    disabled={isAuthPending}
+                    className="text-sm font-medium underline underline-offset-2 disabled:opacity-50"
+                    style={mutedStyle}
+                  >
+                    연동 계정 삭제
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </div>
 
       {isContactModalOpen ? (
