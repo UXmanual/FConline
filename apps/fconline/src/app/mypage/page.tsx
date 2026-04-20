@@ -1,15 +1,20 @@
 'use client'
 
-import { FormEvent, useLayoutEffect, useRef, useState } from 'react'
+import { startTransition, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import type { User } from '@supabase/supabase-js'
+import { Button } from '@/components/ui/button'
 import LoadingDots from '@/components/ui/LoadingDots'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
+import { deriveCommunityNickname, normalizeCommunityNickname, validateCommunityNickname } from '@/lib/community'
 import {
   requestAppNotificationsPermission,
   unsubscribeFromPushNotifications,
   useAppNotificationsEnabled,
 } from '@/lib/appNotifications'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 const openSourceLicenses = [
   {
@@ -138,9 +143,17 @@ export const privacyContent = [
 ]
 
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const isDarkModeEnabled = useDarkModeEnabled()
   const isAppNotificationsEnabled = useAppNotificationsEnabled()
   const privacySectionRef = useRef<HTMLElement | null>(null)
+  const [authUser, setAuthUser] = useState<User | null>(null)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [isAuthPending, setIsAuthPending] = useState(false)
+  const [communityNickname, setCommunityNickname] = useState('')
+  const [isEditingNickname, setIsEditingNickname] = useState(false)
+  const [isSavingNickname, setIsSavingNickname] = useState(false)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(initialPrivacyOpen)
@@ -152,6 +165,48 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isSendingContact, setIsSendingContact] = useState(false)
   const [isAppNotificationPending, setIsAppNotificationPending] = useState(false)
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
+  const authStatus = searchParams.get('auth')
+  const authMessage = authStatus === 'error' ? '로그인 처리 중 문제가 발생했습니다. 다시 시도해 주세요.' : null
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    let isMounted = true
+
+    const syncUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!isMounted) {
+        return
+      }
+
+      setAuthUser(user)
+      setCommunityNickname(user ? deriveCommunityNickname(user) : '')
+      setIsEditingNickname(false)
+      setIsAuthLoading(false)
+    }
+
+    void syncUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) {
+        return
+      }
+
+      setAuthUser(session?.user ?? null)
+      setCommunityNickname(session?.user ? deriveCommunityNickname(session.user) : '')
+      setIsEditingNickname(false)
+      setIsAuthLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   useLayoutEffect(() => {
     if (!initialPrivacyOpen || !privacySectionRef.current) {
@@ -192,6 +247,111 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       window.clearTimeout(timeoutId)
     }
   }, [initialPrivacyOpen])
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsAuthPending(true)
+
+      const supabase = getSupabaseBrowserClient()
+      const redirectTo = `${window.location.origin}/auth/callback?next=/mypage`
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (data.url) {
+        window.location.assign(data.url)
+        return
+      }
+
+      throw new Error('로그인 이동 URL을 만들지 못했습니다.')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Google 로그인을 시작하지 못했습니다.')
+      setIsAuthPending(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      setIsAuthPending(true)
+
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        throw error
+      }
+
+      startTransition(() => {
+        router.replace('/mypage')
+        router.refresh()
+      })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '로그아웃하지 못했습니다.')
+    } finally {
+      setIsAuthPending(false)
+    }
+  }
+
+  const handleSaveCommunityNickname = async () => {
+    if (!authUser || isSavingNickname) {
+      return
+    }
+
+    const trimmedNickname = normalizeCommunityNickname(communityNickname)
+    const validationMessage = validateCommunityNickname(trimmedNickname, authUser.email)
+
+    if (validationMessage) {
+      window.alert(validationMessage)
+      return
+    }
+
+    try {
+      setIsSavingNickname(true)
+
+      const response = await fetch('/api/mypage/nickname', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: trimmedNickname }),
+      })
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.message ?? '닉네임을 저장하지 못했습니다.')
+      }
+
+      setAuthUser((current) => {
+        if (!current) {
+          return current
+        }
+
+        return {
+          ...current,
+          user_metadata: {
+            ...current.user_metadata,
+            community_nickname: result?.nickname ?? trimmedNickname,
+          },
+        } as User
+      })
+      setCommunityNickname(result?.nickname ?? trimmedNickname)
+      setIsEditingNickname(false)
+      window.alert('닉네임을 저장했습니다.')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.')
+    } finally {
+      setIsSavingNickname(false)
+    }
+  }
 
   const handleDarkModeToggle = () => {
     const nextValue = !isDarkModeEnabled
@@ -412,22 +572,114 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </h1>
         </div>
 
-        <section
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
-          <div className="flex items-center gap-1">
-            <p className="text-sm font-semibold" style={titleStyle}>
-              <span style={{ color: '#457ae5' }}>로그인</span>
-              <span>{' 준비중입니다'}</span>
-            </p>
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold" style={titleStyle}>
+                <span style={{ color: '#457ae5' }}>구글 로그인</span>
+                <span>{authUser ? ' 연결됨' : ' 연결 전'}</span>
+              </p>
+
+              {authUser?.email ? (
+                <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium" style={mutedStyle}>
+                  <p className="max-w-[180px] truncate" title={authUser.email}>
+                    {authUser.email}
+                  </p>
+                  <span aria-hidden="true" style={{ color: 'var(--app-muted-text)', opacity: 0.4 }}>
+                    |
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isAuthPending || isSavingNickname}
+                    className="shrink-0 disabled:opacity-50"
+                    style={mutedStyle}
+                  >
+                    {isAuthPending ? '로그아웃 중...' : '로그아웃'}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {!authUser ? (
+              <p className="text-sm leading-[1.35]" style={bodyStyle}>
+                {isAuthLoading
+                  ? '로그인 상태를 확인하고 있습니다.'
+                  : '구글 계정을 연결하면 마이페이지와 개인화 기능을 더 편하게 이용할 수 있습니다.'}
+              </p>
+            ) : null}
+
+            {authMessage ? (
+              <p className="text-[12px] font-semibold leading-[1.35]" style={{ color: '#cf3f5b' }}>
+                {authMessage}
+              </p>
+            ) : null}
+
+            {authUser ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-[12px] font-medium" style={mutedStyle}>
+                  <span className="font-semibold">닉네임</span>
+                  <span aria-hidden="true" style={{ color: 'var(--app-muted-text)', opacity: 0.4 }}>
+                    |
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingNickname((current) => !current)}
+                    className="text-[12px] font-medium"
+                    style={{ color: 'var(--app-muted-text)' }}
+                  >
+                    {isEditingNickname ? '취소' : '수정'}
+                  </button>
+                </div>
+
+                {isEditingNickname ? (
+                  <div className="flex gap-2">
+                    <input
+                      value={communityNickname}
+                      onChange={(event) => setCommunityNickname(event.target.value.slice(0, 10))}
+                      maxLength={10}
+                      placeholder="닉네임"
+                      className="h-10 min-w-0 flex-1 rounded-[999px] border px-3 text-sm outline-none transition focus:bg-transparent"
+                      style={{
+                        backgroundColor: 'transparent',
+                        borderColor: 'var(--app-input-border)',
+                        color: 'var(--app-title)',
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleSaveCommunityNickname}
+                      disabled={isSavingNickname || isAuthPending}
+                      className="h-10 rounded-[999px] px-4 text-[12px] font-semibold"
+                      style={{
+                        backgroundColor: 'var(--app-action-badge-bg)',
+                        color: 'var(--app-action-badge-fg)',
+                      }}
+                    >
+                      {isSavingNickname ? '저장 중...' : '저장'}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                    {communityNickname}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isAuthPending || isAuthLoading}
+                className="h-10 rounded-xl px-4 text-sm font-semibold text-white"
+                style={{ backgroundColor: '#457ae5' }}
+              >
+                {isAuthPending ? '이동 중...' : 'Google 로그인'}
+              </Button>
+            )}
           </div>
         </section>
 
-        <section
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="text-sm leading-[1.35]" style={bodyStyle}>
@@ -450,10 +702,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </div>
         </section>
 
-        <section
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1">
               <p className="text-sm font-semibold" style={titleStyle}>
@@ -471,9 +720,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               onClick={handleDarkModeToggle}
               className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
               style={{
-                backgroundColor: isDarkModeEnabled
-                  ? '#457ae5'
-                  : '#d5dbe3',
+                backgroundColor: isDarkModeEnabled ? '#457ae5' : '#d5dbe3',
               }}
             >
               <span
@@ -534,10 +781,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </div>
         </section>
 
-        <section
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <p className="text-sm font-medium" style={mutedStyle}>
             {`버전 ${APP_VERSION} (Beta)`}
           </p>
@@ -550,20 +794,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </div>
         </section>
 
-        <section
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsLicenseOpen((current) => !current)}
             className="block w-full text-left"
             aria-expanded={isLicenseOpen}
           >
-            <p
-              className={`text-sm font-medium ${isLicenseOpen ? '' : 'underline underline-offset-2'}`}
-              style={mutedStyle}
-            >
+            <p className={`text-sm font-medium ${isLicenseOpen ? '' : 'underline underline-offset-2'}`} style={mutedStyle}>
               오픈소스 라이선스 보기
             </p>
           </button>
@@ -589,20 +827,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           ) : null}
         </section>
 
-        <section
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsTermsOpen((current) => !current)}
             className="block w-full text-left"
             aria-expanded={isTermsOpen}
           >
-            <p
-              className="text-sm font-medium"
-              style={mutedStyle}
-            >
+            <p className="text-sm font-medium" style={mutedStyle}>
               이용약관
             </p>
           </button>
@@ -618,21 +850,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           ) : null}
         </section>
 
-        <section
-          ref={privacySectionRef}
-          className="rounded-lg px-5 py-4"
-          style={{ ...cardStyle, ...surfaceTransitionStyle }}
-        >
+        <section ref={privacySectionRef} className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsPrivacyOpen((current) => !current)}
             className="block w-full text-left"
             aria-expanded={isPrivacyOpen}
           >
-            <p
-              className="text-sm font-medium"
-              style={mutedStyle}
-            >
+            <p className="text-sm font-medium" style={mutedStyle}>
               개인정보처리방침
             </p>
           </button>
@@ -673,7 +898,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </div>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>문의 유형</span>
+                  <span className="text-sm font-semibold" style={titleStyle}>
+                    문의 유형
+                  </span>
                   <div className="relative mt-2">
                     <select
                       value={contactCategory}
@@ -694,7 +921,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>제목</span>
+                  <span className="text-sm font-semibold" style={titleStyle}>
+                    제목
+                  </span>
                   <input
                     required
                     maxLength={100}
@@ -711,7 +940,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>내용</span>
+                  <span className="text-sm font-semibold" style={titleStyle}>
+                    내용
+                  </span>
                   <textarea
                     required
                     maxLength={2000}
@@ -730,7 +961,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>연락수단</span>
+                  <span className="text-sm font-semibold" style={titleStyle}>
+                    연락수단
+                  </span>
                   <input
                     maxLength={100}
                     value={contactValue}

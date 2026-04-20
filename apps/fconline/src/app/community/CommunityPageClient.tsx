@@ -8,8 +8,16 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { COMMUNITY_CATEGORIES, type CommunityCategory, type CommunityCommentItem, type CommunityPostSummary } from '@/lib/community'
+import type { User } from '@supabase/supabase-js'
+import {
+  COMMUNITY_CATEGORIES,
+  deriveCommunityNickname,
+  type CommunityCategory,
+  type CommunityCommentItem,
+  type CommunityPostSummary,
+} from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 const BOARD_TABS = ['자유게시판'] as const
 const POSTS_PER_PAGE = 5
@@ -109,7 +117,7 @@ function PostCard({ post, onDelete, onOpenComments, highlight }: { post: Communi
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
           </div>
-          {expanded ? <button type="button" aria-label="게시글 삭제" onClick={(event) => { event.stopPropagation(); onDelete(post) }} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button> : null}
+          {expanded && post.canDelete ? <button type="button" aria-label="게시글 삭제" onClick={(event) => { event.stopPropagation(); onDelete(post) }} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button> : null}
         </div>
         <h2 className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'}`} style={{ color: 'var(--app-title)' }}>{post.title}</h2>
         {expanded ? <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" /> : null}
@@ -132,10 +140,10 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map([[initialData.page, initialData]]))
   const dragPointerIdRef = useRef<number | null>(null)
   const dragStartYRef = useRef(0)
+  const [authUser, setAuthUser] = useState<User | null>(null)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [activeBoard] = useState<BoardTab>('자유게시판')
   const [selectedCategory, setSelectedCategory] = useState<CommunityCategory>('자유')
-  const [nickname, setNickname] = useState('')
-  const [password, setPassword] = useState('')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [posts, setPosts] = useState(initialData.items)
@@ -148,12 +156,12 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
   const [comments, setComments] = useState<CommunityCommentItem[]>([])
   const [isLoadingComments, setIsLoadingComments] = useState(false)
-  const [commentNickname, setCommentNickname] = useState('')
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
   const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
+  const communityNickname = authUser ? deriveCommunityNickname(authUser) : ''
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
   const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
   const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
@@ -164,7 +172,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const resetCommentSheetState = useCallback(() => {
     setActiveCommentPost(null)
     setComments([])
-    setCommentNickname('')
     setCommentDraft('')
     setCommentSheetOffsetY(0)
     setIsDraggingCommentSheet(false)
@@ -175,6 +182,42 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const closeCommentSheet = useCallback(() => {
     resetCommentSheetState()
   }, [resetCommentSheetState])
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    let isMounted = true
+
+    const syncUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!isMounted) {
+        return
+      }
+
+      setAuthUser(user)
+      setIsAuthLoading(false)
+    }
+
+    void syncUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) {
+        return
+      }
+
+      setAuthUser(session?.user ?? null)
+      setIsAuthLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     const isOverlayOpen = isComposerOpen || activeCommentPost !== null
@@ -293,6 +336,19 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     setIsDraggingCommentSheet(true)
   }
 
+  function openComposer() {
+    if (isAuthLoading) {
+      return
+    }
+
+    if (!authUser) {
+      window.alert('커뮤니티 글쓰기는 로그인 후 이용할 수 있습니다.')
+      return
+    }
+
+    setIsComposerOpen(true)
+  }
+
   async function fetchPostsPage(page: number, useSkeleton = true) {
     const cached = cacheRef.current.get(page)
     if (cached) {
@@ -332,7 +388,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     try {
       setActiveCommentPost(post)
       setComments([])
-      setCommentNickname('')
       setCommentDraft('')
       setIsLoadingComments(true)
       const response = await fetch(`/api/community/comments?postId=${post.id}`, { cache: 'no-store' })
@@ -355,22 +410,22 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (isSubmittingPost) return
-    const trimmedNickname = nickname.trim()
-    const trimmedPassword = password.trim()
+    if (!authUser) {
+      window.alert('커뮤니티 글쓰기는 로그인 후 이용할 수 있습니다.')
+      return
+    }
     const trimmedTitle = title.trim()
     const trimmedContent = content.trim()
-    if (!trimmedNickname || !trimmedPassword || !trimmedTitle || !trimmedContent || trimmedNickname.length > 10) return
+    if (!communityNickname || !trimmedTitle || !trimmedContent) return
     try {
       setIsSubmittingPost(true)
       const response = await fetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: selectedCategory, nickname: trimmedNickname, password: trimmedPassword, title: trimmedTitle, content: trimmedContent }),
+        body: JSON.stringify({ category: selectedCategory, title: trimmedTitle, content: trimmedContent }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '게시글을 저장하지 못했습니다.')
-      setNickname('')
-      setPassword('')
       setTitle('')
       setContent('')
       setSelectedCategory('자유')
@@ -388,13 +443,12 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   }
 
   async function handleDeletePost(targetPost: CommunityPostSummary) {
-    const enteredPassword = window.prompt('게시글 비밀번호를 입력해 주세요')
-    if (enteredPassword === null) return
+    if (!window.confirm('이 게시글을 삭제할까요?')) return
     try {
       const response = await fetch('/api/community/posts', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: targetPost.id, password: enteredPassword }),
+        body: JSON.stringify({ postId: targetPost.id }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '게시글을 삭제하지 못했습니다.')
@@ -414,7 +468,11 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!activeCommentPost) return
-    const trimmedCommentNickname = commentNickname.trim() || '익명'
+    const trimmedCommentNickname = communityNickname || '익명'
+    if (!authUser) {
+      window.alert('커뮤니티 댓글 작성은 로그인 후 이용할 수 있습니다.')
+      return
+    }
     const trimmedComment = commentDraft.trim()
     if (!trimmedComment) return
     try {
@@ -427,7 +485,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       if (!response.ok) throw new Error(result.message ?? '댓글을 저장하지 못했습니다.')
       const nextComment = result.item as CommunityCommentItem
       setComments((current) => [nextComment, ...current])
-      setCommentNickname('')
       setCommentDraft('')
       setPosts((current) => current.map((post) => post.id === activeCommentPost.id ? { ...post, commentCount: post.commentCount + 1 } : post))
       setActiveCommentPost((current) => (current ? { ...current, commentCount: current.commentCount + 1 } : current))
@@ -441,6 +498,43 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       commentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 저장하지 못했습니다.')
+    }
+  }
+
+  async function handleDeleteComment(targetComment: CommunityCommentItem) {
+    if (!window.confirm('이 댓글을 삭제할까요?')) return
+
+    try {
+      const response = await fetch('/api/community/comments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId: targetComment.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message ?? '댓글을 삭제하지 못했습니다.')
+
+      setComments((current) => current.filter((comment) => comment.id !== targetComment.id))
+      setPosts((current) =>
+        current.map((post) =>
+          activeCommentPost && post.id === activeCommentPost.id
+            ? { ...post, commentCount: Math.max(0, post.commentCount - 1) }
+            : post,
+        ),
+      )
+      setActiveCommentPost((current) =>
+        current ? { ...current, commentCount: Math.max(0, current.commentCount - 1) } : current,
+      )
+      const cached = cacheRef.current.get(currentPage)
+      if (cached && activeCommentPost) {
+        cacheRef.current.set(currentPage, {
+          ...cached,
+          items: cached.items.map((post) =>
+            post.id === activeCommentPost.id ? { ...post, commentCount: Math.max(0, post.commentCount - 1) } : post,
+          ),
+        })
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '댓글을 삭제하지 못했습니다.')
     }
   }
 
@@ -463,8 +557,18 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
             <BoardTabButton key={tab} label={tab} count={totalCount} active={tab === activeBoard} isDarkModeEnabled={isDarkModeEnabled} />
           ))}
         </div>
-        {isLoadingPosts ? <div aria-hidden="true" className="home-image-shimmer h-9 w-[78px] shrink-0 rounded-lg" /> : <button type="button" onClick={() => setIsComposerOpen(true)} className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition" style={{ backgroundColor: '#457ae5' }}>글쓰기</button>}
+      {isLoadingPosts ? <div aria-hidden="true" className="home-image-shimmer h-9 w-[78px] shrink-0 rounded-lg" /> : <button type="button" onClick={openComposer} disabled={isAuthLoading} className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition disabled:opacity-60" style={{ backgroundColor: '#457ae5' }}>글쓰기</button>}
       </div>
+
+      {!authUser && !isAuthLoading ? (
+        <p className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+          커뮤니티 글쓰기는 Google 로그인 후 이용할 수 있습니다.
+        </p>
+      ) : authUser ? (
+        <p className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+          게시글 작성 시 닉네임은 {communityNickname}으로 표시됩니다.
+        </p>
+      ) : null}
 
       <section ref={listTopRef} className="space-y-3">
         {isLoadingPosts ? (
@@ -491,7 +595,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
           <button type="button" onClick={() => { const nextPage = Math.min(totalPages, currentPage + 1); setPageWindowStart(Math.min(maxPageWindowStart, safePageWindowStart + 1)); void goToPage(nextPage) }} disabled={currentPage === totalPages} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}>다음</button>
         </div>
 
-        <button type="button" onClick={() => setIsComposerOpen(true)} className="mx-auto mt-1 mb-2 flex items-center justify-center text-sm font-semibold text-white transition" style={{ width: '100%', height: '54px', borderRadius: '16px', backgroundColor: '#457ae5' }}>글쓰기</button>
+        <button type="button" onClick={openComposer} disabled={isAuthLoading} className="mx-auto mt-1 mb-2 flex items-center justify-center text-sm font-semibold text-white transition disabled:opacity-60" style={{ width: '100%', height: '54px', borderRadius: '16px', backgroundColor: '#457ae5' }}>글쓰기</button>
       </section>
 
       {isComposerOpen ? (
@@ -507,15 +611,9 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>닉네임</span>
-                    <input required maxLength={10} value={nickname} onChange={(event) => setNickname(event.target.value.slice(0, 10))} placeholder="닉네임" className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent" style={{ backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)', color: 'var(--app-title)' }} />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>패스워드</span>
-                    <input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="패스워드" className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent" style={{ backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)', color: 'var(--app-title)' }} />
-                  </label>
+                <div className="px-0.5">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>닉네임</p>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--app-body-text)' }}>{communityNickname}</p>
                 </div>
                 <label className="block">
                   <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>제목</span>
@@ -557,7 +655,16 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                             <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
                             <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
                           </div>
-                          {comment.ipPrefix ? <span className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{comment.ipPrefix}</span> : null}
+                          {comment.canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteComment(comment)}
+                              className="text-[12px] font-medium"
+                              style={{ color: 'var(--app-muted-text)' }}
+                            >
+                              삭제
+                            </button>
+                          ) : null}
                         </div>
                         <LinkifiedText text={comment.content} className="text-sm leading-6" />
                       </article>
@@ -568,7 +675,9 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
               <form onSubmit={handleCommentSubmit} className="border-t px-5 py-4" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}>
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 min-w-0 flex-1 items-center rounded-full pr-2" style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)', borderColor: 'transparent' }}>
-                    <input value={commentNickname} onChange={(event) => setCommentNickname(event.target.value.slice(0, 10))} placeholder="닉네임" maxLength={10} className="h-full w-[78px] bg-transparent px-4 text-sm outline-none" style={{ color: 'var(--app-title)' }} />
+                    <span className="shrink-0 px-4 text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                      {communityNickname || '로그인'}
+                    </span>
                     <span className="h-5 w-px shrink-0" style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }} />
                     <input value={commentDraft} onChange={(event) => setCommentDraft(event.target.value)} placeholder="댓글을 입력해주세요" className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none" style={{ color: 'var(--app-title)' }} />
                   </div>

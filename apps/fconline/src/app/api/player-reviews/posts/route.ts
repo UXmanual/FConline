@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server'
 import {
+  canDeleteCommunityPost,
+  deriveCommunityNickname,
   formatRelativeTime,
   getKoreaTimestampString,
   getIpPrefixFromHeader,
   hashPassword,
-  verifyPassword,
   type CommunityPostSummary,
 } from '@/lib/community'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
+import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const DEFAULT_PAGE = 1
@@ -19,6 +21,8 @@ type PlayerReviewPostRow = {
   player_id: string
   player_name: string
   nickname: string
+  author_user_id?: string | null
+  password_hash?: string | null
   ip_prefix?: string | null
   title: string
   content: string
@@ -29,7 +33,11 @@ type CommentCountRow = {
   review_post_id: string
 }
 
-function mapPostSummary(post: PlayerReviewPostRow, commentCount: number): CommunityPostSummary {
+function mapPostSummary(
+  post: PlayerReviewPostRow,
+  commentCount: number,
+  currentUserId?: string | null,
+): CommunityPostSummary {
   return {
     id: post.id,
     category: '선수',
@@ -40,6 +48,7 @@ function mapPostSummary(post: PlayerReviewPostRow, commentCount: number): Commun
     createdAt: post.created_at,
     createdAtLabel: formatRelativeTime(post.created_at),
     commentCount,
+    canDelete: canDeleteCommunityPost(post, currentUserId),
   }
 }
 
@@ -73,10 +82,14 @@ async function fetchPostsPage(
   from: number,
   to: number,
   includeIpPrefix = true,
+  includeAuthorUserId = true,
 ) {
+  const baseFields = includeAuthorUserId
+    ? 'id, player_id, player_name, nickname, author_user_id, password_hash'
+    : 'id, player_id, player_name, nickname, password_hash'
   const selectFields = includeIpPrefix
-    ? 'id, player_id, player_name, nickname, ip_prefix, title, content, created_at'
-    : 'id, player_id, player_name, nickname, title, content, created_at'
+    ? `${baseFields}, ip_prefix, title, content, created_at`
+    : `${baseFields}, title, content, created_at`
 
   const response = await supabase
     .from('player_review_posts')
@@ -89,7 +102,11 @@ async function fetchPostsPage(
     return response
   }
 
-  return fetchPostsPage(supabase, playerId, from, to, false)
+  if (includeAuthorUserId) {
+    return fetchPostsPage(supabase, playerId, from, to, includeIpPrefix, false)
+  }
+
+  return fetchPostsPage(supabase, playerId, from, to, false, includeAuthorUserId)
 }
 
 async function resolvePageForPost(
@@ -158,9 +175,13 @@ export async function GET(request: NextRequest) {
       return Response.json({ message: 'playerId가 필요합니다.' }, { status: 400 })
     }
 
+    const authSupabase = await createSupabaseSsrClient()
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser()
+
     const supabase = createSupabaseAdminClient()
-    const resolvedPage =
-      (await resolvePageForPost(supabase, playerId, postId, pageSize)) ?? requestedPage
+    const resolvedPage = (await resolvePageForPost(supabase, playerId, postId, pageSize)) ?? requestedPage
     const from = (resolvedPage - 1) * pageSize
     const to = resolvedPage * pageSize - 1
     const { data: posts, error: postsError, count } = await fetchPostsPage(supabase, playerId, from, to)
@@ -175,7 +196,7 @@ export async function GET(request: NextRequest) {
       typedPosts.map((post) => post.id),
     )
 
-    const items = typedPosts.map((post) => mapPostSummary(post, commentCountMap.get(post.id) ?? 0))
+    const items = typedPosts.map((post) => mapPostSummary(post, commentCountMap.get(post.id) ?? 0, user?.id))
 
     return Response.json({
       items,
@@ -194,6 +215,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authSupabase = await createSupabaseSsrClient()
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser()
+
+    if (!user) {
+      return Response.json({ message: '로그인한 사용자만 선수평가를 작성할 수 있습니다.' }, { status: 401 })
+    }
+
     const body = await request.json()
     const ipPrefix =
       getIpPrefixFromHeader(request.headers.get('x-forwarded-for')) ??
@@ -201,12 +231,11 @@ export async function POST(request: NextRequest) {
       getIpPrefixFromHeader(request.headers.get('cf-connecting-ip'))
     const playerId = String(body.playerId ?? '').trim()
     const playerName = String(body.playerName ?? '').trim()
-    const nickname = String(body.nickname ?? '').trim()
-    const password = String(body.password ?? '').trim()
+    const nickname = deriveCommunityNickname(user)
     const title = String(body.title ?? '').trim()
     const content = String(body.content ?? '').trim()
 
-    if (!playerId || !playerName || !nickname || !password || !title || !content) {
+    if (!playerId || !playerName || !nickname || !title || !content) {
       return Response.json({ message: '입력값을 다시 확인해 주세요.' }, { status: 400 })
     }
 
@@ -215,7 +244,8 @@ export async function POST(request: NextRequest) {
       player_id: playerId,
       player_name: playerName,
       nickname,
-      password_hash: hashPassword(password),
+      author_user_id: user.id,
+      password_hash: hashPassword(user.id),
       title,
       content,
       created_at: getKoreaTimestampString(),
@@ -225,7 +255,7 @@ export async function POST(request: NextRequest) {
     let response = await supabase
       .from('player_review_posts')
       .insert(insertPayload)
-      .select('id, player_id, player_name, nickname, ip_prefix, title, content, created_at')
+      .select('id, player_id, player_name, nickname, author_user_id, ip_prefix, title, content, created_at')
       .single()
 
     if (response.error) {
@@ -248,7 +278,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '선수 평가를 등록하지 못했습니다.' }, { status: 500 })
     }
 
-    const item = mapPostSummary(response.data as PlayerReviewPostRow, 0)
+    const item = mapPostSummary(response.data as PlayerReviewPostRow, 0, user.id)
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }
@@ -261,27 +291,45 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authSupabase = await createSupabaseSsrClient()
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser()
+
+    if (!user) {
+      return Response.json({ message: '로그인한 사용자만 선수평가를 삭제할 수 있습니다.' }, { status: 401 })
+    }
+
     const body = await request.json()
     const postId = String(body.postId ?? '').trim()
-    const password = String(body.password ?? '').trim()
 
-    if (!postId || !password) {
-      return Response.json({ message: '비밀번호를 입력해 주세요.' }, { status: 400 })
+    if (!postId) {
+      return Response.json({ message: '삭제할 선수평가를 찾지 못했습니다.' }, { status: 400 })
     }
 
     const supabase = createSupabaseAdminClient()
-    const { data: post, error: postError } = await supabase
+    const primaryResponse = await supabase
       .from('player_review_posts')
-      .select('id, password_hash')
+      .select('id, author_user_id, password_hash')
       .eq('id', postId)
       .single()
+
+    const fallbackResponse = primaryResponse.error
+      ? await supabase
+          .from('player_review_posts')
+          .select('id, password_hash')
+          .eq('id', postId)
+          .single()
+      : null
+
+    const { data: post, error: postError } = fallbackResponse ?? primaryResponse
 
     if (postError || !post) {
       return Response.json({ message: '선수 평가를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    if (!verifyPassword(password, String(post.password_hash))) {
-      return Response.json({ message: '비밀번호가 일치하지 않습니다.' }, { status: 403 })
+    if (!canDeleteCommunityPost(post, user.id)) {
+      return Response.json({ message: '내가 작성한 글만 삭제할 수 있습니다.' }, { status: 403 })
     }
 
     const { error: deleteError } = await supabase.from('player_review_posts').delete().eq('id', postId)

@@ -14,6 +14,7 @@ export type CommunityPostSummary = {
   createdAt: string
   createdAtLabel: string
   commentCount: number
+  canDelete?: boolean
 }
 
 export type CommunityCommentItem = {
@@ -24,6 +25,7 @@ export type CommunityCommentItem = {
   content: string
   createdAt: string
   createdAtLabel: string
+  canDelete?: boolean
 }
 
 export function isCommunityCategory(value: string): value is CommunityCategory {
@@ -93,6 +95,25 @@ export function verifyPassword(password: string, hashedPassword: string) {
   return timingSafeEqual(inputHash, storedBuffer)
 }
 
+export function canDeleteCommunityPost(
+  postLike: { author_user_id?: string | null; password_hash?: string | null },
+  currentUserId?: string | null,
+) {
+  if (!currentUserId) {
+    return false
+  }
+
+  if (postLike.author_user_id && postLike.author_user_id === currentUserId) {
+    return true
+  }
+
+  if (postLike.password_hash) {
+    return verifyPassword(currentUserId, postLike.password_hash)
+  }
+
+  return false
+}
+
 export function getIpPrefixFromHeader(rawValue: string | null) {
   const firstValue = rawValue?.split(',')[0]?.trim()
 
@@ -120,4 +141,109 @@ export function getIpPrefixFromHeader(rawValue: string | null) {
   }
 
   return null
+}
+
+export function normalizeCommunityNickname(value: string) {
+  return value.trim().slice(0, 10)
+}
+
+const COMMUNITY_NICKNAME_OWNER_EMAIL = 'uxdmanual@gmail.com'
+const RESERVED_COMMUNITY_NICKNAMES = ['운영자', '관리자']
+const BLOCKED_COMMUNITY_NICKNAME_TERMS = [
+  '시발',
+  '씨발',
+  '병신',
+  '븅신',
+  '좆',
+  '존나',
+  '개새끼',
+  '지랄',
+  '걸레',
+  '보지',
+  '자지',
+  '섹스',
+  'sex',
+  'fuck',
+  'pussy',
+  'penis',
+  'boji',
+  'jaji',
+]
+
+function normalizeNicknameForModeration(value: string) {
+  return normalizeCommunityNickname(value)
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[._-]/g, '')
+}
+
+export function canBypassCommunityNicknamePolicy(email?: string | null) {
+  return email?.trim().toLowerCase() === COMMUNITY_NICKNAME_OWNER_EMAIL
+}
+
+export function validateCommunityNickname(value: string, email?: string | null) {
+  const normalized = normalizeCommunityNickname(value)
+
+  if (!normalized) {
+    return '닉네임을 입력해 주세요.'
+  }
+
+  if (canBypassCommunityNicknamePolicy(email)) {
+    return null
+  }
+
+  const moderationTarget = normalizeNicknameForModeration(normalized)
+
+  if (
+    RESERVED_COMMUNITY_NICKNAMES.some(
+      (nickname) => normalizeNicknameForModeration(nickname) === moderationTarget,
+    )
+  ) {
+    return '사용할 수 없는 닉네임입니다.'
+  }
+
+  if (BLOCKED_COMMUNITY_NICKNAME_TERMS.some((term) => moderationTarget.includes(term))) {
+    return '사용할 수 없는 닉네임입니다.'
+  }
+
+  return null
+}
+
+export function deriveCommunityNickname(userLike: {
+  email?: string | null
+  user_metadata?: { community_nickname?: unknown; full_name?: unknown; name?: unknown } | null
+}) {
+  const metadataNickname = userLike.user_metadata?.community_nickname
+  if (typeof metadataNickname === 'string') {
+    const normalized = normalizeCommunityNickname(metadataNickname)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  const metadataFullName = userLike.user_metadata?.full_name
+  if (typeof metadataFullName === 'string') {
+    const normalized = normalizeCommunityNickname(metadataFullName)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  const metadataName = userLike.user_metadata?.name
+  if (typeof metadataName === 'string') {
+    const normalized = normalizeCommunityNickname(metadataName)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  const emailPrefix = userLike.email?.split('@')[0]
+  if (emailPrefix) {
+    const normalized = normalizeCommunityNickname(emailPrefix)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return 'Google 사용자'
 }

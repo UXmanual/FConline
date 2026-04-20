@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
-import { formatRelativeTime, type CommunityPostSummary } from '@/lib/community'
+import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { canDeleteCommunityPost, formatRelativeTime, type CommunityPostSummary } from '@/lib/community'
 import CommunityPageClient from './CommunityPageClient'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,8 @@ type PostRow = {
   id: string
   category: string
   nickname: string
+  author_user_id?: string | null
+  password_hash?: string | null
   ip_prefix?: string | null
   title: string
   content: string
@@ -30,12 +33,27 @@ type InitialCommunityData = {
 
 async function fetchInitialPosts(): Promise<InitialCommunityData> {
   try {
+    const authSupabase = await createSupabaseSsrClient()
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser()
     const supabase = createSupabaseAdminClient()
-    const { data: posts, error: postsError, count } = await supabase
+    const primaryResponse = await supabase
       .from('community_posts')
-      .select('id, category, nickname, ip_prefix, title, content, created_at', { count: 'exact' })
+      .select('id, category, nickname, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(0, POSTS_PER_PAGE - 1)
+
+    const fallbackResponse = primaryResponse.error
+      ? await supabase
+        .from('community_posts')
+        .select('id, category, nickname, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(0, POSTS_PER_PAGE - 1)
+      : null
+
+    const response = fallbackResponse ?? primaryResponse
+    const { data: posts, error: postsError, count } = response
 
     if (postsError || !posts) {
       return { items: [], totalCount: 0, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
@@ -61,6 +79,7 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       createdAt: post.created_at,
       createdAtLabel: formatRelativeTime(post.created_at),
       commentCount: commentCountMap.get(post.id) ?? 0,
+      canDelete: canDeleteCommunityPost(post, user?.id),
     }))
 
     return {

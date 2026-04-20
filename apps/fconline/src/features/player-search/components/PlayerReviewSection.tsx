@@ -1,8 +1,18 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import type { User } from '@supabase/supabase-js'
 import SelectChevron from '@/components/ui/SelectChevron'
-import { type CommunityPostSummary } from '@/lib/community'
+import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
+import { useDarkModeEnabled } from '@/lib/darkMode'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
@@ -44,8 +54,27 @@ function ReviewSkeletonList({ rows = 5 }: { rows?: number }) {
             <div className="home-image-shimmer h-3.5 w-8 rounded-full" />
           </div>
           <div className="home-image-shimmer mt-3 h-4 w-[72%] rounded-full" />
-          <div className="home-image-shimmer mt-3 h-3.5 w-[88%] rounded-full" />
-          <div className="home-image-shimmer mt-2 h-3.5 w-[64%] rounded-full" />
+          <div className="mt-3 inline-flex items-center gap-1">
+            <div className="home-image-shimmer h-3.5 w-8 rounded-full" />
+            <div className="home-image-shimmer h-3.5 w-4 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CommentSheetSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, index) => (
+        <div key={index} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="home-image-shimmer h-4 w-16 rounded-full" />
+            <div className="home-image-shimmer h-3.5 w-12 rounded-full" />
+          </div>
+          <div className="home-image-shimmer h-3.5 w-[82%] rounded-full" />
+          <div className="home-image-shimmer h-3.5 w-[60%] rounded-full" />
         </div>
       ))}
     </div>
@@ -55,10 +84,12 @@ function ReviewSkeletonList({ rows = 5 }: { rows?: number }) {
 function ReviewPostCard({
   post,
   onDelete,
+  onOpenComments,
   highlight,
 }: {
   post: CommunityPostSummary
   onDelete: (post: CommunityPostSummary) => void
+  onOpenComments: (post: CommunityPostSummary) => void
   highlight?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -76,64 +107,79 @@ function ReviewPostCard({
       }}
       onClick={() => setExpanded((current) => !current)}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className="inline-flex h-7 items-center rounded-lg px-3 text-[12px] font-semibold"
-            style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
-          >
-            선수 평가
-          </span>
-          <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>
-            {post.nickname}
-          </span>
-          <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
-            ·
-          </span>
-          <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
-            {post.createdAtLabel}
-          </span>
+      <div className="min-w-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex h-7 items-center rounded-lg px-3 text-[12px] font-semibold"
+              style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
+            >
+              선수 평가
+            </span>
+            <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>
+              {post.nickname}
+            </span>
+            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
+              ·
+            </span>
+            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
+              {post.createdAtLabel}
+            </span>
+          </div>
+
+          {expanded && post.canDelete ? (
+            <button
+              type="button"
+              className="shrink-0 text-[12px] font-medium leading-none"
+              style={{ color: 'var(--app-muted-text)' }}
+              onClick={(event) => {
+                event.stopPropagation()
+                onDelete(post)
+              }}
+            >
+              삭제
+            </button>
+          ) : null}
         </div>
 
-        {expanded ? (
-          <button
-            type="button"
-            className="shrink-0 text-[12px] font-medium leading-none"
-            style={{ color: 'var(--app-muted-text)' }}
-            onClick={(event) => {
-              event.stopPropagation()
-              onDelete(post)
-            }}
-          >
-            삭제
-          </button>
-        ) : null}
+        <h2
+          className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${
+            expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'
+          }`}
+          style={{ color: 'var(--app-title)' }}
+        >
+          {cardLevelLabel ? <span style={{ color: '#457ae5' }}>{`[${cardLevelLabel}] `}</span> : null}
+          <span>{titleBody}</span>
+        </h2>
+
+        <p
+          className={`mt-3 text-sm leading-6 ${
+            expanded ? 'whitespace-pre-wrap break-words' : 'line-clamp-2 break-words'
+          }`}
+          style={{ color: 'var(--app-body-text)' }}
+        >
+          {post.content}
+        </p>
       </div>
 
-      <h2
-        className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${
-          expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'
-        }`}
-        style={{ color: 'var(--app-title)' }}
-      >
-        {cardLevelLabel ? <span style={{ color: '#457ae5' }}>{`[${cardLevelLabel}] `}</span> : null}
-        <span>{titleBody}</span>
-      </h2>
-
-      <p
-        className={`mt-3 text-sm leading-6 ${
-          expanded ? 'whitespace-pre-wrap break-words' : 'line-clamp-2 break-words'
-        }`}
-        style={{ color: 'var(--app-body-text)' }}
-      >
-        {post.content}
-      </p>
-
-      {post.ipPrefix ? (
-        <div className="mt-3 text-right text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
-          {post.ipPrefix}
-        </div>
-      ) : null}
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onOpenComments(post)
+          }}
+          className="inline-flex items-center gap-1 text-[12px] font-medium"
+        >
+          <span style={{ color: 'var(--app-title)' }}>댓글</span>
+          <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
+        </button>
+        {post.ipPrefix ? (
+          <span className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+            {post.ipPrefix}
+          </span>
+        ) : null}
+      </div>
     </article>
   )
 }
@@ -146,10 +192,14 @@ export default function PlayerReviewSection({
   onTotalCountChange,
   initialHighlightedPostId = null,
 }: Props) {
+  const isDarkModeEnabled = useDarkModeEnabled()
+  const commentsScrollRef = useRef<HTMLDivElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map())
-  const [nickname, setNickname] = useState('')
-  const [password, setPassword] = useState('')
+  const dragPointerIdRef = useRef<number | null>(null)
+  const dragStartYRef = useRef(0)
+  const [authUser, setAuthUser] = useState<User | null>(null)
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [selectedCardLevel, setSelectedCardLevel] = useState(defaultCardLevel)
@@ -161,12 +211,26 @@ export default function PlayerReviewSection({
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [isSubmittingPost, setIsSubmittingPost] = useState(false)
+  const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
+  const [comments, setComments] = useState<CommunityCommentItem[]>([])
+  const [isLoadingComments, setIsLoadingComments] = useState(false)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
+  const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
+  const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
+  const reviewNickname = authUser ? deriveCommunityNickname(authUser) : ''
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
   const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
   const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
   const pageGroupEnd = Math.min(totalPages, safePageWindowStart + MAX_VISIBLE_PAGES - 1)
-  const visiblePages = Array.from({ length: pageGroupEnd - safePageWindowStart + 1 }, (_, index) => safePageWindowStart + index)
+  const visiblePages = Array.from(
+    { length: pageGroupEnd - safePageWindowStart + 1 },
+    (_, index) => safePageWindowStart + index,
+  )
+  const sortedComments = [...comments].sort(
+    (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  )
 
   useEffect(() => {
     onTotalCountChange?.(totalCount)
@@ -179,83 +243,82 @@ export default function PlayerReviewSection({
     window.sessionStorage.removeItem(PLAYER_QUERY_CACHE_KEY)
   }
 
+  const resetCommentSheetState = useCallback(() => {
+    setActiveCommentPost(null)
+    setComments([])
+    setCommentDraft('')
+    setCommentSheetOffsetY(0)
+    setIsDraggingCommentSheet(false)
+    setIsCommentSheetVisible(false)
+    dragPointerIdRef.current = null
+  }, [])
+
+  const closeCommentSheet = useCallback(() => {
+    resetCommentSheetState()
+  }, [resetCommentSheetState])
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    let isMounted = true
+
+    const syncUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!isMounted) {
+        return
+      }
+
+      setAuthUser(user)
+      setIsAuthLoading(false)
+    }
+
+    void syncUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) {
+        return
+      }
+
+      setAuthUser(session?.user ?? null)
+      setIsAuthLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    const isOverlayOpen = isComposerOpen || activeCommentPost !== null
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
+    const previousOverflow = document.body.style.overflow
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior
+
+    if (isOverlayOpen) {
+      document.documentElement.style.overflow = 'hidden'
+      document.documentElement.style.overscrollBehavior = 'none'
+      document.body.style.overflow = 'hidden'
+      document.body.style.overscrollBehavior = 'none'
+    }
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior
+      document.body.style.overflow = previousOverflow
+      document.body.style.overscrollBehavior = previousOverscrollBehavior
+    }
+  }, [activeCommentPost, isComposerOpen])
+
   useEffect(() => {
     setSelectedCardLevel(defaultCardLevel)
     setAiSelectedCardLevel(defaultCardLevel)
   }, [defaultCardLevel, playerId])
-
-  const aiReviewSummary = aiReviewSummariesByLevel?.[aiSelectedCardLevel] ?? null
-
-  const fetchPostsPage = useCallback(async (
-    page: number,
-    options?: {
-      useSkeleton?: boolean
-      highlightPostId?: string | null
-    },
-  ) => {
-    const useSkeleton = options?.useSkeleton ?? true
-    const highlightPostId = options?.highlightPostId ?? null
-    const shouldBypassCache = Boolean(highlightPostId)
-    const cached = shouldBypassCache ? null : cacheRef.current.get(page)
-
-    if (cached) {
-      setPosts(cached.items)
-      setTotalCount(cached.totalCount)
-      setCurrentPage(cached.page)
-      setPageWindowStart(Math.max(1, Math.min(cached.page, Math.max(1, Math.ceil(cached.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1))))
-      setIsLoadingPosts(false)
-      return
-    }
-
-    try {
-      setIsLoadingPosts(useSkeleton)
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(POSTS_PER_PAGE),
-        playerId,
-      })
-
-      if (highlightPostId) {
-        params.set('postId', highlightPostId)
-      }
-
-      const response = await fetch(`/api/player-reviews/posts?${params.toString()}`, { cache: 'no-store' })
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.message ?? '게시글을 불러오지 못했습니다.')
-      }
-
-      const data: CommunityPageData = {
-        items: result.items ?? [],
-        totalCount: result.totalCount ?? 0,
-        page: result.page ?? page,
-        pageSize: result.pageSize ?? POSTS_PER_PAGE,
-      }
-
-      cacheRef.current.set(data.page, data)
-      setPosts(data.items)
-      setTotalCount(data.totalCount)
-      setCurrentPage(data.page)
-      setPageWindowStart(
-        Math.max(1, Math.min(data.page, Math.max(1, Math.ceil(data.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1))),
-      )
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.')
-    } finally {
-      setIsLoadingPosts(false)
-    }
-  }, [playerId])
-
-  useEffect(() => {
-    cacheRef.current.clear()
-    setPosts([])
-    setTotalCount(0)
-    setCurrentPage(1)
-    setPageWindowStart(1)
-    setHighlightedPostId(initialHighlightedPostId)
-    void fetchPostsPage(1, { highlightPostId: initialHighlightedPostId })
-  }, [fetchPostsPage, initialHighlightedPostId, playerId])
 
   useEffect(() => {
     if (!highlightedPostId) return
@@ -268,8 +331,151 @@ export default function PlayerReviewSection({
     return () => window.cancelAnimationFrame(frameId)
   }, [highlightedPostId, posts])
 
+  useEffect(() => {
+    if (!activeCommentPost) return
+    setCommentSheetOffsetY(0)
+    setIsCommentSheetVisible(false)
+    const frameId = window.requestAnimationFrame(() => setIsCommentSheetVisible(true))
+    return () => window.cancelAnimationFrame(frameId)
+  }, [activeCommentPost])
+
+  useEffect(() => {
+    if (!isDraggingCommentSheet) return
+
+    function handlePointerMove(event: PointerEvent) {
+      if (dragPointerIdRef.current !== event.pointerId) return
+      setCommentSheetOffsetY(Math.max(0, event.clientY - dragStartYRef.current))
+    }
+
+    function handlePointerEnd(event: PointerEvent) {
+      if (dragPointerIdRef.current !== event.pointerId) return
+      dragPointerIdRef.current = null
+      setIsDraggingCommentSheet(false)
+
+      if (commentSheetOffsetY > 96) {
+        closeCommentSheet()
+        return
+      }
+
+      setCommentSheetOffsetY(0)
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerEnd)
+    window.addEventListener('pointercancel', handlePointerEnd)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerEnd)
+      window.removeEventListener('pointercancel', handlePointerEnd)
+    }
+  }, [closeCommentSheet, commentSheetOffsetY, isDraggingCommentSheet])
+
+  const aiReviewSummary = aiReviewSummariesByLevel?.[aiSelectedCardLevel] ?? null
+
+  const fetchPostsPage = useCallback(
+    async (
+      page: number,
+      options?: {
+        useSkeleton?: boolean
+        highlightPostId?: string | null
+      },
+    ) => {
+      const useSkeleton = options?.useSkeleton ?? true
+      const highlightPostId = options?.highlightPostId ?? null
+      const shouldBypassCache = Boolean(highlightPostId)
+      const cached = shouldBypassCache ? null : cacheRef.current.get(page)
+
+      if (cached) {
+        setPosts(cached.items)
+        setTotalCount(cached.totalCount)
+        setCurrentPage(cached.page)
+        setPageWindowStart(
+          Math.max(
+            1,
+            Math.min(cached.page, Math.max(1, Math.ceil(cached.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1)),
+          ),
+        )
+        setIsLoadingPosts(false)
+        return
+      }
+
+      try {
+        setIsLoadingPosts(useSkeleton)
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(POSTS_PER_PAGE),
+          playerId,
+        })
+
+        if (highlightPostId) {
+          params.set('postId', highlightPostId)
+        }
+
+        const response = await fetch(`/api/player-reviews/posts?${params.toString()}`, { cache: 'no-store' })
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.message ?? '선수 평가를 불러오지 못했습니다.')
+        }
+
+        const data: CommunityPageData = {
+          items: result.items ?? [],
+          totalCount: result.totalCount ?? 0,
+          page: result.page ?? page,
+          pageSize: result.pageSize ?? POSTS_PER_PAGE,
+        }
+
+        cacheRef.current.set(data.page, data)
+        setPosts(data.items)
+        setTotalCount(data.totalCount)
+        setCurrentPage(data.page)
+        setPageWindowStart(
+          Math.max(
+            1,
+            Math.min(data.page, Math.max(1, Math.ceil(data.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1)),
+          ),
+        )
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : '선수 평가를 불러오지 못했습니다.')
+      } finally {
+        setIsLoadingPosts(false)
+      }
+    },
+    [playerId],
+  )
+
+  useEffect(() => {
+    cacheRef.current.clear()
+    setPosts([])
+    setTotalCount(0)
+    setCurrentPage(1)
+    setPageWindowStart(1)
+    setHighlightedPostId(initialHighlightedPostId)
+    void fetchPostsPage(1, { highlightPostId: initialHighlightedPostId })
+  }, [fetchPostsPage, initialHighlightedPostId, playerId])
+
   function scrollToListTop() {
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function handleCommentSheetDragStart(event: ReactPointerEvent<HTMLElement>) {
+    dragPointerIdRef.current = event.pointerId
+    dragStartYRef.current = event.clientY - commentSheetOffsetY
+    setIsDraggingCommentSheet(true)
+  }
+
+  function openComposer() {
+    if (isAuthLoading) {
+      return
+    }
+
+    if (!authUser) {
+      window.alert('선수평가 작성은 로그인 후 이용할 수 있습니다.')
+      return
+    }
+
+    setIsComposerOpen(true)
   }
 
   async function goToPage(page: number) {
@@ -280,16 +486,41 @@ export default function PlayerReviewSection({
     scrollToListTop()
   }
 
+  async function loadComments(post: CommunityPostSummary) {
+    try {
+      setActiveCommentPost(post)
+      setComments([])
+      setCommentDraft('')
+      setIsLoadingComments(true)
+      const response = await fetch(`/api/player-reviews/comments?postId=${post.id}`, { cache: 'no-store' })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message ?? '선수평가 댓글을 불러오지 못했습니다.')
+      }
+
+      setComments(result.items ?? [])
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '선수평가 댓글을 불러오지 못했습니다.')
+      closeCommentSheet()
+    } finally {
+      setIsLoadingComments(false)
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (isSubmittingPost) return
 
-    const trimmedNickname = nickname.trim()
-    const trimmedPassword = password.trim()
+    if (!authUser) {
+      window.alert('선수평가 작성은 로그인 후 이용할 수 있습니다.')
+      return
+    }
+
     const trimmedTitle = title.trim()
     const trimmedContent = content.trim()
 
-    if (!trimmedNickname || !trimmedPassword || !trimmedTitle || !trimmedContent || trimmedNickname.length > 10) {
+    if (!reviewNickname || !trimmedTitle || !trimmedContent) {
       return
     }
 
@@ -299,10 +530,7 @@ export default function PlayerReviewSection({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          category: '선수',
           playerName,
-          nickname: trimmedNickname,
-          password: trimmedPassword,
           title: `[${selectedCardLevel}카] ${trimmedTitle}`,
           content: trimmedContent,
           playerId,
@@ -311,11 +539,9 @@ export default function PlayerReviewSection({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.message ?? '게시글을 등록하지 못했습니다.')
+        throw new Error(result.message ?? '선수 평가를 등록하지 못했습니다.')
       }
 
-      setNickname('')
-      setPassword('')
       setTitle('')
       setContent('')
       setIsComposerOpen(false)
@@ -326,26 +552,31 @@ export default function PlayerReviewSection({
       setPageWindowStart(1)
       await fetchPostsPage(1, { useSkeleton: false })
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : '게시글을 등록하지 못했습니다.')
+      window.alert(error instanceof Error ? error.message : '선수 평가를 등록하지 못했습니다.')
     } finally {
       setIsSubmittingPost(false)
     }
   }
 
   async function handleDeletePost(targetPost: CommunityPostSummary) {
-    const enteredPassword = window.prompt('게시글 비밀번호를 입력해 주세요.')
-    if (enteredPassword === null) return
+    if (!window.confirm('이 선수평가를 삭제할까요?')) {
+      return
+    }
 
     try {
       const response = await fetch('/api/player-reviews/posts', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: targetPost.id, password: enteredPassword }),
+        body: JSON.stringify({ postId: targetPost.id }),
       })
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.message ?? '게시글을 삭제하지 못했습니다.')
+        throw new Error(result.message ?? '선수 평가를 삭제하지 못했습니다.')
+      }
+
+      if (activeCommentPost?.id === targetPost.id) {
+        closeCommentSheet()
       }
 
       invalidatePlayerSearchCaches()
@@ -357,7 +588,97 @@ export default function PlayerReviewSection({
       setPageWindowStart((current) => Math.min(current, Math.max(1, nextTotalPages - MAX_VISIBLE_PAGES + 1)))
       await fetchPostsPage(targetPage, { useSkeleton: false })
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : '게시글을 삭제하지 못했습니다.')
+      window.alert(error instanceof Error ? error.message : '선수 평가를 삭제하지 못했습니다.')
+    }
+  }
+
+  async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!activeCommentPost) return
+
+    if (!authUser) {
+      window.alert('선수평가 댓글 작성은 로그인 후 이용할 수 있습니다.')
+      return
+    }
+
+    const trimmedComment = commentDraft.trim()
+    if (!trimmedComment) return
+
+    try {
+      const response = await fetch('/api/player-reviews/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: activeCommentPost.id, content: trimmedComment }),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message ?? '선수평가 댓글을 저장하지 못했습니다.')
+      }
+
+      const nextComment = result.item as CommunityCommentItem
+      setComments((current) => [nextComment, ...current])
+      setCommentDraft('')
+      setPosts((current) =>
+        current.map((post) => (post.id === activeCommentPost.id ? { ...post, commentCount: post.commentCount + 1 } : post)),
+      )
+      setActiveCommentPost((current) =>
+        current ? { ...current, commentCount: current.commentCount + 1 } : current,
+      )
+      const cached = cacheRef.current.get(currentPage)
+      if (cached) {
+        cacheRef.current.set(currentPage, {
+          ...cached,
+          items: cached.items.map((post) =>
+            post.id === activeCommentPost.id ? { ...post, commentCount: post.commentCount + 1 } : post,
+          ),
+        })
+      }
+      commentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '선수평가 댓글을 저장하지 못했습니다.')
+    }
+  }
+
+  async function handleDeleteComment(targetComment: CommunityCommentItem) {
+    if (!window.confirm('이 댓글을 삭제할까요?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/player-reviews/comments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId: targetComment.id }),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message ?? '선수평가 댓글을 삭제하지 못했습니다.')
+      }
+
+      setComments((current) => current.filter((comment) => comment.id !== targetComment.id))
+      setPosts((current) =>
+        current.map((post) =>
+          activeCommentPost && post.id === activeCommentPost.id
+            ? { ...post, commentCount: Math.max(0, post.commentCount - 1) }
+            : post,
+        ),
+      )
+      setActiveCommentPost((current) =>
+        current ? { ...current, commentCount: Math.max(0, current.commentCount - 1) } : current,
+      )
+      const cached = cacheRef.current.get(currentPage)
+      if (cached && activeCommentPost) {
+        cacheRef.current.set(currentPage, {
+          ...cached,
+          items: cached.items.map((post) =>
+            post.id === activeCommentPost.id ? { ...post, commentCount: Math.max(0, post.commentCount - 1) } : post,
+          ),
+        })
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '선수평가 댓글을 삭제하지 못했습니다.')
     }
   }
 
@@ -375,7 +696,7 @@ export default function PlayerReviewSection({
             <p className="mt-1 text-sm leading-5" style={{ color: 'var(--app-nav-label)' }}>
               체감, 장단점, 추천 포지션을
               <br />
-              자유롭게 남겨보세요
+              자유롭게 공유해보세요
             </p>
           </div>
           {isLoadingPosts ? (
@@ -383,14 +704,25 @@ export default function PlayerReviewSection({
           ) : (
             <button
               type="button"
-              onClick={() => setIsComposerOpen(true)}
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition"
+              onClick={openComposer}
+              disabled={isAuthLoading}
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white transition disabled:opacity-60"
               style={{ backgroundColor: '#457ae5' }}
             >
               글쓰기
             </button>
           )}
         </div>
+
+        {!authUser && !isAuthLoading ? (
+          <p className="mt-3 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+            선수평가와 댓글 작성은 Google 로그인 후 이용할 수 있습니다.
+          </p>
+        ) : authUser ? (
+          <p className="mt-3 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+            선수평가와 댓글 작성 시 닉네임은 {reviewNickname}으로 표시됩니다.
+          </p>
+        ) : null}
 
         {aiReviewSummary ? (
           <div
@@ -399,7 +731,7 @@ export default function PlayerReviewSection({
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
-                🤖 AI 선수평가
+                요약 AI 선수평가
               </p>
               <div className="relative shrink-0">
                 <select
@@ -438,13 +770,22 @@ export default function PlayerReviewSection({
         ) : posts.length > 0 ? (
           posts.map((post) => (
             <div key={post.id} data-post-id={post.id}>
-              <ReviewPostCard post={post} onDelete={handleDeletePost} highlight={post.id === highlightedPostId} />
+              <ReviewPostCard
+                post={post}
+                onDelete={handleDeletePost}
+                onOpenComments={loadComments}
+                highlight={post.id === highlightedPostId}
+              />
             </div>
           ))
         ) : (
           <div
             className="rounded-lg px-5 py-8 text-center text-sm"
-            style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', color: 'var(--app-muted-text)' }}
+            style={{
+              backgroundColor: 'var(--app-card-bg)',
+              border: '1px solid var(--app-card-border)',
+              color: 'var(--app-muted-text)',
+            }}
           >
             아직 등록된 선수 평가가 없습니다.
           </div>
@@ -479,7 +820,10 @@ export default function PlayerReviewSection({
                   void goToPage(page)
                 }}
                 className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition"
-                style={{ backgroundColor: page === currentPage ? '#457ae5' : 'var(--app-surface-soft)', color: page === currentPage ? '#fff' : 'var(--app-body-text)' }}
+                style={{
+                  backgroundColor: page === currentPage ? '#457ae5' : 'var(--app-surface-soft)',
+                  color: page === currentPage ? '#fff' : 'var(--app-body-text)',
+                }}
               >
                 {page}
               </button>
@@ -503,8 +847,9 @@ export default function PlayerReviewSection({
 
         <button
           type="button"
-          onClick={() => setIsComposerOpen(true)}
-          className="mx-auto mt-1 mb-2 flex h-[54px] w-full items-center justify-center text-sm font-semibold text-white transition"
+          onClick={openComposer}
+          disabled={isAuthLoading}
+          className="mx-auto mt-1 mb-2 flex h-[54px] w-full items-center justify-center text-sm font-semibold text-white transition disabled:opacity-60"
           style={{ borderRadius: '16px', backgroundColor: '#457ae5' }}
         >
           글쓰기
@@ -528,10 +873,7 @@ export default function PlayerReviewSection({
             >
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div>
-                  <p
-                    className="text-[16px] font-semibold tracking-[-0.02em]"
-                    style={{ color: 'var(--app-title)' }}
-                  >
+                  <p className="text-[16px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
                     <span style={{ color: '#457ae5' }}>{playerName}</span>
                     <span>{' 선수 평가'}</span>
                   </p>
@@ -561,56 +903,49 @@ export default function PlayerReviewSection({
                   </label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>닉네임</span>
-                    <input
-                      required
-                      maxLength={10}
-                      value={nickname}
-                      onChange={(event) => setNickname(event.target.value.slice(0, 10))}
-                      placeholder="닉네임"
-                      className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
-                      style={{ backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)', color: 'var(--app-title)' }}
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>비밀번호</span>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="비밀번호"
-                      className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
-                      style={{ backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)', color: 'var(--app-title)' }}
-                    />
-                  </label>
+                <div className="px-0.5">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                    닉네임
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--app-body-text)' }}>
+                    {reviewNickname}
+                  </p>
                 </div>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>제목</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                    제목
+                  </span>
                   <input
                     required
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
-                    placeholder="제목을 입력해주세요"
+                    placeholder="제목을 입력해 주세요"
                     className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
-                    style={{ backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)', color: 'var(--app-title)' }}
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
                   />
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>내용</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                    내용
+                  </span>
                   <textarea
                     required
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
-                    placeholder={`${playerName} 선수 평가를 입력해주세요`}
+                    placeholder={`${playerName} 선수 평가를 입력해 주세요`}
                     rows={6}
                     className="mt-2 w-full rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition focus:bg-transparent"
-                    style={{ backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)', color: 'var(--app-title)' }}
+                    style={{
+                      backgroundColor: 'var(--app-input-bg)',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
                   />
                 </label>
 
@@ -620,7 +955,14 @@ export default function PlayerReviewSection({
                     onClick={() => setIsComposerOpen(false)}
                     disabled={isSubmittingPost}
                     className="flex items-center justify-center text-sm font-semibold transition disabled:opacity-60"
-                    style={{ flex: '1 1 0%', height: '54px', borderRadius: '14px', backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-input-border)', color: 'var(--app-muted-text)' }}
+                    style={{
+                      flex: '1 1 0%',
+                      height: '54px',
+                      borderRadius: '14px',
+                      backgroundColor: 'var(--app-card-bg)',
+                      border: '1px solid var(--app-input-border)',
+                      color: 'var(--app-muted-text)',
+                    }}
                   >
                     취소
                   </button>
@@ -631,7 +973,138 @@ export default function PlayerReviewSection({
                     className="flex items-center justify-center text-sm font-semibold text-white transition disabled:opacity-70"
                     style={{ flex: '2 1 0%', height: '54px', borderRadius: '16px', backgroundColor: '#457ae5' }}
                   >
-                    {isSubmittingPost ? '등록 중...' : '글쓰기'}
+                    {isSubmittingPost ? '등록 중..' : '글쓰기'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {activeCommentPost ? (
+        <div className="fixed inset-0 z-[70]">
+          <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
+          <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
+            <section
+              className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]"
+              style={{
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                transform: isDraggingCommentSheet
+                  ? `translateY(${commentSheetOffsetY}px)`
+                  : isCommentSheetVisible
+                    ? `translateY(${commentSheetOffsetY}px)`
+                    : 'translateY(calc(100dvh + env(safe-area-inset-bottom)))',
+                backgroundColor: 'var(--app-modal-bg)',
+                borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))',
+                boxShadow: isDarkModeEnabled
+                  ? '0 -32px 76px rgba(0, 0, 0, 0.58)'
+                  : '0 -28px 68px rgba(15, 23, 42, 0.28)',
+                willChange: 'transform',
+                transition: isDraggingCommentSheet
+                  ? 'none'
+                  : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease',
+              }}
+            >
+              <div
+                className="flex cursor-grab justify-center pt-3 active:cursor-grabbing"
+                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+                onPointerDown={handleCommentSheetDragStart}
+              >
+                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+              </div>
+              <div
+                className="cursor-grab border-b px-5 py-4 active:cursor-grabbing"
+                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}
+                onPointerDown={handleCommentSheetDragStart}
+              >
+                <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                  댓글 <span className="font-[600] text-[#457ae5]">{activeCommentPost.commentCount}</span>
+                </p>
+              </div>
+              <div
+                ref={commentsScrollRef}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
+                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+              >
+                {isLoadingComments ? (
+                  <CommentSheetSkeleton />
+                ) : sortedComments.length > 0 ? (
+                  <div className="space-y-4">
+                    {sortedComments.map((comment) => (
+                      <article key={comment.id} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                              {comment.nickname}
+                            </span>
+                            <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+                              {comment.createdAtLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {comment.canDelete ? (
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteComment(comment)}
+                                className="text-[12px] font-medium"
+                                style={{ color: 'var(--app-muted-text)' }}
+                              >
+                                삭제
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                        <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--app-body-text)' }}>
+                          {comment.content}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="py-10 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>
+                    첫 댓글을 남겨보세요.
+                  </p>
+                )}
+              </div>
+              <form
+                onSubmit={handleCommentSubmit}
+                className="border-t px-5 py-4"
+                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-11 min-w-0 flex-1 items-center rounded-full pr-2"
+                    style={{
+                      backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+                      borderColor: 'transparent',
+                    }}
+                  >
+                    <span
+                      className="shrink-0 px-4 text-sm font-medium"
+                      style={{ color: 'var(--app-title)' }}
+                    >
+                      {reviewNickname || '로그인'}
+                    </span>
+                    <span
+                      className="h-5 w-px shrink-0"
+                      style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }}
+                    />
+                    <input
+                      value={commentDraft}
+                      onChange={(event) => setCommentDraft(event.target.value)}
+                      placeholder="댓글을 입력해주세요"
+                      className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none"
+                      style={{ color: 'var(--app-title)' }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition sm:px-4"
+                    style={{ backgroundColor: '#457ae5' }}
+                  >
+                    등록
                   </button>
                 </div>
               </form>
