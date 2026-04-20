@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '18.0': [
+    'Google 로그인 안내 문구를 커뮤니티와 선수 평가 중심으로 다듬었습니다.',
+  ],
   '17.9': [
     'Google 로그인과 닉네임 기반 커뮤니티/선수평가 작성 흐름을 추가했습니다.',
   ],

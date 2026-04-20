@@ -605,7 +605,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               <p className="text-sm leading-[1.35]" style={bodyStyle}>
                 {isAuthLoading
                   ? '로그인 상태를 확인하고 있습니다.'
-                  : '구글 계정을 연결하면 마이페이지와 개인화 기능을 더 편하게 이용할 수 있습니다.'}
+                  : '구글 계정을 연결하면 커뮤니티와 선수 평가를 이용할 수 있습니다.'}
               </p>
             ) : null}
 
