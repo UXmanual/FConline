@@ -200,6 +200,7 @@ export default function PlayerReviewSection({
   const dragStartYRef = useRef(0)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [resolvedReviewNickname, setResolvedReviewNickname] = useState('')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [selectedCardLevel, setSelectedCardLevel] = useState(defaultCardLevel)
@@ -219,7 +220,7 @@ export default function PlayerReviewSection({
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
   const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
-  const reviewNickname = authUser ? deriveCommunityNickname(authUser) : ''
+  const reviewNickname = resolvedReviewNickname || (authUser ? deriveCommunityNickname(authUser) : '')
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
   const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
   const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
@@ -292,6 +293,39 @@ export default function PlayerReviewSection({
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!authUser) {
+      setResolvedReviewNickname('')
+      return
+    }
+
+    let isCancelled = false
+    const fallbackNickname = deriveCommunityNickname(authUser)
+
+    async function syncNickname() {
+      try {
+        const response = await fetch('/api/mypage/nickname', { cache: 'no-store' })
+        const result = await response.json().catch(() => null)
+
+        if (!response.ok || isCancelled) {
+          return
+        }
+
+        setResolvedReviewNickname(String(result?.nickname ?? fallbackNickname))
+      } catch {
+        if (!isCancelled) {
+          setResolvedReviewNickname(fallbackNickname)
+        }
+      }
+    }
+
+    void syncNickname()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [authUser])
 
   useEffect(() => {
     const isOverlayOpen = isComposerOpen || activeCommentPost !== null

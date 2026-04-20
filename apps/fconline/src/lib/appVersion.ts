@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '18.2': [
+    '커뮤니티와 선수 평가 작성 팝업에서 최신 닉네임이 바로 보이도록 표시 흐름을 맞췄습니다.',
+  ],
   '18.1': [
     'Google 로그인 기반 커뮤니티, 선수 평가, 계정 삭제 흐름을 정리했습니다.',
   ],

@@ -142,6 +142,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const dragStartYRef = useRef(0)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [resolvedCommunityNickname, setResolvedCommunityNickname] = useState('')
   const [activeBoard] = useState<BoardTab>('자유게시판')
   const [selectedCategory, setSelectedCategory] = useState<CommunityCategory>('자유')
   const [title, setTitle] = useState('')
@@ -161,7 +162,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
   const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
-  const communityNickname = authUser ? deriveCommunityNickname(authUser) : ''
+  const communityNickname = resolvedCommunityNickname || (authUser ? deriveCommunityNickname(authUser) : '')
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
   const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
   const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
@@ -218,6 +219,39 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!authUser) {
+      setResolvedCommunityNickname('')
+      return
+    }
+
+    let isCancelled = false
+    const fallbackNickname = deriveCommunityNickname(authUser)
+
+    async function syncNickname() {
+      try {
+        const response = await fetch('/api/mypage/nickname', { cache: 'no-store' })
+        const result = await response.json().catch(() => null)
+
+        if (!response.ok || isCancelled) {
+          return
+        }
+
+        setResolvedCommunityNickname(String(result?.nickname ?? fallbackNickname))
+      } catch {
+        if (!isCancelled) {
+          setResolvedCommunityNickname(fallbackNickname)
+        }
+      }
+    }
+
+    void syncNickname()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [authUser])
 
   useEffect(() => {
     const isOverlayOpen = isComposerOpen || activeCommentPost !== null

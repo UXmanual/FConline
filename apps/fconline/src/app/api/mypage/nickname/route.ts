@@ -93,3 +93,24 @@ export async function POST(request: NextRequest) {
     return Response.json({ message }, { status: 500 })
   }
 }
+
+export async function GET() {
+  try {
+    const authSupabase = await createSupabaseSsrClient()
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser()
+
+    if (!user) {
+      return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })
+    }
+
+    return Response.json({
+      nickname: deriveCommunityNickname(user),
+      user,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '닉네임을 불러오지 못했습니다.'
+    return Response.json({ message }, { status: 500 })
+  }
+}

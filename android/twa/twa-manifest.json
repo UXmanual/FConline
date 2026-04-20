@@ -18,8 +18,8 @@
     "path": "C:\\Users\\Rich\\FConline\\.local\\android\\fcoground-release.keystore",
     "alias": "fcoground"
   },
-  "appVersionCode": 178,
-  "appVersion": "18.1",
+  "appVersionCode": 179,
+  "appVersion": "18.2",
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://fconlinemanual.vercel.app/manifest.webmanifest",
   "fallbackType": "customtabs",
