@@ -4,9 +4,23 @@ import { createSupabaseAdminClient } from '@/lib/supabase/server'
 const TELEGRAM_API_BASE = 'https://api.telegram.org'
 const DEFAULT_CATEGORY = '앱 문의'
 
+function unwrapEnv(value?: string | null) {
+  const trimmed = value?.trim()
+
+  if (!trimmed) {
+    return ''
+  }
+
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+    return trimmed.slice(1, -1).trim()
+  }
+
+  return trimmed
+}
+
 function getTelegramConfig() {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim()
-  const chatId = process.env.TELEGRAM_CHAT_ID?.trim()
+  const botToken = unwrapEnv(process.env.TELEGRAM_BOT_TOKEN)
+  const chatId = unwrapEnv(process.env.TELEGRAM_CHAT_ID)
 
   if (!botToken || !chatId) {
     throw new Error('Missing Telegram configuration.')
@@ -51,7 +65,8 @@ async function sendTelegramMessage(text: string) {
   })
 
   if (!response.ok) {
-    throw new Error('Failed to send Telegram message.')
+    const failureText = await response.text().catch(() => '')
+    throw new Error(`Failed to send Telegram message. ${failureText}`.trim())
   }
 }
 
@@ -65,9 +80,13 @@ async function saveContactRequest(payload: {
   try {
     const supabase = createSupabaseAdminClient()
     const { error } = await supabase.from('contact_requests').insert(payload)
-    return !error
+    if (error) {
+      return { ok: false, error: error.message }
+    }
+
+    return { ok: true as const }
   } catch {
-    return false
+    return { ok: false as const, error: 'Unexpected database error.' }
   }
 }
 
@@ -88,7 +107,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '입력 길이를 다시 확인해 주세요.' }, { status: 400 })
     }
 
-    const databaseSaved = await saveContactRequest({
+    const databaseResult = await saveContactRequest({
       category,
       title,
       content,
@@ -96,18 +115,44 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     })
 
-    await sendTelegramMessage(
-      buildTelegramMessage({
-        category,
-        title,
-        content,
-        contact,
-        createdAt,
-      }),
-    )
+    let telegramDelivered = false
+    let telegramErrorMessage: string | null = null
 
-    return Response.json({ success: true, databaseSaved })
-  } catch {
+    try {
+      await sendTelegramMessage(
+        buildTelegramMessage({
+          category,
+          title,
+          content,
+          contact,
+          createdAt,
+        }),
+      )
+      telegramDelivered = true
+    } catch (error) {
+      telegramErrorMessage = error instanceof Error ? error.message : 'Unknown Telegram error.'
+      console.error('[contact] Telegram delivery failed', {
+        message: telegramErrorMessage,
+      })
+    }
+
+    if (!databaseResult.ok && !telegramDelivered) {
+      console.error('[contact] Contact request failed for both database and Telegram', {
+        databaseError: databaseResult.error,
+        telegramError: telegramErrorMessage,
+      })
+      return Response.json({ message: '문의 전송에 실패했습니다.' }, { status: 500 })
+    }
+
+    return Response.json({
+      success: true,
+      databaseSaved: databaseResult.ok,
+      telegramDelivered,
+    })
+  } catch (error) {
+    console.error('[contact] Unexpected contact request failure', {
+      message: error instanceof Error ? error.message : 'Unknown error.',
+    })
     return Response.json({ message: '문의 전송에 실패했습니다.' }, { status: 500 })
   }
 }

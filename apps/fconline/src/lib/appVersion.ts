@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '18.5': [
+    '문의하기 전송은 Telegram 전달이 지연되더라도 DB 저장이 완료되면 실패로 막히지 않도록 보완했습니다.',
+  ],
   '18.4': [
     '커뮤니티와 선수 평가 댓글 입력창의 비로그인 안내를 정리하고, 댓글 등록 중에는 중복 제출이 되지 않도록 막았습니다.',
     '커뮤니티와 선수 평가 목록/댓글 로딩 경로를 병렬 처리 중심으로 정리해 첫 응답 체감을 개선했습니다.',
