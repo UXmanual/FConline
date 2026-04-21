@@ -127,7 +127,7 @@ function ReviewPostCard({
             </span>
           </div>
 
-          {expanded && post.canDelete ? (
+          {post.canDelete ? (
             <button
               type="button"
               className="shrink-0 text-[12px] font-medium leading-none"

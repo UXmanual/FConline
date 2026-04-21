@@ -79,7 +79,7 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       createdAt: post.created_at,
       createdAtLabel: formatRelativeTime(post.created_at),
       commentCount: commentCountMap.get(post.id) ?? 0,
-      canDelete: canDeleteCommunityPost(post, user?.id),
+      canDelete: canDeleteCommunityPost(post, user?.id, user?.email),
     }))
 
     return {

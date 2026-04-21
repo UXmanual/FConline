@@ -117,7 +117,7 @@ function PostCard({ post, onDelete, onOpenComments, highlight }: { post: Communi
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
           </div>
-          {expanded && post.canDelete ? <button type="button" aria-label="게시글 삭제" onClick={(event) => { event.stopPropagation(); onDelete(post) }} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button> : null}
+          {post.canDelete ? <button type="button" aria-label="게시글 삭제" onClick={(event) => { event.stopPropagation(); onDelete(post) }} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button> : null}
         </div>
         <h2 className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'}`} style={{ color: 'var(--app-title)' }}>{post.title}</h2>
         {expanded ? <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" /> : null}
