@@ -350,7 +350,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       })
       setCommunityNickname(result?.nickname ?? trimmedNickname)
       setIsEditingNickname(false)
-      window.alert('닉네임을 저장했습니다.')
+      window.alert('닉네임이 변경되었습니다.')
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.')
     } finally {
