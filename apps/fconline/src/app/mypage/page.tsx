@@ -146,6 +146,34 @@ export const privacyContent = [
   '중요한 변경이 있는 경우 앱 또는 관련 페이지를 통해 안내합니다.',
 ]
 
+function GoogleBrandIcon() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white"
+    >
+      <svg viewBox="0 0 18 18" className="size-[18px]" role="img" aria-hidden="true">
+        <path
+          fill="#4285F4"
+          d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.56 2.68-3.86 2.68-6.62Z"
+        />
+        <path
+          fill="#34A853"
+          d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M3.97 10.71A5.41 5.41 0 0 1 3.69 9c0-.59.1-1.16.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33Z"
+        />
+        <path
+          fill="#EA4335"
+          d="M9 3.58c1.32 0 2.5.46 3.44 1.36l2.58-2.58C13.46.9 11.42 0 9 0A9 9 0 0 0 .96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
+        />
+      </svg>
+    </span>
+  )
+}
+
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -172,6 +200,17 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
   const authStatus = searchParams.get('auth')
   const authMessage = authStatus === 'error' ? '로그인 처리 중 문제가 발생했습니다. 다시 시도해 주세요.' : null
+  const googleLoginButtonStyle = isDarkModeEnabled
+    ? {
+        backgroundColor: '#131314',
+        borderColor: '#8E918F',
+        color: '#E3E3E3',
+      }
+    : {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#747775',
+        color: '#1F1F1F',
+      }
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -650,14 +689,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               ) : null}
             </div>
 
-            {!authUser ? (
-              <p className="text-sm leading-[1.35]" style={bodyStyle}>
-                {isAuthLoading
-                  ? '로그인 상태를 확인하고 있습니다.'
-                  : '구글 계정을 연결하면 커뮤니티와 선수 평가를 이용할 수 있습니다.'}
-              </p>
-            ) : null}
-
             {authMessage ? (
               <p className="text-[12px] font-semibold leading-[1.35]" style={{ color: '#cf3f5b' }}>
                 {authMessage}
@@ -715,15 +746,23 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 )}
               </div>
             ) : (
-              <Button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isAuthPending || isAuthLoading}
-                className="h-10 rounded-xl px-4 text-sm font-semibold text-white"
-                style={{ backgroundColor: '#457ae5' }}
-              >
-                {isAuthPending ? '이동 중...' : 'Google 로그인'}
-              </Button>
+              <>
+                <p className="text-sm leading-[1.35]" style={bodyStyle}>
+                  {isAuthLoading ? '로그인 상태를 확인하고 있습니다.' : '구글 로그인 후 커뮤니티·선수 평가 이용 가능'}
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isAuthPending || isAuthLoading}
+                  className="h-10 gap-0 rounded-xl border px-0 text-sm font-medium"
+                  style={googleLoginButtonStyle}
+                >
+                  <span className="flex items-center gap-[10px] pl-3 pr-3">
+                    <GoogleBrandIcon />
+                    <span className="leading-5">{isAuthPending ? '이동 중...' : 'Google 계정으로 로그인'}</span>
+                  </span>
+                </Button>
+              </>
             )}
           </div>
         </section>
