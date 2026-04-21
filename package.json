@@ -2,6 +2,7 @@
   "name": "fconline",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
+  "packageManager": "npm@11.8.0",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",

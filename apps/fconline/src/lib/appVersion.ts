@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '18.6': [
+    '마이페이지 Google 로그인 안내 문구를 다듬고 버튼 간격을 조정했습니다.',
+    '홈 컨트롤러 사용량 카드의 기준 문구를 구분선 형태로 정리하고 상위 1만명 기준으로 명확히 표시했습니다.',
+  ],
   '18.5': [
     '문의하기 전송은 Telegram 전달이 지연되더라도 DB 저장이 완료되면 실패로 막히지 않도록 보완했습니다.',
   ],

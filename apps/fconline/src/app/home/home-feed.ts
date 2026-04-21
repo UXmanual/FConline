@@ -259,7 +259,7 @@ export async function getHomeControllerUsage(): Promise<HomeControllerUsage | nu
           record: padRecord,
         },
       ],
-      basisLabel: '공식 경기 1 ON 1, 전일 12시 업데이트 기준',
+      basisLabel: '공식 경기 1 ON 1 | 전일 12시 업데이트 상위 1만명 기준',
       sourceUrl: DAILY_SQUAD_URL,
     }
   } catch {

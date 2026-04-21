@@ -103,8 +103,15 @@ export default function HomeControllerUsageCard({ usage }: Props) {
         </a>
       </div>
 
-      <p className="mt-1 text-[12px] leading-5" style={mutedStyle}>
-        {usage.basisLabel}
+      <p className="mt-1 flex flex-wrap items-center gap-y-0.5 text-[12px] leading-5" style={mutedStyle}>
+        {usage.basisLabel.split('|').map((part, i, arr) => (
+          <span key={i} className="flex items-center">
+            {part.trim()}
+            {i < arr.length - 1 && (
+              <span className="mx-2 h-2.5 w-[1px] bg-current opacity-20" aria-hidden="true" />
+            )}
+          </span>
+        ))}
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-3">

@@ -748,13 +748,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
             ) : (
               <>
                 <p className="text-sm leading-[1.35]" style={bodyStyle}>
-                  {isAuthLoading ? '로그인 상태를 확인하고 있습니다.' : '구글 로그인 후 커뮤니티·선수 평가 이용 가능'}
+                  {isAuthLoading ? '로그인 상태를 확인하고 있습니다.' : '구글 로그인하고 커뮤니티와 선수평가에 참여해요'}
                 </p>
                 <Button
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isAuthPending || isAuthLoading}
-                  className="h-10 gap-0 rounded-xl border px-0 text-sm font-medium"
+                  className="mt-2 h-10 gap-0 rounded-xl border px-0 text-sm font-medium"
                   style={googleLoginButtonStyle}
                 >
                   <span className="flex items-center gap-[10px] pl-3 pr-3">
