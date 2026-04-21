@@ -37,6 +37,7 @@ function mapPostSummary(
   post: PostRow,
   commentCount: number,
   currentUserId?: string | null,
+  currentUserEmail?: string | null,
 ): CommunityPostSummary {
   return {
     id: post.id,
@@ -48,7 +49,7 @@ function mapPostSummary(
     createdAt: post.created_at,
     createdAtLabel: formatRelativeTime(post.created_at),
     commentCount,
-    canDelete: canDeleteCommunityPost(post, currentUserId),
+    canDelete: canDeleteCommunityPost(post, currentUserId, currentUserEmail),
   }
 }
 
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
     )
 
     const items = typedPosts.map((post) =>
-      mapPostSummary(post, commentCountMap.get(post.id) ?? 0, user?.id),
+      mapPostSummary(post, commentCountMap.get(post.id) ?? 0, user?.id, user?.email),
     )
 
     return Response.json({
@@ -224,7 +225,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '게시글을 등록하지 못했습니다.' }, { status: 500 })
     }
 
-    const item = mapPostSummary(response.data as PostRow, 0, user.id)
+    const item = mapPostSummary(response.data as PostRow, 0, user.id, user.email)
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }
@@ -274,7 +275,7 @@ export async function DELETE(request: NextRequest) {
       return Response.json({ message: '게시글을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    if (!canDeleteCommunityPost(post, user.id)) {
+    if (!canDeleteCommunityPost(post, user.id, user.email)) {
       return Response.json({ message: '내가 작성한 글만 삭제할 수 있습니다.' }, { status: 403 })
     }
 

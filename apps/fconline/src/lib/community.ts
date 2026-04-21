@@ -95,12 +95,23 @@ export function verifyPassword(password: string, hashedPassword: string) {
   return timingSafeEqual(inputHash, storedBuffer)
 }
 
+const COMMUNITY_NICKNAME_OWNER_EMAIL = 'uxdmanual@gmail.com'
+
+export function isCommunityAdminEmail(email?: string | null) {
+  return email?.trim().toLowerCase() === COMMUNITY_NICKNAME_OWNER_EMAIL
+}
+
 export function canDeleteCommunityPost(
   postLike: { author_user_id?: string | null; password_hash?: string | null },
   currentUserId?: string | null,
+  currentUserEmail?: string | null,
 ) {
   if (!currentUserId) {
     return false
+  }
+
+  if (isCommunityAdminEmail(currentUserEmail)) {
+    return true
   }
 
   if (postLike.author_user_id && postLike.author_user_id === currentUserId) {
@@ -147,7 +158,6 @@ export function normalizeCommunityNickname(value: string) {
   return value.trim().slice(0, 10)
 }
 
-const COMMUNITY_NICKNAME_OWNER_EMAIL = 'uxdmanual@gmail.com'
 const RESERVED_COMMUNITY_NICKNAMES = ['운영자', '관리자']
 const BLOCKED_COMMUNITY_NICKNAME_TERMS = [
   '시발',
@@ -178,7 +188,7 @@ function normalizeNicknameForModeration(value: string) {
 }
 
 export function canBypassCommunityNicknamePolicy(email?: string | null) {
-  return email?.trim().toLowerCase() === COMMUNITY_NICKNAME_OWNER_EMAIL
+  return isCommunityAdminEmail(email)
 }
 
 export function validateCommunityNickname(value: string, email?: string | null) {

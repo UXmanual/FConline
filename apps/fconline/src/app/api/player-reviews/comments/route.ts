@@ -25,6 +25,7 @@ type PlayerReviewCommentRow = {
 function mapComment(
   comment: PlayerReviewCommentRow,
   currentUserId?: string | null,
+  currentUserEmail?: string | null,
 ): CommunityCommentItem {
   return {
     id: comment.id,
@@ -34,7 +35,7 @@ function mapComment(
     content: comment.content,
     createdAt: comment.created_at,
     createdAtLabel: formatRelativeTime(comment.created_at),
-    canDelete: canDeleteCommunityPost(comment, currentUserId),
+    canDelete: canDeleteCommunityPost(comment, currentUserId, currentUserEmail),
   }
 }
 
@@ -92,7 +93,9 @@ export async function GET(request: NextRequest) {
     }
 
     return Response.json({
-      items: ((data ?? []) as PlayerReviewCommentRow[]).map((comment) => mapComment(comment, user?.id)),
+      items: ((data ?? []) as PlayerReviewCommentRow[]).map((comment) =>
+        mapComment(comment, user?.id, user?.email),
+      ),
     })
   } catch (error) {
     if (process.env.NODE_ENV === 'development' && isMissingSupabaseConfigError(error)) {
@@ -197,7 +200,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '선수 평가 댓글을 등록하지 못했습니다.' }, { status: 500 })
     }
 
-    const item = mapComment(response.data as PlayerReviewCommentRow, user.id)
+    const item = mapComment(response.data as PlayerReviewCommentRow, user.id, user.email)
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }
@@ -272,7 +275,7 @@ export async function DELETE(request: NextRequest) {
       return Response.json({ message: '내가 작성한 댓글만 삭제할 수 있습니다.' }, { status: 403 })
     }
 
-    if (!canDeleteCommunityPost(ownershipTarget, user.id)) {
+    if (!canDeleteCommunityPost(ownershipTarget, user.id, user.email)) {
       return Response.json({ message: '내가 작성한 댓글만 삭제할 수 있습니다.' }, { status: 403 })
     }
 
