@@ -34,22 +34,22 @@ type InitialCommunityData = {
 async function fetchInitialPosts(): Promise<InitialCommunityData> {
   try {
     const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
     const supabase = createSupabaseAdminClient()
-    const primaryResponse = await supabase
+    const userPromise = authSupabase.auth.getUser()
+    const primaryResponsePromise = supabase
       .from('community_posts')
       .select('id, category, nickname, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(0, POSTS_PER_PAGE - 1)
 
+    const [{ data: { user } }, primaryResponse] = await Promise.all([userPromise, primaryResponsePromise])
+
     const fallbackResponse = primaryResponse.error
       ? await supabase
-        .from('community_posts')
-        .select('id, category, nickname, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(0, POSTS_PER_PAGE - 1)
+          .from('community_posts')
+          .select('id, category, nickname, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(0, POSTS_PER_PAGE - 1)
       : null
 
     const response = fallbackResponse ?? primaryResponse

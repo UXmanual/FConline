@@ -177,15 +177,16 @@ export async function GET(request: NextRequest) {
     }
 
     const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
-
     const supabase = createSupabaseAdminClient()
-    const resolvedPage = (await resolvePageForPost(supabase, playerId, postId, pageSize)) ?? requestedPage
+    const userPromise = authSupabase.auth.getUser()
+    const resolvedPage = postId ? (await resolvePageForPost(supabase, playerId, postId, pageSize)) ?? requestedPage : requestedPage
     const from = (resolvedPage - 1) * pageSize
     const to = resolvedPage * pageSize - 1
-    const { data: posts, error: postsError, count } = await fetchPostsPage(supabase, playerId, from, to)
+    const postsPromise = fetchPostsPage(supabase, playerId, from, to)
+    const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
+      userPromise,
+      postsPromise,
+    ])
 
     if (postsError) {
       return Response.json({ message: '선수 평가를 불러오지 못했습니다.' }, { status: 500 })

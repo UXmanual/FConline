@@ -215,6 +215,7 @@ export default function PlayerReviewSection({
   const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
   const [comments, setComments] = useState<CommunityCommentItem[]>([])
   const [isLoadingComments, setIsLoadingComments] = useState(false)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
@@ -629,6 +630,7 @@ export default function PlayerReviewSection({
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!activeCommentPost) return
+    if (isSubmittingComment) return
 
     if (!authUser) {
       window.alert('선수평가 댓글 작성은 로그인 후 이용할 수 있습니다.')
@@ -639,6 +641,7 @@ export default function PlayerReviewSection({
     if (!trimmedComment) return
 
     try {
+      setIsSubmittingComment(true)
       const response = await fetch('/api/player-reviews/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -671,6 +674,8 @@ export default function PlayerReviewSection({
       commentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '선수평가 댓글을 저장하지 못했습니다.')
+    } finally {
+      setIsSubmittingComment(false)
     }
   }
 
@@ -1115,30 +1120,36 @@ export default function PlayerReviewSection({
                       borderColor: 'transparent',
                     }}
                   >
-                    <span
-                      className="shrink-0 px-4 text-sm font-medium"
-                      style={{ color: 'var(--app-title)' }}
-                    >
-                      {reviewNickname || '로그인'}
-                    </span>
-                    <span
-                      className="h-5 w-px shrink-0"
-                      style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }}
-                    />
+                    {authUser ? (
+                      <>
+                        <span
+                          className="shrink-0 px-4 text-sm font-medium"
+                          style={{ color: 'var(--app-title)' }}
+                        >
+                          {reviewNickname}
+                        </span>
+                        <span
+                          className="h-5 w-px shrink-0"
+                          style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }}
+                        />
+                      </>
+                    ) : null}
                     <input
+                      disabled={!authUser || isSubmittingComment}
                       value={commentDraft}
                       onChange={(event) => setCommentDraft(event.target.value)}
-                      placeholder="댓글을 입력해주세요"
-                      className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none"
+                      placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'}
+                      className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none disabled:cursor-not-allowed"
                       style={{ color: 'var(--app-title)' }}
                     />
                   </div>
                   <button
+                    disabled={!authUser || isSubmittingComment}
                     type="submit"
-                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition sm:px-4"
+                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
                     style={{ backgroundColor: '#457ae5' }}
                   >
-                    등록
+                    {isSubmittingComment ? '등록 중...' : '등록'}
                   </button>
                 </div>
               </form>

@@ -82,11 +82,9 @@ export async function GET(request: NextRequest) {
     }
 
     const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
-
-    const { data, error } = await fetchCommunityComments(postId)
+    const userPromise = authSupabase.auth.getUser()
+    const commentsPromise = fetchCommunityComments(postId)
+    const [{ data: { user } }, { data, error }] = await Promise.all([userPromise, commentsPromise])
 
     if (error) {
       return Response.json({ message: '댓글을 불러오지 못했습니다.' }, { status: 500 })

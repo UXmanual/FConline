@@ -157,6 +157,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
   const [comments, setComments] = useState<CommunityCommentItem[]>([])
   const [isLoadingComments, setIsLoadingComments] = useState(false)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
@@ -327,6 +328,14 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     }
 
     let isCancelled = false
+    const schedulePrefetch =
+      typeof window !== 'undefined' && 'requestIdleCallback' in window
+        ? window.requestIdleCallback.bind(window)
+        : (callback: () => void) => window.setTimeout(callback, 500)
+    const cancelScheduledPrefetch =
+      typeof window !== 'undefined' && 'cancelIdleCallback' in window
+        ? window.cancelIdleCallback.bind(window)
+        : (handle: number) => window.clearTimeout(handle)
 
     async function prefetchNextPage() {
       try {
@@ -350,13 +359,13 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       }
     }
 
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = schedulePrefetch(() => {
       void prefetchNextPage()
-    }, 0)
+    })
 
     return () => {
       isCancelled = true
-      window.clearTimeout(timeoutId)
+      cancelScheduledPrefetch(timeoutId)
     }
   }, [currentPage, isLoadingPosts, totalCount, totalPages])
 
@@ -502,6 +511,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!activeCommentPost) return
+    if (isSubmittingComment) return
     const trimmedCommentNickname = communityNickname || '익명'
     if (!authUser) {
       window.alert('커뮤니티 댓글 작성은 로그인 후 이용할 수 있습니다.')
@@ -510,6 +520,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     const trimmedComment = commentDraft.trim()
     if (!trimmedComment) return
     try {
+      setIsSubmittingComment(true)
       const response = await fetch('/api/community/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -532,6 +543,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       commentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 저장하지 못했습니다.')
+    } finally {
+      setIsSubmittingComment(false)
     }
   }
 
@@ -709,13 +722,17 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
               <form onSubmit={handleCommentSubmit} className="border-t px-5 py-4" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}>
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 min-w-0 flex-1 items-center rounded-full pr-2" style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)', borderColor: 'transparent' }}>
-                    <span className="shrink-0 px-4 text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                      {communityNickname || '로그인'}
-                    </span>
-                    <span className="h-5 w-px shrink-0" style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }} />
-                    <input value={commentDraft} onChange={(event) => setCommentDraft(event.target.value)} placeholder="댓글을 입력해주세요" className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none" style={{ color: 'var(--app-title)' }} />
+                    {authUser ? (
+                      <>
+                        <span className="shrink-0 px-4 text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                          {communityNickname}
+                        </span>
+                        <span className="h-5 w-px shrink-0" style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }} />
+                      </>
+                    ) : null}
+                    <input disabled={!authUser || isSubmittingComment} value={commentDraft} onChange={(event) => setCommentDraft(event.target.value)} placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'} className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none disabled:cursor-not-allowed" style={{ color: 'var(--app-title)' }} />
                   </div>
-                  <button type="submit" className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition sm:px-4" style={{ backgroundColor: '#457ae5' }}>등록</button>
+                  <button disabled={!authUser || isSubmittingComment} type="submit" className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4" style={{ backgroundColor: '#457ae5' }}>{isSubmittingComment ? '등록 중...' : '등록'}</button>
                 </div>
               </form>
             </section>

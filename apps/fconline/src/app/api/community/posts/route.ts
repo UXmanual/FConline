@@ -126,12 +126,13 @@ export async function GET(request: NextRequest) {
   try {
     const { page, pageSize, from, to } = getPaginationParams(request)
     const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
-
     const supabase = createSupabaseAdminClient()
-    const { data: posts, error: postsError, count } = await fetchPostsPage(supabase, from, to)
+    const userPromise = authSupabase.auth.getUser()
+    const postsPromise = fetchPostsPage(supabase, from, to)
+    const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
+      userPromise,
+      postsPromise,
+    ])
 
     if (postsError) {
       return Response.json({ message: '게시글을 불러오지 못했습니다.' }, { status: 500 })
