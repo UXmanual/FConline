@@ -333,6 +333,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       return
     }
 
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      return
+    }
+
     resetAppNotificationsEnabled()
     setIsAppNotificationSheetOpen(true)
   }, [])
@@ -574,7 +578,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       return
     }
 
-    closeAppNotificationSheet(process.env.NODE_ENV === 'production')
+    closeAppNotificationSheet(false)
 
     try {
       setIsAppNotificationPending(true)
