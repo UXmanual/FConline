@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.5': [
+    '마이페이지 재진입 시 알림 팝업 노출 조건을 개선해 딤 클릭으로 닫은 경우 다시 마이탭 진입 시 팝업이 정상 표시되도록 수정했습니다.',
+  ],
   '19.4': [
     '앱 알림을 허용했다가 다시 끄면 알림 안내 팝업이 다시 표시되도록 개선했습니다.',
     '미로그인 상태에서 글쓰기·댓글 버튼을 누르면 로그인 안내 팝업의 버튼 스타일을 개선했습니다.',

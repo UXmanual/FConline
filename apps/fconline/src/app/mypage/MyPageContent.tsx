@@ -1,7 +1,7 @@
 'use client'
 
 import { startTransition, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import LoadingDots from '@/components/ui/LoadingDots'
@@ -202,6 +202,7 @@ function GoogleBrandIcon() {
 
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const isDarkModeEnabled = useDarkModeEnabled()
   const isAppNotificationsEnabled = useAppNotificationsEnabled()
@@ -336,7 +337,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
     resetAppNotificationsEnabled()
     setIsAppNotificationSheetOpen(true)
-  }, [])
+  }, [pathname])
 
   useEffect(() => {
     const prev = prevAppNotificationsEnabledRef.current
