@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.2': [
+    '이전 버전 오류로 앱 알림 팝업이 영구적으로 숨겨진 경우 팝업이 다시 표시되도록 초기화했습니다.',
+  ],
   '19.1': [
     '앱 알림 미허용 상태에서 마이페이지 재진입 시 알림 안내 팝업이 다시 표시되도록 수정했습니다.',
   ],

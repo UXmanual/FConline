@@ -17,7 +17,7 @@ import {
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen'
+const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v2'
 
 function isInstalledApp() {
   if (typeof window === 'undefined') {
