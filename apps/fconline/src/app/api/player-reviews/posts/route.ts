@@ -1,13 +1,12 @@
 import { NextRequest } from 'next/server'
 import {
-  canDeleteCommunityPost,
   deriveCommunityNickname,
   formatRelativeTime,
   getKoreaTimestampString,
   getIpPrefixFromHeader,
-  hashPassword,
   type CommunityPostSummary,
 } from '@/lib/community'
+import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -21,6 +20,7 @@ type PlayerReviewPostRow = {
   player_id: string
   player_name: string
   nickname: string
+  comment_count?: number | null
   author_user_id?: string | null
   password_hash?: string | null
   ip_prefix?: string | null
@@ -29,13 +29,8 @@ type PlayerReviewPostRow = {
   created_at: string
 }
 
-type CommentCountRow = {
-  review_post_id: string
-}
-
 function mapPostSummary(
   post: PlayerReviewPostRow,
-  commentCount: number,
   currentUserId?: string | null,
   currentUserEmail?: string | null,
 ): CommunityPostSummary {
@@ -48,7 +43,7 @@ function mapPostSummary(
     content: post.content,
     createdAt: post.created_at,
     createdAtLabel: formatRelativeTime(post.created_at),
-    commentCount,
+    commentCount: Math.max(0, Number(post.comment_count ?? 0) || 0),
     canDelete: canDeleteCommunityPost(post, currentUserId, currentUserEmail),
   }
 }
@@ -86,8 +81,8 @@ async function fetchPostsPage(
   includeAuthorUserId = true,
 ) {
   const baseFields = includeAuthorUserId
-    ? 'id, player_id, player_name, nickname, author_user_id, password_hash'
-    : 'id, player_id, player_name, nickname, password_hash'
+    ? 'id, player_id, player_name, nickname, comment_count, author_user_id, password_hash'
+    : 'id, player_id, player_name, nickname, comment_count, password_hash'
   const selectFields = includeIpPrefix
     ? `${baseFields}, ip_prefix, title, content, created_at`
     : `${baseFields}, title, content, created_at`
@@ -144,28 +139,6 @@ async function resolvePageForPost(
   return Math.floor((count ?? 0) / pageSize) + 1
 }
 
-async function fetchCommentCounts(supabase: SupabaseClient, postIds: string[]) {
-  if (postIds.length === 0) {
-    return new Map<string, number>()
-  }
-
-  const { data, error } = await supabase
-    .from('player_review_comments')
-    .select('review_post_id')
-    .in('review_post_id', postIds)
-
-  if (error) {
-    return new Map<string, number>()
-  }
-
-  const countMap = new Map<string, number>()
-  for (const row of (data ?? []) as CommentCountRow[]) {
-    countMap.set(row.review_post_id, (countMap.get(row.review_post_id) ?? 0) + 1)
-  }
-
-  return countMap
-}
-
 export async function GET(request: NextRequest) {
   try {
     const { page: requestedPage, pageSize } = getPaginationParams(request)
@@ -193,14 +166,7 @@ export async function GET(request: NextRequest) {
     }
 
     const typedPosts = (posts ?? []) as unknown as PlayerReviewPostRow[]
-    const commentCountMap = await fetchCommentCounts(
-      supabase,
-      typedPosts.map((post) => post.id),
-    )
-
-    const items = typedPosts.map((post) =>
-      mapPostSummary(post, commentCountMap.get(post.id) ?? 0, user?.id, user?.email),
-    )
+    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email))
 
     return Response.json({
       items,
@@ -269,6 +235,7 @@ export async function POST(request: NextRequest) {
           player_id: playerId,
           player_name: playerName,
           nickname,
+          comment_count: 0,
           password_hash: insertPayload.password_hash,
           title,
           content,
@@ -282,7 +249,11 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '선수 평가를 등록하지 못했습니다.' }, { status: 500 })
     }
 
-    const item = mapPostSummary(response.data as PlayerReviewPostRow, 0, user.id, user.email)
+    const item = mapPostSummary(
+      { ...(response.data as PlayerReviewPostRow), comment_count: 0 },
+      user.id,
+      user.email,
+    )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }

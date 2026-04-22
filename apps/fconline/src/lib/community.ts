@@ -1,5 +1,3 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
-
 export const COMMUNITY_CATEGORIES = ['자유', '모집', '분석', '선수', '팁'] as const
 
 export type CommunityCategory = (typeof COMMUNITY_CATEGORIES)[number]
@@ -72,57 +70,10 @@ export function formatRelativeTime(value: string | Date, now = new Date()) {
   return `${diffDays}일 전`
 }
 
-export function hashPassword(password: string) {
-  const salt = randomBytes(16).toString('hex')
-  const hashed = scryptSync(password, salt, 64).toString('hex')
-  return `${salt}:${hashed}`
-}
-
-export function verifyPassword(password: string, hashedPassword: string) {
-  const [salt, storedHash] = hashedPassword.split(':')
-
-  if (!salt || !storedHash) {
-    return false
-  }
-
-  const inputHash = scryptSync(password, salt, 64)
-  const storedBuffer = Buffer.from(storedHash, 'hex')
-
-  if (inputHash.length !== storedBuffer.length) {
-    return false
-  }
-
-  return timingSafeEqual(inputHash, storedBuffer)
-}
-
 const COMMUNITY_NICKNAME_OWNER_EMAIL = 'uxdmanual@gmail.com'
 
 export function isCommunityAdminEmail(email?: string | null) {
   return email?.trim().toLowerCase() === COMMUNITY_NICKNAME_OWNER_EMAIL
-}
-
-export function canDeleteCommunityPost(
-  postLike: { author_user_id?: string | null; password_hash?: string | null },
-  currentUserId?: string | null,
-  currentUserEmail?: string | null,
-) {
-  if (!currentUserId) {
-    return false
-  }
-
-  if (isCommunityAdminEmail(currentUserEmail)) {
-    return true
-  }
-
-  if (postLike.author_user_id && postLike.author_user_id === currentUserId) {
-    return true
-  }
-
-  if (postLike.password_hash) {
-    return verifyPassword(currentUserId, postLike.password_hash)
-  }
-
-  return false
 }
 
 export function getIpPrefixFromHeader(rawValue: string | null) {

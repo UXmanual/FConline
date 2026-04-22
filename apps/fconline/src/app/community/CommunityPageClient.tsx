@@ -254,6 +254,43 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     }
   }, [authUser])
 
+  const fetchPostsPage = useCallback(async (page: number, useSkeleton = true) => {
+    const cached = cacheRef.current.get(page)
+    if (cached) {
+      setPosts(cached.items)
+      setTotalCount(cached.totalCount)
+      return
+    }
+    try {
+      setIsLoadingPosts(useSkeleton)
+      const response = await fetch(`/api/community/posts?page=${page}&pageSize=${POSTS_PER_PAGE}`, { cache: 'no-store' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message ?? '게시글을 불러오지 못했습니다.')
+      const data: CommunityPageData = {
+        items: result.items ?? [],
+        totalCount: result.totalCount ?? 0,
+        page: result.page ?? page,
+        pageSize: result.pageSize ?? POSTS_PER_PAGE,
+      }
+      cacheRef.current.set(page, data)
+      setPosts(data.items)
+      setTotalCount(data.totalCount)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingPosts(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isAuthLoading || !authUser) {
+      return
+    }
+
+    cacheRef.current.delete(currentPage)
+    void fetchPostsPage(currentPage, false)
+  }, [authUser?.email, authUser?.id, fetchPostsPage, isAuthLoading])
+
   useEffect(() => {
     const isOverlayOpen = isComposerOpen || activeCommentPost !== null
     const previousHtmlOverflow = document.documentElement.style.overflow
@@ -390,34 +427,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     }
 
     setIsComposerOpen(true)
-  }
-
-  async function fetchPostsPage(page: number, useSkeleton = true) {
-    const cached = cacheRef.current.get(page)
-    if (cached) {
-      setPosts(cached.items)
-      setTotalCount(cached.totalCount)
-      return
-    }
-    try {
-      setIsLoadingPosts(useSkeleton)
-      const response = await fetch(`/api/community/posts?page=${page}&pageSize=${POSTS_PER_PAGE}`, { cache: 'no-store' })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.message ?? '게시글을 불러오지 못했습니다.')
-      const data: CommunityPageData = {
-        items: result.items ?? [],
-        totalCount: result.totalCount ?? 0,
-        page: result.page ?? page,
-        pageSize: result.pageSize ?? POSTS_PER_PAGE,
-      }
-      cacheRef.current.set(page, data)
-      setPosts(data.items)
-      setTotalCount(data.totalCount)
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : '게시글을 불러오지 못했습니다.')
-    } finally {
-      setIsLoadingPosts(false)
-    }
   }
 
   async function goToPage(page: number) {

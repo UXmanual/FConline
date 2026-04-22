@@ -4,11 +4,45 @@ import { useEffect } from 'react'
 
 export default function PwaBootstrap() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       return
     }
 
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    if (process.env.NODE_ENV !== 'production') {
+      let isCancelled = false
+
+      const cleanupDevServiceWorkers = async () => {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(registrations.map((registration) => registration.unregister()))
+        } catch (error) {
+          if (!isCancelled) {
+            console.error('[PWA] Failed to unregister service workers in development.', error)
+          }
+        }
+
+        try {
+          const cacheNames = await caches.keys()
+          await Promise.all(
+            cacheNames
+              .filter((cacheName) => cacheName.startsWith('fco-ground-'))
+              .map((cacheName) => caches.delete(cacheName)),
+          )
+        } catch (error) {
+          if (!isCancelled) {
+            console.error('[PWA] Failed to clear caches in development.', error)
+          }
+        }
+      }
+
+      void cleanupDevServiceWorkers()
+
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    if (!('serviceWorker' in navigator)) {
       return
     }
 

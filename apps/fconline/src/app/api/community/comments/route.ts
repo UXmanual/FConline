@@ -1,13 +1,12 @@
 import { NextRequest } from 'next/server'
 import {
-  canDeleteCommunityPost,
   deriveCommunityNickname,
   formatRelativeTime,
   getIpPrefixFromHeader,
   getKoreaTimestampString,
-  hashPassword,
   type CommunityCommentItem,
 } from '@/lib/community'
+import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 
@@ -71,6 +70,19 @@ async function fetchCommunityComments(postId: string) {
     .select('id')
     .eq('post_id', postId)
     .order('created_at', { ascending: false })
+}
+
+async function syncCommunityPostCommentCount(postId: string) {
+  const supabase = createSupabaseAdminClient()
+  const { count } = await supabase
+    .from('community_comments')
+    .select('id', { count: 'exact', head: true })
+    .eq('post_id', postId)
+
+  await supabase
+    .from('community_posts')
+    .update({ comment_count: count ?? 0 })
+    .eq('id', postId)
 }
 
 export async function GET(request: NextRequest) {
@@ -196,6 +208,8 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '댓글을 등록하지 못했습니다.' }, { status: 500 })
     }
 
+    await syncCommunityPostCommentCount(postId)
+
     const item = mapComment(response.data, user.id, user.email)
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
@@ -227,10 +241,10 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = createSupabaseAdminClient()
     const selectAttempts = [
-      'id, author_user_id, password_hash',
-      'id, author_user_id',
-      'id, password_hash',
-      'id',
+      'id, post_id, author_user_id, password_hash',
+      'id, post_id, author_user_id',
+      'id, post_id, password_hash',
+      'id, post_id',
     ]
 
     let comment: Record<string, unknown> | null = null
@@ -275,10 +289,17 @@ export async function DELETE(request: NextRequest) {
       return Response.json({ message: '내가 작성한 댓글만 삭제할 수 있습니다.' }, { status: 403 })
     }
 
+    const targetPostId =
+      typeof comment.post_id === 'string' && comment.post_id.trim().length > 0 ? comment.post_id : null
+
     const { error: deleteError } = await supabase.from('community_comments').delete().eq('id', commentId)
 
     if (deleteError) {
       return Response.json({ message: '댓글을 삭제하지 못했습니다.' }, { status: 500 })
+    }
+
+    if (targetPostId) {
+      await syncCommunityPostCommentCount(targetPostId)
     }
 
     return Response.json({ success: true })
