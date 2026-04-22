@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { privacyContent } from '@/app/mypage/page'
+import { privacyContent } from '@/app/mypage/MyPageContent'
 
 const linkedServices = [
   {

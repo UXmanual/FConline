@@ -198,6 +198,7 @@ export default function PlayerReviewSection({
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map())
   const dragPointerIdRef = useRef<number | null>(null)
   const dragStartYRef = useRef(0)
+  const currentPageRef = useRef(1)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [resolvedReviewNickname, setResolvedReviewNickname] = useState('')
@@ -222,6 +223,7 @@ export default function PlayerReviewSection({
   const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
   const reviewNickname = resolvedReviewNickname || (authUser ? deriveCommunityNickname(authUser) : '')
+  const authUserKey = authUser ? `${authUser.id}:${authUser.email ?? ''}` : ''
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
   const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
   const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
@@ -356,6 +358,10 @@ export default function PlayerReviewSection({
   }, [defaultCardLevel, playerId])
 
   useEffect(() => {
+    currentPageRef.current = currentPage
+  }, [currentPage])
+
+  useEffect(() => {
     if (!highlightedPostId) return
 
     const frameId = window.requestAnimationFrame(() => {
@@ -479,6 +485,16 @@ export default function PlayerReviewSection({
     },
     [playerId],
   )
+
+  useEffect(() => {
+    if (isAuthLoading || !authUserKey) {
+      return
+    }
+
+    const page = currentPageRef.current
+    cacheRef.current.delete(page)
+    void fetchPostsPage(page, { useSkeleton: false })
+  }, [authUserKey, fetchPostsPage, isAuthLoading])
 
   useEffect(() => {
     cacheRef.current.clear()

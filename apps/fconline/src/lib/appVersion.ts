@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '18.8': [
+    '선수평가 탭에서 로그인 후 권한 정보만 조용히 다시 불러오도록 정리해 초기 목록 로딩 흐름을 다듬었습니다.',
+    '메인 등에서 특정 선수평가 글로 바로 들어올 때 불필요한 페이지 계산을 줄여 해당 글 진입 속도를 개선했습니다.',
+  ],
   '18.6': [
     '마이페이지 Google 로그인 안내 문구를 다듬고 버튼 간격을 조정했습니다.',
     '홈 컨트롤러 사용량 카드의 기준 문구를 구분선 형태로 정리하고 상위 1만명 기준으로 명확히 표시했습니다.',

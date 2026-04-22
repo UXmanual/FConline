@@ -139,6 +139,10 @@ async function resolvePageForPost(
   return Math.floor((count ?? 0) / pageSize) + 1
 }
 
+function containsPost(posts: PlayerReviewPostRow[], postId: string) {
+  return posts.some((post) => post.id === postId)
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { page: requestedPage, pageSize } = getPaginationParams(request)
@@ -152,14 +156,32 @@ export async function GET(request: NextRequest) {
     const authSupabase = await createSupabaseSsrClient()
     const supabase = createSupabaseAdminClient()
     const userPromise = authSupabase.auth.getUser()
-    const resolvedPage = postId ? (await resolvePageForPost(supabase, playerId, postId, pageSize)) ?? requestedPage : requestedPage
-    const from = (resolvedPage - 1) * pageSize
-    const to = resolvedPage * pageSize - 1
-    const postsPromise = fetchPostsPage(supabase, playerId, from, to)
-    const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
-      userPromise,
-      postsPromise,
-    ])
+    const requestedFrom = (requestedPage - 1) * pageSize
+    const requestedTo = requestedPage * pageSize - 1
+    const initialPostsPromise = fetchPostsPage(supabase, playerId, requestedFrom, requestedTo)
+    const [{ data: { user } }, initialPostsResponse] = await Promise.all([userPromise, initialPostsPromise])
+
+    if (initialPostsResponse.error) {
+      return Response.json({ message: '?좎닔 ?됯?瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??' }, { status: 500 })
+    }
+
+    let resolvedPage = requestedPage
+    let postsResponse: Awaited<ReturnType<typeof fetchPostsPage>> = initialPostsResponse
+    const initialPosts = (initialPostsResponse.data ?? []) as unknown as PlayerReviewPostRow[]
+    const hasTargetPost = postId ? containsPost(initialPosts, postId) : false
+
+    if (postId && !hasTargetPost) {
+      const targetPage = await resolvePageForPost(supabase, playerId, postId, pageSize)
+
+      if (targetPage && targetPage !== requestedPage) {
+        resolvedPage = targetPage
+        const resolvedFrom = (targetPage - 1) * pageSize
+        const resolvedTo = targetPage * pageSize - 1
+        postsResponse = await fetchPostsPage(supabase, playerId, resolvedFrom, resolvedTo)
+      }
+    }
+
+    const { data: posts, error: postsError, count } = postsResponse
 
     if (postsError) {
       return Response.json({ message: '선수 평가를 불러오지 못했습니다.' }, { status: 500 })
