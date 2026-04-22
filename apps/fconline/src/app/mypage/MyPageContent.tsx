@@ -574,7 +574,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       return
     }
 
-    closeAppNotificationSheet(false)
+    closeAppNotificationSheet(process.env.NODE_ENV === 'production')
 
     try {
       setIsAppNotificationPending(true)

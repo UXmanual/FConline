@@ -37,7 +37,7 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
     }
 
     if (pathname === href) {
-      window.location.assign(href)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
