@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.0': [
+    '마이페이지 앱 알림 시트를 프로덕션 환경에서만 닫히도록 처리해 개발 환경과의 동작 차이를 정리했습니다.',
+    '하단 탭에서 현재 페이지 탭을 다시 누르면 페이지 최상단으로 부드럽게 스크롤되도록 개선했습니다.',
+  ],
   '18.9': [
     '마이페이지 앱 알림 안내와 문의하기 팝업을 하단 플로팅 카드 스타일로 정리하고 입력창 톤을 통일했습니다.',
     '커뮤니티와 선수평가의 글쓰기·댓글 입력 UI를 같은 규칙으로 맞춰 모바일과 PC에서 더 일관되게 보이도록 다듬었습니다.',
