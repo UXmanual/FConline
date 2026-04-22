@@ -917,30 +917,36 @@ export default function PlayerReviewSection({
             type="button"
             aria-label="글쓰기 닫기"
             className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(37, 52, 82, 0.58)' }}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
             onClick={() => setIsComposerOpen(false)}
           />
 
-          <div className="absolute inset-0 z-10 flex items-center justify-center px-8 py-6 sm:px-7">
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
             <section
-              className="max-h-[calc(100vh-48px)] w-full max-w-[320px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[360px] sm:px-6 sm:py-6"
-              style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+              className="max-h-[calc(100vh-96px-env(safe-area-inset-bottom))] w-full overflow-y-auto rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
             >
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div>
+                  <div
+                    className="mx-auto mb-4 h-1.5 w-12 rounded-full"
+                    style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
+                  />
                   <p className="text-[16px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
                     <span style={{ color: '#457ae5' }}>{playerName}</span>
                     <span>{' 선수 평가'}</span>
                   </p>
                   <label className="block">
-                    <div className="relative mt-2">
+                    <div className="relative mt-5">
                       <select
                         value={selectedCardLevel}
                         onChange={(event) => setSelectedCardLevel(Number(event.target.value))}
-                        className="h-11 w-full appearance-none rounded-lg border pl-3 pr-10 text-sm font-semibold outline-none transition focus:bg-transparent"
+                        className="h-12 w-full appearance-none rounded-[22px] border-0 pl-4 pr-11 text-sm font-semibold outline-none transition"
                         style={{
-                          backgroundColor: 'var(--app-input-bg)',
-                          borderColor: 'var(--app-input-border)',
+                          backgroundColor: 'var(--app-surface-soft)',
                           color: 'var(--app-title)',
                         }}
                       >
@@ -958,17 +964,15 @@ export default function PlayerReviewSection({
                   </label>
                 </div>
 
-                <div className="px-0.5">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                <div className="flex items-center gap-2 px-0.5 text-sm">
+                  <p className="font-semibold" style={{ color: 'var(--app-title)' }}>
                     닉네임
                   </p>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--app-body-text)' }}>
-                    {reviewNickname}
-                  </p>
+                  <p style={{ color: 'var(--app-body-text)' }}>{reviewNickname}</p>
                 </div>
 
-                <label className="block">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                <label className="mt-2 block">
+                  <span className="hidden" style={{ color: 'var(--app-title)' }}>
                     제목
                   </span>
                   <input
@@ -976,17 +980,16 @@ export default function PlayerReviewSection({
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     placeholder="제목을 입력해 주세요"
-                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                    className="h-12 w-full rounded-[22px] border-0 px-4 text-sm outline-none transition"
                     style={{
-                      backgroundColor: 'var(--app-input-bg)',
-                      borderColor: 'var(--app-input-border)',
+                      backgroundColor: 'var(--app-surface-soft)',
                       color: 'var(--app-title)',
                     }}
                   />
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                  <span className="hidden" style={{ color: 'var(--app-title)' }}>
                     내용
                   </span>
                   <textarea
@@ -994,28 +997,23 @@ export default function PlayerReviewSection({
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
                     placeholder={`${playerName} 선수 평가를 입력해 주세요`}
-                    rows={6}
-                    className="mt-2 w-full rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition focus:bg-transparent"
+                    rows={4}
+                    className="min-h-[104px] w-full rounded-[22px] border-0 px-4 py-3 text-sm leading-6 outline-none transition"
                     style={{
-                      backgroundColor: 'var(--app-input-bg)',
-                      borderColor: 'var(--app-input-border)',
+                      backgroundColor: 'var(--app-surface-soft)',
                       color: 'var(--app-title)',
+                      resize: 'none',
                     }}
                   />
                 </label>
 
-                <div className="flex items-end gap-3 pt-1">
+                <div className="mt-7 flex flex-col gap-3">
                   <button
                     type="button"
                     onClick={() => setIsComposerOpen(false)}
                     disabled={isSubmittingPost}
-                    className="flex items-center justify-center text-sm font-semibold transition disabled:opacity-60"
+                    className="order-2 block w-full text-center text-sm font-medium transition disabled:opacity-60"
                     style={{
-                      flex: '1 1 0%',
-                      height: '54px',
-                      borderRadius: '14px',
-                      backgroundColor: 'var(--app-card-bg)',
-                      border: '1px solid var(--app-input-border)',
                       color: 'var(--app-muted-text)',
                     }}
                   >
@@ -1025,8 +1023,8 @@ export default function PlayerReviewSection({
                   <button
                     type="submit"
                     disabled={isSubmittingPost}
-                    className="flex items-center justify-center text-sm font-semibold text-white transition disabled:opacity-70"
-                    style={{ flex: '2 1 0%', height: '54px', borderRadius: '16px', backgroundColor: '#457ae5' }}
+                    className="order-1 flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white transition disabled:opacity-70"
+                    style={{ backgroundColor: '#457ae5' }}
                   >
                     {isSubmittingPost ? '등록 중..' : '글쓰기'}
                   </button>
@@ -1129,33 +1127,23 @@ export default function PlayerReviewSection({
                 style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}
               >
                 <div className="flex items-center gap-3">
+                  {authUser ? (
+                    <span className="shrink-0 text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                      {reviewNickname}
+                    </span>
+                  ) : null}
                   <div
-                    className="flex h-11 min-w-0 flex-1 items-center rounded-full pr-2"
+                    className="flex h-12 min-w-0 flex-1 items-center rounded-[22px] px-4"
                     style={{
-                      backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
-                      borderColor: 'transparent',
+                      backgroundColor: 'var(--app-surface-soft)',
                     }}
                   >
-                    {authUser ? (
-                      <>
-                        <span
-                          className="shrink-0 px-4 text-sm font-medium"
-                          style={{ color: 'var(--app-title)' }}
-                        >
-                          {reviewNickname}
-                        </span>
-                        <span
-                          className="h-5 w-px shrink-0"
-                          style={{ backgroundColor: isDarkModeEnabled ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)' }}
-                        />
-                      </>
-                    ) : null}
                     <input
                       disabled={!authUser || isSubmittingComment}
                       value={commentDraft}
                       onChange={(event) => setCommentDraft(event.target.value)}
                       placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'}
-                      className="h-full min-w-0 flex-1 bg-transparent px-4 text-sm outline-none disabled:cursor-not-allowed"
+                      className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:font-medium placeholder:text-[var(--app-muted-text)] disabled:cursor-not-allowed"
                       style={{ color: 'var(--app-title)' }}
                     />
                   </div>

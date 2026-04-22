@@ -10,11 +10,37 @@ import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
 import { deriveCommunityNickname, normalizeCommunityNickname, validateCommunityNickname } from '@/lib/community'
 import {
   requestAppNotificationsPermission,
+  resetAppNotificationsEnabled,
   unsubscribeFromPushNotifications,
   useAppNotificationsEnabled,
 } from '@/lib/appNotifications'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+
+const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen'
+
+function isInstalledApp() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const iosNavigator = window.navigator as Navigator & { standalone?: boolean }
+
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches ||
+    iosNavigator.standalone === true
+  )
+}
+
+function canShowAppNotificationPrompt() {
+  if (process.env.NODE_ENV !== 'production') {
+    return true
+  }
+
+  return isInstalledApp()
+}
 
 const openSourceLicenses = [
   {
@@ -197,6 +223,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [contactValue, setContactValue] = useState('')
   const [isSendingContact, setIsSendingContact] = useState(false)
   const [isAppNotificationPending, setIsAppNotificationPending] = useState(false)
+  const [isAppNotificationSheetOpen, setIsAppNotificationSheetOpen] = useState(false)
   const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
   const authStatus = searchParams.get('auth')
   const authMessage = authStatus === 'error' ? '로그인 처리 중 문제가 발생했습니다. 다시 시도해 주세요.' : null
@@ -291,6 +318,69 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       window.clearTimeout(timeoutId)
     }
   }, [initialPrivacyOpen])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !canShowAppNotificationPrompt()) {
+      return
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      window.localStorage.removeItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY)
+    }
+
+    const hasSeenPrompt = window.localStorage.getItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY) === 'true'
+    if (hasSeenPrompt) {
+      return
+    }
+
+    resetAppNotificationsEnabled()
+    setIsAppNotificationSheetOpen(true)
+  }, [])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return
+    }
+
+    const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (!themeColorMeta) {
+      return
+    }
+
+    const nextThemeColor = isAppNotificationSheetOpen
+      ? getComputedStyle(document.documentElement).getPropertyValue('--app-modal-bg').trim() || (isDarkModeEnabled ? '#1a1b21' : '#ffffff')
+      : isDarkModeEnabled
+        ? '#121318'
+        : '#f0f3f5'
+
+    themeColorMeta.setAttribute('content', nextThemeColor)
+
+    return () => {
+      themeColorMeta.setAttribute('content', isDarkModeEnabled ? '#121318' : '#f0f3f5')
+    }
+  }, [isAppNotificationSheetOpen, isDarkModeEnabled])
+
+  useEffect(() => {
+    const isOverlayOpen = isAppNotificationSheetOpen || isContactModalOpen
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
+    const previousBodyOverflow = document.body.style.overflow
+    const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior
+
+    if (isOverlayOpen) {
+      document.documentElement.style.overflow = 'hidden'
+      document.documentElement.style.overscrollBehavior = 'none'
+      document.body.style.overflow = 'hidden'
+      document.body.style.overscrollBehavior = 'none'
+    }
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior
+      document.body.style.overflow = previousBodyOverflow
+      document.body.style.overscrollBehavior = previousBodyOverscrollBehavior
+    }
+  }, [isAppNotificationSheetOpen, isContactModalOpen])
 
   const handleGoogleLogin = async () => {
     try {
@@ -446,6 +536,62 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     setDarkModeEnabled(nextValue)
   }
 
+  const handleEnableAppNotifications = async () => {
+    const result = await requestAppNotificationsPermission()
+
+    if (result.ok) {
+      return
+    }
+
+    if (result.reason === 'unsupported') {
+      window.alert('이 브라우저에서는 앱 알림을 지원하지 않습니다.')
+      return
+    }
+
+    if (result.reason === 'subscription_failed') {
+      window.alert('알림 권한은 허용되었지만 구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      return
+    }
+
+    if (result.reason === 'denied') {
+      window.alert('브라우저 알림 권한이 차단되어 있습니다. 브라우저 설정에서 알림을 허용한 뒤 다시 시도해 주세요.')
+      return
+    }
+
+    window.alert('앱 알림 권한이 허용되지 않았습니다.')
+  }
+
+  const closeAppNotificationSheet = (persistSeen = true) => {
+    if (persistSeen && typeof window !== 'undefined') {
+      window.localStorage.setItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY, 'true')
+    }
+
+    setIsAppNotificationSheetOpen(false)
+  }
+
+  const handleAcceptAppNotificationSheet = async () => {
+    if (isAppNotificationPending) {
+      return
+    }
+
+    closeAppNotificationSheet(false)
+
+    try {
+      setIsAppNotificationPending(true)
+      await handleEnableAppNotifications()
+    } finally {
+      setIsAppNotificationPending(false)
+    }
+  }
+
+  const handleDismissAppNotificationSheet = () => {
+    closeAppNotificationSheet(false)
+  }
+
+  const handleDeferAppNotificationSheet = () => {
+    closeAppNotificationSheet()
+  }
+
   const handleAppNotificationToggle = async () => {
     if (isAppNotificationPending) {
       return
@@ -462,11 +608,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         return
       }
 
-      const result = await requestAppNotificationsPermission()
-
-      if (result.ok) {
-        return
-      }
+      await handleEnableAppNotifications()
+      const result: {
+        reason?: 'unsupported' | 'subscription_failed' | 'denied'
+      } = {}
+      return
 
       if (result.reason === 'unsupported') {
         window.alert('이 브라우저에서는 앱 알림을 지원하지 않습니다.')
@@ -997,23 +1143,88 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         ) : null}
       </div>
 
+      {isAppNotificationSheetOpen ? (
+        <div className="fixed inset-0 z-[70]">
+          <button
+            type="button"
+            aria-label="앱 알림 안내 닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={handleDismissAppNotificationSheet}
+          />
+
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{
+                backgroundColor: 'var(--app-modal-bg, #ffffff)',
+              }}
+            >
+              <div
+                className="mx-auto mb-4 h-1.5 w-12 rounded-full"
+                style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
+              />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={titleStyle}>
+                  앱 알림 내용을 알려드릴까요?
+                </p>
+                <p className="text-sm leading-[1.55]" style={bodyStyle}>
+                  주요 업데이트와 필요한 알림을 앱으로 바로 받아보실 수 있어요
+                </p>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={handleAcceptAppNotificationSheet}
+                  disabled={isAppNotificationPending}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  {isAppNotificationPending ? '처리 중...' : '동의하기'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeferAppNotificationSheet}
+                  disabled={isAppNotificationPending}
+                  className="block w-full text-center text-sm font-medium disabled:opacity-60"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  나중에
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
       {isContactModalOpen ? (
         <div className="fixed inset-0 z-[60]">
           <button
             type="button"
             aria-label="문의 작성 닫기"
             className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(37, 52, 82, 0.58)' }}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
             onClick={() => setIsContactModalOpen(false)}
           />
 
-          <div className="absolute inset-0 z-10 flex items-center justify-center px-8 py-6 sm:px-7">
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
             <section
-              className="max-h-[calc(100vh-48px)] w-full max-w-[320px] overflow-y-auto px-5 py-6 shadow-[0_20px_44px_rgba(15,23,42,0.18)] sm:max-w-[360px] sm:px-6 sm:py-6"
-              style={{ borderRadius: '24px', backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+              className="max-h-[calc(100vh-96px-env(safe-area-inset-bottom))] w-full overflow-y-auto rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
             >
               <form className="space-y-5" onSubmit={handleSubmitContact}>
                 <div>
+                  <div
+                    className="mx-auto mb-4 h-1.5 w-12 rounded-full"
+                    style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
+                  />
                   <p className="text-[16px] font-semibold tracking-[-0.02em]" style={titleStyle}>
                     <span style={{ color: '#457ae5' }}>앱문의</span>
                     <span>{' 보내기'}</span>
@@ -1021,17 +1232,16 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </div>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>
+                  <span className="hidden" style={titleStyle}>
                     문의 유형
                   </span>
-                  <div className="relative mt-2">
+                  <div className="relative">
                     <select
                       value={contactCategory}
                       onChange={(event) => setContactCategory(event.target.value)}
-                      className="h-11 w-full appearance-none rounded-lg border pl-3 pr-10 text-sm font-semibold outline-none transition focus:bg-transparent"
+                      className="h-12 w-full appearance-none rounded-[22px] border-0 pl-4 pr-11 text-sm font-semibold outline-none transition"
                       style={{
-                        backgroundColor: 'var(--app-input-bg)',
-                        borderColor: 'var(--app-input-border)',
+                        backgroundColor: 'var(--app-surface-soft)',
                         color: 'var(--app-title)',
                       }}
                     >
@@ -1044,7 +1254,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>
+                  <span className="hidden" style={titleStyle}>
                     제목
                   </span>
                   <input
@@ -1053,17 +1263,16 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                     value={contactTitle}
                     onChange={(event) => setContactTitle(event.target.value)}
                     placeholder="제목을 입력해주세요"
-                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                    className="h-12 w-full rounded-[22px] border-0 px-4 text-sm outline-none transition"
                     style={{
-                      backgroundColor: 'var(--app-input-bg)',
-                      borderColor: 'var(--app-input-border)',
+                      backgroundColor: 'var(--app-surface-soft)',
                       color: 'var(--app-title)',
                     }}
                   />
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>
+                  <span className="hidden" style={titleStyle}>
                     내용
                   </span>
                   <textarea
@@ -1072,11 +1281,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                     value={contactContent}
                     onChange={(event) => setContactContent(event.target.value)}
                     placeholder="문의 내용을 입력해주세요"
-                    rows={5}
-                    className="mt-2 w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition focus:bg-transparent"
+                    rows={4}
+                    className="min-h-[104px] w-full rounded-[22px] border-0 px-4 py-3 text-sm outline-none transition"
                     style={{
-                      backgroundColor: 'var(--app-input-bg)',
-                      borderColor: 'var(--app-input-border)',
+                      backgroundColor: 'var(--app-surface-soft)',
                       color: 'var(--app-title)',
                       resize: 'none',
                     }}
@@ -1084,7 +1292,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </label>
 
                 <label className="block">
-                  <span className="text-sm font-semibold" style={titleStyle}>
+                  <span className="hidden" style={titleStyle}>
                     연락수단
                   </span>
                   <input
@@ -1092,23 +1300,21 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                     value={contactValue}
                     onChange={(event) => setContactValue(event.target.value)}
                     placeholder="이메일 또는 연락처 (선택)"
-                    className="mt-2 h-11 w-full rounded-lg border px-3 text-sm outline-none transition focus:bg-transparent"
+                    className="h-12 w-full rounded-[22px] border-0 px-4 text-sm outline-none transition"
                     style={{
-                      backgroundColor: 'var(--app-input-bg)',
-                      borderColor: 'var(--app-input-border)',
+                      backgroundColor: 'var(--app-surface-soft)',
                       color: 'var(--app-title)',
                     }}
                   />
                 </label>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="mt-7 flex flex-col gap-3">
                   <button
                     type="button"
                     onClick={() => setIsContactModalOpen(false)}
-                    className="h-11 rounded-lg text-sm font-semibold"
+                    className="order-2 block w-full text-center text-sm font-medium"
                     style={{
-                      backgroundColor: 'var(--app-surface-soft)',
-                      color: 'var(--app-body-text)',
+                      color: 'var(--app-muted-text)',
                     }}
                   >
                     취소
@@ -1116,7 +1322,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                   <button
                     type="submit"
                     disabled={isSendingContact}
-                    className="h-11 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                    className="order-1 flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white disabled:opacity-60"
                     style={{ backgroundColor: '#457ae5' }}
                   >
                     {isSendingContact ? '보내는 중...' : '보내기'}

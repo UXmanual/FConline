@@ -55,6 +55,10 @@ export function setAppNotificationsEnabled(nextValue: boolean) {
   window.dispatchEvent(new Event(APP_NOTIFICATIONS_EVENT))
 }
 
+export function resetAppNotificationsEnabled() {
+  setAppNotificationsEnabled(false)
+}
+
 export function getOrCreateAppDeviceId() {
   if (typeof window === 'undefined') {
     return ''
