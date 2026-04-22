@@ -333,10 +333,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       return
     }
 
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      return
-    }
-
     resetAppNotificationsEnabled()
     setIsAppNotificationSheetOpen(true)
   }, [])

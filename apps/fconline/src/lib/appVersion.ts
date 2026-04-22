@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.1': [
+    '앱 알림 미허용 상태에서 마이페이지 재진입 시 알림 안내 팝업이 다시 표시되도록 수정했습니다.',
+  ],
   '19.0': [
     '마이페이지 앱 알림 시트를 프로덕션 환경에서만 닫히도록 처리해 개발 환경과의 동작 차이를 정리했습니다.',
     '하단 탭에서 현재 페이지 탭을 다시 누르면 페이지 최상단으로 부드럽게 스크롤되도록 개선했습니다.',
