@@ -1,7 +1,7 @@
 'use client'
 
 import { startTransition, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import LoadingDots from '@/components/ui/LoadingDots'
@@ -202,7 +202,6 @@ function GoogleBrandIcon() {
 
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const router = useRouter()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
   const isDarkModeEnabled = useDarkModeEnabled()
   const isAppNotificationsEnabled = useAppNotificationsEnabled()
@@ -322,22 +321,21 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }, [initialPrivacyOpen])
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !canShowAppNotificationPrompt()) {
-      return
-    }
+    if (typeof window === 'undefined' || !canShowAppNotificationPrompt()) return
+    if (isAppNotificationSheetOpen) return
+    if (isAppNotificationsEnabled) return
+    if (sessionStorage.getItem('mypage-popup-dismissed') === '1') return
 
     if (process.env.NODE_ENV !== 'production') {
       window.localStorage.removeItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY)
     }
 
     const hasSeenPrompt = window.localStorage.getItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY) === 'true'
-    if (hasSeenPrompt) {
-      return
-    }
+    if (hasSeenPrompt) return
 
     resetAppNotificationsEnabled()
     setIsAppNotificationSheetOpen(true)
-  }, [pathname])
+  })
 
   useEffect(() => {
     const prev = prevAppNotificationsEnabledRef.current
@@ -596,6 +594,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }
 
   const handleDismissAppNotificationSheet = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('mypage-popup-dismissed', '1')
+    }
     closeAppNotificationSheet(false)
   }
 

@@ -41,6 +41,10 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
       return
     }
 
+    if (pathname === '/mypage' && href !== '/mypage') {
+      sessionStorage.removeItem('mypage-popup-dismissed')
+    }
+
     router.push(href)
   }
 
