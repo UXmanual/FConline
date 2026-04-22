@@ -205,6 +205,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const searchParams = useSearchParams()
   const isDarkModeEnabled = useDarkModeEnabled()
   const isAppNotificationsEnabled = useAppNotificationsEnabled()
+  const prevAppNotificationsEnabledRef = useRef<boolean | null>(null)
   const privacySectionRef = useRef<HTMLElement | null>(null)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
@@ -336,6 +337,15 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     resetAppNotificationsEnabled()
     setIsAppNotificationSheetOpen(true)
   }, [])
+
+  useEffect(() => {
+    const prev = prevAppNotificationsEnabledRef.current
+    prevAppNotificationsEnabledRef.current = isAppNotificationsEnabled
+
+    if (prev === true && isAppNotificationsEnabled === false && canShowAppNotificationPrompt()) {
+      setIsAppNotificationSheetOpen(true)
+    }
+  }, [isAppNotificationsEnabled])
 
   useEffect(() => {
     if (typeof document === 'undefined') {

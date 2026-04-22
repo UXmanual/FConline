@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.4': [
+    '앱 알림을 허용했다가 다시 끄면 알림 안내 팝업이 다시 표시되도록 개선했습니다.',
+    '미로그인 상태에서 글쓰기·댓글 버튼을 누르면 로그인 안내 팝업의 버튼 스타일을 개선했습니다.',
+  ],
   '19.3': [
     '미로그인 상태에서 글쓰기·댓글 버튼을 누르면 시스템 팝업 대신 앱 스타일 안내 팝업으로 표시되도록 변경했습니다.',
   ],

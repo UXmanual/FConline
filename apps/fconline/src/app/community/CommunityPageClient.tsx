@@ -8,6 +8,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import {
   COMMUNITY_CATEGORIES,
@@ -134,6 +135,7 @@ function PostCard({ post, onDelete, onOpenComments, highlight }: { post: Communi
 }
 
 export default function CommunityPageClient({ initialData }: { initialData: CommunityPageData }) {
+  const router = useRouter()
   const isDarkModeEnabled = useDarkModeEnabled()
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
@@ -777,14 +779,22 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                   커뮤니티 글쓰기와 댓글은 Google 로그인 후 이용할 수 있어요
                 </p>
               </div>
-              <div className="mt-6">
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsLoginRequiredOpen(false); router.push('/mypage') }}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  로그인하러 가기
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsLoginRequiredOpen(false)}
                   className="block w-full text-center text-sm font-medium"
                   style={{ color: 'var(--app-muted-text)' }}
                 >
-                  확인
+                  취소
                 </button>
               </div>
             </section>
