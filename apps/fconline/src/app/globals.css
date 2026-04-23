@@ -262,7 +262,14 @@ html.app-dark-mode {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

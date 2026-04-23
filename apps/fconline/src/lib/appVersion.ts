@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.7': [
+    '전역 스크롤바를 숨겨 모바일과 PC에서 화면 흐름이 더 깔끔하게 보이도록 정리했습니다.',
+    'Windows 환경에서 개발 서버를 별도 창으로 더 안정적으로 띄울 수 있도록 실행 스크립트를 추가했습니다.',
+  ],
   '19.6': [
     '딤 클릭으로 알림 팝업을 닫은 뒤 다른 탭을 거쳐 마이탭으로 돌아오면 팝업이 다시 정상 표시되도록 수정했습니다.',
   ],

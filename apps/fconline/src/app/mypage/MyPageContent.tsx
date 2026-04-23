@@ -335,7 +335,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
     resetAppNotificationsEnabled()
     setIsAppNotificationSheetOpen(true)
-  })
+  }, [isAppNotificationSheetOpen, isAppNotificationsEnabled])
 
   useEffect(() => {
     const prev = prevAppNotificationsEnabledRef.current
