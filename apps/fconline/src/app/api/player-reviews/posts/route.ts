@@ -7,6 +7,7 @@ import {
   type CommunityPostSummary,
 } from '@/lib/community'
 import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
+import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -153,9 +154,10 @@ export async function GET(request: NextRequest) {
       return Response.json({ message: 'playerId가 필요합니다.' }, { status: 400 })
     }
 
-    const authSupabase = await createSupabaseSsrClient()
     const supabase = createSupabaseAdminClient()
-    const userPromise = authSupabase.auth.getUser()
+    const userPromise = hasSupabaseAuthCookie(request)
+      ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
+      : Promise.resolve({ data: { user: null } })
     const requestedFrom = (requestedPage - 1) * pageSize
     const requestedTo = requestedPage * pageSize - 1
     const initialPostsPromise = fetchPostsPage(supabase, playerId, requestedFrom, requestedTo)

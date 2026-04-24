@@ -3,12 +3,18 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
+import { STANDALONE_BOTTOM_COMPENSATION_PX } from '@/components/layout/bottomInset'
 
 export default function AppChrome() {
   const pathname = usePathname()
   const showFooter = pathname === '/mypage'
   const [isStandaloneDisplayMode, setIsStandaloneDisplayMode] = useState(false)
-  const footerBottomCompensation = isStandaloneDisplayMode ? 30 : 0
+  const mypageFooterPaddingBottom =
+    showFooter && isStandaloneDisplayMode
+      ? `calc(env(safe-area-inset-bottom) + ${STANDALONE_BOTTOM_COMPENSATION_PX}px)`
+      : undefined
+  const sharedStandaloneSpacerHeight =
+    !showFooter && isStandaloneDisplayMode ? STANDALONE_BOTTOM_COMPENSATION_PX : 0
 
   useEffect(() => {
     if (!('scrollRestoration' in window.history)) return
@@ -82,11 +88,12 @@ export default function AppChrome() {
               transition: 'background-color 180ms ease, color 180ms ease',
             }}
           >
-            {'게임 배너, 이미지, 선수 정보의 저작권은 NEXON Korea Corporation에 있습니다.'}
+            {'API 선수 정보 및 관련 이미지 저작권은 NEXON Korea Corporation에 있습니다.'}
           </div>
           <footer
             className="px-5 pb-4 text-left text-xs font-medium tracking-[0.02em]"
             style={{
+              paddingBottom: mypageFooterPaddingBottom,
               backgroundColor: 'var(--app-page-bg)',
               color: 'var(--app-footer-text)',
               transition: 'background-color 180ms ease, color 180ms ease',
@@ -94,16 +101,16 @@ export default function AppChrome() {
           >
             {'\u00A9uxdmanual'}
           </footer>
-          <div
-            aria-hidden="true"
-            style={{
-              height: `${footerBottomCompensation}px`,
-              backgroundColor: 'var(--app-page-bg)',
-              transition: 'background-color 180ms ease',
-            }}
-          />
         </>
       ) : null}
+      <div
+        aria-hidden="true"
+        style={{
+          height: `${sharedStandaloneSpacerHeight}px`,
+          backgroundColor: 'var(--app-page-bg)',
+          transition: 'background-color 180ms ease',
+        }}
+      />
       <BottomNav isStandaloneDisplayMode={isStandaloneDisplayMode} />
     </>
   )

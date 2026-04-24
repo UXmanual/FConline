@@ -8,6 +8,7 @@ import {
   type CommunityPostSummary,
 } from '@/lib/community'
 import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
+import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -98,9 +99,10 @@ async function fetchPostsPage(
 export async function GET(request: NextRequest) {
   try {
     const { page, pageSize, from, to } = getPaginationParams(request)
-    const authSupabase = await createSupabaseSsrClient()
     const supabase = createSupabaseAdminClient()
-    const userPromise = authSupabase.auth.getUser()
+    const userPromise = hasSupabaseAuthCookie(request)
+      ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
+      : Promise.resolve({ data: { user: null } })
     const postsPromise = fetchPostsPage(supabase, from, to)
     const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
       userPromise,

@@ -9,6 +9,7 @@ import {
   CommunityIcon,
   MypageIcon,
 } from '@/components/icons/NavIcons'
+import { STANDALONE_BOTTOM_COMPENSATION_PX } from '@/components/layout/bottomInset'
 
 const RESET_KEY = 'player-search-reset'
 const PRESERVE_KEY = 'player-search-preserve'
@@ -28,7 +29,9 @@ type Props = {
 export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
   const pathname = usePathname()
   const router = useRouter()
-  const pwaBottomCompensation = isStandaloneDisplayMode ? 14 : 0
+  const pwaBottomCompensation = isStandaloneDisplayMode
+    ? STANDALONE_BOTTOM_COMPENSATION_PX
+    : 0
 
   const navigateToRoot = (href: string) => {
     if (href === '/players') {

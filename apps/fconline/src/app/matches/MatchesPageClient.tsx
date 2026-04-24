@@ -44,6 +44,11 @@ const SHARE_CHANNELS = [
   { label: 'X 공유', icon: XLogo, key: 'x' },
   { label: '링크 복사', icon: LinkSimple, key: 'copy' },
 ] as const
+type ShareFeedbackTone = 'success' | 'error'
+type ShareFeedbackState = {
+  message: string
+  tone: ShareFeedbackTone
+}
 
 type MatchSearchCacheEntry = {
   exactCandidate: MatchSearchCandidate | null
@@ -1733,64 +1738,180 @@ function buildMatchInsight(
 function buildOfficialMatchInsight(teams: NonNullable<ReturnType<typeof buildOfficialTeams>>) {
   const meMetrics = getOfficialPlayerMetrics(teams.me)
   const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
-  const lines: string[] = []
+  const lines: Array<{ priority: number; text: string }> = []
+  const seen = new Set<string>()
 
-  if (teams.myScore > teams.opponentScore) {
-    if (meMetrics.effectiveShots > opponentMetrics.effectiveShots) {
-      lines.push(
-        `유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 마무리 질에서 앞섰고, 그 차이가 승리로 연결됐습니다.`,
-      )
-    } else {
-      lines.push(
-        `스코어는 ${teams.myScore}:${teams.opponentScore} 승리였고, 적은 찬스에서도 마무리를 살린 경기였습니다.`,
-      )
-    }
-  } else if (teams.myScore < teams.opponentScore) {
-    if (meMetrics.shots < opponentMetrics.shots) {
-      lines.push(
-        `슈팅 수가 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}로 밀려 공격 장면을 덜 만들었습니다. 이번 경기는 진입 횟수 자체가 아쉬웠습니다.`,
-      )
-    } else {
-      lines.push(
-        `기회 수는 크게 밀리지 않았지만 ${teams.myScore}:${teams.opponentScore}로 패했습니다. 마지막 결정 장면의 정교함이 결과를 갈랐습니다.`,
-      )
-    }
-  } else {
-    lines.push(
-      `무승부 경기였고, 점수 차이는 없었지만 유효슛과 패스 완성도 같은 세부 지표에서 다음 승부 포인트가 보이는 경기였습니다.`,
-    )
+  const addLine = (priority: number, text: string) => {
+    if (seen.has(text)) return
+    seen.add(text)
+    lines.push({ priority, text })
   }
 
+  const shotGap = meMetrics.shots - opponentMetrics.shots
+  const effectiveShotGap = meMetrics.effectiveShots - opponentMetrics.effectiveShots
   const possessionGap = meMetrics.possession - opponentMetrics.possession
-  if (Math.abs(possessionGap) >= 8) {
-    lines.push(
-      possessionGap > 0
-        ? `점유율 ${formatMetricNumber(meMetrics.possession)}%로 볼 소유는 더 길게 가져갔습니다. 다만 점유 우위를 유효슛으로 더 강하게 연결하면 체감이 더 좋아질 흐름입니다.`
-        : `점유율이 ${formatMetricNumber(opponentMetrics.possession)}%까지 넘어가며 흐름을 상대에게 내준 시간대가 길었습니다. 빌드업 첫 패스 안정화가 우선 포인트입니다.`,
+  const passGap =
+    meMetrics.passRate != null && opponentMetrics.passRate != null
+      ? meMetrics.passRate - opponentMetrics.passRate
+      : null
+  const myConversion = meMetrics.shots > 0 ? (meMetrics.goals / meMetrics.shots) * 100 : 0
+  const opponentConversion =
+    opponentMetrics.shots > 0 ? (opponentMetrics.goals / opponentMetrics.shots) * 100 : 0
+  const myDefensiveStops = (meMetrics.tackleSuccess ?? 0) + (meMetrics.blockSuccess ?? 0)
+  const opponentDefensiveStops =
+    (opponentMetrics.tackleSuccess ?? 0) + (opponentMetrics.blockSuccess ?? 0)
+  const ratingGap = meMetrics.rating - opponentMetrics.rating
+  const isWin = teams.myScore > teams.opponentScore
+  const isLoss = teams.myScore < teams.opponentScore
+  const isDraw = teams.myScore === teams.opponentScore
+
+  if (isWin) {
+    if (effectiveShotGap >= 2) {
+      addLine(
+        120,
+        `스코어는 ${teams.myScore}:${teams.opponentScore} 승리였고, 유효슛이 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 분명히 앞섰습니다. 이 경기는 단순히 운이 아니라 찬스 질 자체에서 우위를 만든 승리였습니다.`,
+      )
+    } else if (shotGap < 0) {
+      addLine(
+        118,
+        `슈팅 수는 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}로 밀렸는데도 ${teams.myScore}:${teams.opponentScore}로 이겼습니다. 볼을 오래 잡거나 많이 때린 경기라기보다, 적은 기회를 더 정확하게 끝낸 효율 승리에 가깝습니다.`,
+      )
+    } else {
+      addLine(
+        116,
+        `스코어 ${teams.myScore}:${teams.opponentScore} 승리입니다. 지표 전체를 압도한 경기까지는 아니어도, 적어도 결정적인 순간의 선택과 마무리는 상대보다 낫게 가져갔습니다.`,
+      )
+    }
+  } else if (isLoss) {
+    if (shotGap >= 0 && effectiveShotGap >= 0) {
+      addLine(
+        120,
+        `슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 기회 수는 밀리지 않았는데 ${teams.myScore}:${teams.opponentScore}로 패했습니다. 이 경기는 전개보다 마무리 효율과 박스 안 결정력이 결과를 망친 쪽에 가깝습니다.`,
+      )
+    } else if (shotGap <= -3 || effectiveShotGap <= -2) {
+      addLine(
+        118,
+        `패배 원인이 비교적 명확합니다. 슈팅이 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛이 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 밀려 공격 장면 자체를 덜 만들었습니다. 이번 경기는 마무리 이전에 진입 횟수부터 부족했습니다.`,
+      )
+    } else {
+      addLine(
+        116,
+        `스코어는 ${teams.myScore}:${teams.opponentScore} 패배입니다. 전체 흐름이 완전히 한쪽으로 기운 경기는 아니었지만, 결정적 장면 한두 번에서 상대보다 덜 날카로웠고 그 차이가 그대로 점수 차로 남았습니다.`,
+      )
+    }
+  } else if (shotGap !== 0 || effectiveShotGap !== 0) {
+    addLine(
+      112,
+      `무승부지만 내용은 완전히 대등하지 않았습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)} 흐름을 보면, 다음 경기에서 먼저 한 골을 넣을 쪽이 누구였는지 힌트는 남은 경기였습니다.`,
+    )
+  } else {
+    addLine(
+      108,
+      `무승부 경기였습니다. 스코어뿐 아니라 주요 공격 지표도 비슷해서, 세부 운영 완성도 하나가 승부를 갈랐을 법한 팽팽한 흐름이었습니다.`,
     )
   }
 
-  if (meMetrics.passRate != null && opponentMetrics.passRate != null) {
-    const passGap = meMetrics.passRate - opponentMetrics.passRate
-    if (passGap >= 6) {
-      lines.push(
-        `패스 성공률은 ${formatPercent(meMetrics.passRate)}로 상대보다 안정적이었습니다. 전개 안정감은 좋았고, 박스 앞 선택만 더 날카로우면 같은 패턴이 더 큰 위협이 됩니다.`,
+  if (shotGap >= 3 && effectiveShotGap <= 0) {
+    addLine(
+      110,
+      `슈팅은 더 많이 가져갔는데 유효슛 우위로 이어지지 않았습니다. 숫자만 보면 공격 시도는 있었지만, 박스 안에서 급하게 끝내거나 각도가 없는 슛이 많았다는 뜻입니다. 같은 점유를 가져가더라도 '언제 때리느냐'를 더 까다롭게 골라야 합니다.`,
+    )
+  } else if (shotGap <= -3 && effectiveShotGap >= 0) {
+    addLine(
+      106,
+      `슈팅 총량은 적었지만 유효슛 격차는 크지 않았습니다. 많은 장면을 만드는 팀은 아니었지만, 들어간 공격은 비교적 날카로웠다는 뜻입니다. 다만 이 패턴은 한두 번만 막혀도 바로 득점력이 끊겨서, 공격 볼륨을 조금 더 늘릴 필요가 있습니다.`,
+    )
+  }
+
+  if (myConversion === 0 && meMetrics.shots >= 5) {
+    addLine(
+      114,
+      `슈팅을 ${formatMetricNumber(meMetrics.shots)}개 만들고도 무득점이었습니다. 공격이 안 풀렸다기보다, 마무리 선택이 계속 빗나간 경기로 보는 편이 더 정확합니다. 골문 정면으로 끝낸 슛이 적었다면 박스 안 첫 터치와 슈팅 타이밍부터 다시 봐야 합니다.`,
+    )
+  } else if (myConversion + 18 < opponentConversion && opponentMetrics.goals > 0) {
+    addLine(
+      112,
+      `결정력 차이가 컸습니다. 내 슈팅 대비 득점 전환율은 ${formatPercent(myConversion)}인데 상대는 ${formatPercent(opponentConversion)}였습니다. 같은 몇 번의 찬스라도 상대가 더 값비싸게 쓴 셈이라, 이 경기는 수비보다 마무리 쪽 손실이 더 크게 보입니다.`,
+    )
+  } else if (myConversion >= 30 && meMetrics.goals > 0) {
+    addLine(
+      98,
+      `득점 전환율이 ${formatPercent(myConversion)}로 높았습니다. 슛 수가 아주 많지 않아도 유효한 장면을 골로 바꾸는 효율은 괜찮았고, 이 감각을 유지한 채 공격 볼륨만 늘리면 결과가 더 안정될 수 있습니다.`,
+    )
+  }
+
+  if (possessionGap >= 8 && effectiveShotGap <= 0) {
+    addLine(
+      111,
+      `점유율은 ${formatMetricNumber(meMetrics.possession)}%로 우위였지만, 그 점유가 유효슛 우위로는 연결되지 않았습니다. 볼은 오래 들고 있었는데 상대 수비를 더 아프게 찌르지는 못한, 소유형 정체 구간이 있었다고 보는 게 맞습니다.`,
+    )
+  } else if (possessionGap <= -8 && effectiveShotGap >= 0) {
+    addLine(
+      103,
+      `점유율은 내줬지만 유효슛 내용은 크게 밀리지 않았습니다. 볼을 오래 쥐는 운영보다 탈취 후 빠르게 전진하는 패턴이 더 잘 먹힌 경기였고, 괜히 점유를 맞추려 하기보다 전환 속도를 살리는 편이 더 맞는 흐름이었습니다.`,
+    )
+  } else if (possessionGap <= -10 && isLoss) {
+    addLine(
+      109,
+      `점유율이 ${formatMetricNumber(opponentMetrics.possession)}%까지 넘어가며 흐름을 너무 오래 상대에게 줬습니다. 수비 숫자를 맞춰도 결국 다시 공을 뺏기면 계속 눌리기 때문에, 첫 번째 전진 패스 성공률을 끌어올리는 게 우선입니다.`,
+    )
+  }
+
+  if (passGap != null) {
+    const myPassRate = meMetrics.passRate ?? 0
+
+    if (passGap <= -6) {
+      addLine(
+        110,
+        `패스 성공률이 ${formatPercent(myPassRate)}로 상대보다 낮았습니다. 공격 템포를 올리려는 의도는 있었겠지만, 실제론 전개 안정성을 잃어버려 흐름을 오래 못 잡았습니다. 이번 경기는 무리한 직선 패스보다 한 번 더 풀어가는 선택이 필요했습니다.`,
       )
-    } else if (passGap <= -6) {
-      lines.push(
-        `패스 성공률이 ${formatPercent(meMetrics.passRate)}로 상대보다 낮았습니다. 이번 경기는 빠르게 풀려는 선택보다 한 템포 더 정리하는 운영이 더 유효했을 가능성이 큽니다.`,
+    } else if (passGap >= 6 && (isLoss || isDraw) && effectiveShotGap <= 0) {
+      addLine(
+        102,
+        `패스 성공률은 ${formatPercent(myPassRate)}로 더 좋았는데 결과 이득은 크지 않았습니다. 전개 안정성은 있었지만 상대 박스 앞에서 속도 변화나 침투 타이밍이 부족해서, 안전한 소유가 위협으로 전환되지 못했습니다.`,
       )
     }
   }
 
-  const defensivePlays = (meMetrics.tackleSuccess ?? 0) + (meMetrics.blockSuccess ?? 0)
-  if (defensivePlays >= 4) {
-    lines.push(
-      `태클/차단 성공이 합계 ${formatMetricNumber(defensivePlays)}회로 수비 개입은 꾸준했습니다. 압박 타이밍은 나쁘지 않았고, 탈취 직후 전개만 더 붙으면 역습 효율도 올라갑니다.`,
+  if (opponentMetrics.effectiveShots >= 4 && myDefensiveStops <= opponentDefensiveStops && isLoss) {
+    addLine(
+      108,
+      `상대 유효슛이 ${formatMetricNumber(opponentMetrics.effectiveShots)}개까지 나왔는데, 태클/차단 성공 합계는 ${formatMetricNumber(myDefensiveStops)}회에 그쳤습니다. 최종 수비 구간에서 슛을 너무 편하게 허용한 경기였고, 박스 앞 압박 강도를 더 높여야 합니다.`,
+    )
+  } else if (myDefensiveStops >= 6 && (isLoss || isDraw)) {
+    addLine(
+      96,
+      `태클/차단 성공이 합계 ${formatMetricNumber(myDefensiveStops)}회로 수비 개입은 적지 않았습니다. 버티는 힘은 있었지만, 끊어낸 뒤 바로 다시 내주는 장면이 반복되면 결국 수비 지표가 좋아도 경기 주도권은 가져오기 어렵습니다.`,
     )
   }
 
-  return lines.slice(0, 3)
+  if (meMetrics.offsides >= 3) {
+    addLine(
+      100,
+      `오프사이드가 ${formatMetricNumber(meMetrics.offsides)}회면 침투 타이밍이 계속 한 박자 빨랐다는 뜻입니다. 지금은 공격 의도는 좋지만, 상대 라인을 흔들기 전에 먼저 뛰어나가면서 좋은 장면을 스스로 끊고 있습니다.`,
+    )
+  }
+
+  if (meMetrics.fouls >= 3 || meMetrics.yellowCards > 0 || meMetrics.redCards > 0) {
+    addLine(
+      94,
+      `파울 ${formatMetricNumber(meMetrics.fouls)}회${meMetrics.yellowCards > 0 ? `, 경고 ${formatMetricNumber(meMetrics.yellowCards)}회` : ''}${meMetrics.redCards > 0 ? `, 퇴장 ${formatMetricNumber(meMetrics.redCards)}회` : ''}로 수비 대응이 다소 급했습니다. 한 번 늦은 압박을 몸으로 끊는 장면이 많아지면, 이후 수비 선택지가 급격히 줄어듭니다.`,
+    )
+  }
+
+  if (ratingGap <= -0.5 && (isLoss || isDraw)) {
+    addLine(
+      101,
+      `평점도 ${formatMetricNumber(meMetrics.rating, 2)}대${formatMetricNumber(opponentMetrics.rating, 2)}로 밀렸습니다. 특정 지표 하나만의 문제가 아니라, 공격 마무리와 수비 대응 전체에서 상대가 조금씩 더 나았다는 뜻입니다.`,
+    )
+  } else if (ratingGap >= 0.5 && isLoss) {
+    addLine(
+      95,
+      `평점은 ${formatMetricNumber(meMetrics.rating, 2)}대${formatMetricNumber(opponentMetrics.rating, 2)}로 크게 밀리지 않았는데 결과는 패배였습니다. 내용 전체가 나빴다기보다, 실점 장면 몇 번과 마무리 실패가 지나치게 치명적이었던 경기로 보는 편이 맞습니다.`,
+    )
+  }
+
+  return lines.sort((left, right) => right.priority - left.priority).map(({ text }) => text)
 }
 
 function formatOfficialTeamColors(teamColors: string[] | null | undefined) {
@@ -1869,6 +1990,7 @@ function MatchRecordCard({
   searchMode,
   shouldExpand,
   onExpandedChange,
+  onShareFeedback,
 }: {
   match: MatchData
   teams: NonNullable<ReturnType<typeof buildVoltaTeams>>
@@ -1876,6 +1998,7 @@ function MatchRecordCard({
   searchMode: SearchMode
   shouldExpand: boolean
   onExpandedChange: (matchId: string | null) => void
+  onShareFeedback: (message: string, tone?: ShareFeedbackTone) => void
 }) {
   const cardRef = useRef<HTMLElement | null>(null)
   const [selectedPlayerOuid, setSelectedPlayerOuid] = useState(teams.me.ouid)
@@ -1923,9 +2046,9 @@ function MatchRecordCard({
     if (type === 'copy') {
       try {
         await navigator.clipboard.writeText(shareUrl)
-        window.alert('링크가 복사되었습니다.')
+        onShareFeedback('링크가 복사되었습니다.')
       } catch {
-        window.alert('링크 복사에 실패했습니다.')
+        onShareFeedback('링크 복사에 실패했습니다.', 'error')
       }
       return
     }
@@ -2143,6 +2266,7 @@ function OfficialMatchRecordCard({
   searchMode,
   shouldExpand,
   onExpandedChange,
+  onShareFeedback,
 }: {
   match: MatchData
   teams: NonNullable<ReturnType<typeof buildOfficialTeams>>
@@ -2150,6 +2274,7 @@ function OfficialMatchRecordCard({
   searchMode: SearchMode
   shouldExpand: boolean
   onExpandedChange: (matchId: string | null) => void
+  onShareFeedback: (message: string, tone?: ShareFeedbackTone) => void
 }) {
   const cardRef = useRef<HTMLElement | null>(null)
   const [isExpandedInternal, setIsExpandedInternal] = useState(false)
@@ -2187,9 +2312,9 @@ function OfficialMatchRecordCard({
     if (type === 'copy') {
       try {
         await navigator.clipboard.writeText(shareUrl)
-        window.alert('링크가 복사되었습니다.')
+        onShareFeedback('링크가 복사되었습니다.')
       } catch {
-        window.alert('링크 복사에 실패했습니다.')
+        onShareFeedback('링크 복사에 실패했습니다.', 'error')
       }
       return
     }
@@ -2392,7 +2517,11 @@ function OfficialMatchRecordCard({
   )
 }
 
-async function copyOwnerPageLink(nickname: string, searchMode: SearchMode) {
+async function copyOwnerPageLink(
+  nickname: string,
+  searchMode: SearchMode,
+  onShareFeedback: (message: string, tone?: ShareFeedbackTone) => void,
+) {
   if (typeof window === 'undefined') return
 
   const relativeUrl = buildMatchesUrl(nickname, null, searchMode)
@@ -2400,9 +2529,9 @@ async function copyOwnerPageLink(nickname: string, searchMode: SearchMode) {
 
   try {
     await navigator.clipboard.writeText(shareUrl)
-    window.alert('구단주 페이지가 복사되었습니다.')
+    onShareFeedback('구단주 페이지가 복사되었습니다.')
   } catch {
-    window.alert('링크 복사에 실패했습니다.')
+    onShareFeedback('링크 복사에 실패했습니다.', 'error')
   }
 }
 
@@ -2556,6 +2685,7 @@ type Props = {
 export default function MatchesPageClient({ initialNickname, initialMatchId, initialSearchMode }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
+  const shareFeedbackTimerRef = useRef<number | null>(null)
   const normalizedInitialMode = normalizeSearchMode(initialSearchMode)
 
   const [selectedSearchMode, setSelectedSearchMode] = useState<SearchMode>(normalizedInitialMode)
@@ -2581,6 +2711,20 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   const [matchesError, setMatchesError] = useState('')
   const [visibleMatchCount, setVisibleMatchCount] = useState(INITIAL_VISIBLE_MATCHES)
   const [activeMatchId, setActiveMatchId] = useState(initialMatchId)
+  const [shareFeedback, setShareFeedback] = useState<ShareFeedbackState | null>(null)
+
+  const showShareFeedback = (message: string, tone: ShareFeedbackTone = 'success') => {
+    setShareFeedback({ message, tone })
+
+    if (shareFeedbackTimerRef.current !== null) {
+      window.clearTimeout(shareFeedbackTimerRef.current)
+    }
+
+    shareFeedbackTimerRef.current = window.setTimeout(() => {
+      setShareFeedback(null)
+      shareFeedbackTimerRef.current = null
+    }, 2200)
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -2589,6 +2733,14 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
     for (const key of LEGACY_MATCH_CACHE_KEYS) {
       window.localStorage.removeItem(key)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (shareFeedbackTimerRef.current !== null) {
+        window.clearTimeout(shareFeedbackTimerRef.current)
+      }
     }
   }, [])
 
@@ -3171,7 +3323,12 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                             <button
                               type="button"
                               aria-label="구단주 페이지 링크 복사"
-                              onClick={() => void copyOwnerPageLink(exactCandidate.nickname, selectedSearchMode)}
+                              onClick={() =>
+                                void copyOwnerPageLink(
+                                  exactCandidate.nickname,
+                                  selectedSearchMode,
+                                  showShareFeedback,
+                                )}
                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
                               style={{
                                 backgroundColor: 'transparent',
@@ -3294,6 +3451,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                                 shareNickname={shareNickname}
                                 searchMode={selectedSearchMode}
                                 shouldExpand={activeMatchId === match.matchId}
+                                onShareFeedback={showShareFeedback}
                                 onExpandedChange={(matchId) => {
                                   setActiveMatchId(matchId ?? '')
                                   updateMatchesUrl(shareNickname || null, matchId ?? null, selectedSearchMode)
@@ -3434,7 +3592,12 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                             <button
                               type="button"
                               aria-label="구단주 페이지 링크 복사"
-                              onClick={() => void copyOwnerPageLink(exactCandidate.nickname, selectedSearchMode)}
+                              onClick={() =>
+                                void copyOwnerPageLink(
+                                  exactCandidate.nickname,
+                                  selectedSearchMode,
+                                  showShareFeedback,
+                                )}
                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition"
                               style={{
                                 backgroundColor: 'transparent',
@@ -3543,6 +3706,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                                 shareNickname={shareNickname}
                                 searchMode={selectedSearchMode}
                                 shouldExpand={activeMatchId === match.matchId}
+                                onShareFeedback={showShareFeedback}
                                 onExpandedChange={(matchId) => {
                                   setActiveMatchId(matchId ?? '')
                                   updateMatchesUrl(shareNickname || null, matchId ?? null, selectedSearchMode)
@@ -3661,6 +3825,49 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
           </>
         )}
       </div>
+      {shareFeedback ? (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => setShareFeedback(null)}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div
+                className="mx-auto mb-4 h-1.5 w-12 rounded-full"
+                style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
+              />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
+                  {shareFeedback.tone === 'error' ? '공유에 실패했어요' : '링크가 복사되었어요'}
+                </p>
+                <p className="text-sm leading-[1.55]" style={{ color: 'var(--app-body-text)' }}>
+                  {shareFeedback.message}
+                </p>
+              </div>
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShareFeedback(null)}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  확인
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
