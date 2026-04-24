@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '19.9': [
+    '메인 배너 이미지를 교체했습니다.',
+  ],
   '19.8': [
     '커뮤니티와 선수평가 목록/댓글 조회에서 비로그인 사용자의 불필요한 인증 확인을 줄여 초기 응답 흐름을 가볍게 정리했습니다.',
     '마이페이지 푸터 문구를 정리하고, 설치형 PWA 하단 여백 보정을 공통 기준으로 다시 맞췄습니다.',
