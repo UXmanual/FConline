@@ -245,6 +245,7 @@ export default function PlayerReviewSection({
   const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
   const [reportTarget, setReportTarget] = useState<{ type: string; id: string } | null>(null)
   const [isReporting, setIsReporting] = useState(false)
+  const [isReportSuccessOpen, setIsReportSuccessOpen] = useState(false)
   const reviewNickname = resolvedReviewNickname || (authUser ? deriveCommunityNickname(authUser) : '')
   const authUserKey = authUser ? `${authUser.id}:${authUser.email ?? ''}` : ''
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
@@ -647,6 +648,7 @@ export default function PlayerReviewSection({
       })
       const result = await response.json().catch(() => null)
       if (!response.ok && response.status !== 409) throw new Error(result?.message ?? '신고를 접수하지 못했습니다.')
+      setIsReportSuccessOpen(true)
     } finally {
       setIsReporting(false)
       setReportTarget(null)
@@ -1267,6 +1269,24 @@ export default function PlayerReviewSection({
                 >
                   취소
                 </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {isReportSuccessOpen ? (
+        <div className="fixed inset-0 z-[80]">
+          <button type="button" aria-label="닫기" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }} onClick={() => setIsReportSuccessOpen(false)} />
+          <div className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
+            <section className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}>
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>신고가 완료되었습니다</p>
+                <p className="text-sm leading-[1.55]" style={{ color: 'var(--app-body-text)' }}>운영자가 검토 후 조치하겠습니다.</p>
+              </div>
+              <div className="mt-6">
+                <button type="button" onClick={() => setIsReportSuccessOpen(false)} className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white" style={{ backgroundColor: '#457ae5' }}>확인</button>
               </div>
             </section>
           </div>

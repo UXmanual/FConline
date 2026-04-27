@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.3': [
+    '신고 사유 선택 후 신고 완료 안내 팝업이 노출되도록 개선했습니다.',
+  ],
   '20.2': [
     '커뮤니티와 선수평가 게시글·댓글에 신고 기능을 추가했습니다.',
     '신고 접수 시 운영자에게 텔레그램 알림이 전송되며, 어드민 페이지에서 확인·처리할 수 있습니다.',
