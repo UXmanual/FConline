@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.1': [
+    '딤 클릭으로 알림 팝업을 닫은 뒤 다른 탭을 거쳐 마이탭으로 돌아오면 팝업이 다시 정상 표시되도록 수정했습니다.',
+  ],
   '20.0': [
     '누적 XP 기반 레벨 시스템을 추가하고, 로그인·커뮤니티·선수평가 활동에 따른 레벨 반영 흐름을 적용했습니다.',
     '레벨 계산 기준을 Lv.99 구조로 확장하고, 구간별 레벨 컬러와 마이페이지 레벨 안내를 함께 정리했습니다.',

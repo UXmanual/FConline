@@ -269,6 +269,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const isAppNotificationsEnabled = useAppNotificationsEnabled()
   const prevAppNotificationsEnabledRef = useRef<boolean | null>(null)
   const privacySectionRef = useRef<HTMLElement | null>(null)
+  const checkPopupRef = useRef<() => void>(() => {})
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isAuthPending, setIsAuthPending] = useState(false)
@@ -420,17 +421,31 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }, [initialPrivacyOpen])
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !canShowAppNotificationPrompt()) return
-    if (isAppNotificationSheetOpen) return
-    if (isAppNotificationsEnabled) return
-    if (sessionStorage.getItem('mypage-popup-dismissed') === '1') return
+    checkPopupRef.current = () => {
+      if (typeof window === 'undefined' || !canShowAppNotificationPrompt()) return
+      if (isAppNotificationSheetOpen) return
+      if (isAppNotificationsEnabled) return
+      if (sessionStorage.getItem('mypage-popup-dismissed') === '1') return
 
-    const hasSeenPrompt = window.localStorage.getItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY) === 'true'
-    if (hasSeenPrompt) return
+      if (process.env.NODE_ENV !== 'production') {
+        window.localStorage.removeItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY)
+      }
 
-    resetAppNotificationsEnabled()
-    setIsAppNotificationSheetOpen(true)
-  }, [isAppNotificationSheetOpen, isAppNotificationsEnabled])
+      const hasSeenPrompt = window.localStorage.getItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY) === 'true'
+      if (hasSeenPrompt) return
+
+      resetAppNotificationsEnabled()
+      setIsAppNotificationSheetOpen(true)
+    }
+  })
+
+  useEffect(() => {
+    checkPopupRef.current()
+
+    const handleMypageEnter = () => checkPopupRef.current()
+    window.addEventListener('mypage-enter', handleMypageEnter)
+    return () => window.removeEventListener('mypage-enter', handleMypageEnter)
+  }, [])
 
   useEffect(() => {
     const prev = prevAppNotificationsEnabledRef.current

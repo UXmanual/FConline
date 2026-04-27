@@ -49,6 +49,10 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
     }
 
     router.push(href)
+
+    if (pathname !== '/mypage' && href === '/mypage') {
+      window.dispatchEvent(new CustomEvent('mypage-enter'))
+    }
   }
 
   return (
