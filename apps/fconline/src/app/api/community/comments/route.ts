@@ -4,6 +4,7 @@ import {
   formatRelativeTime,
   getIpPrefixFromHeader,
   getKoreaTimestampString,
+  isCommunityAdminEmail,
   type CommunityCommentItem,
 } from '@/lib/community'
 import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
@@ -293,6 +294,23 @@ export async function DELETE(request: NextRequest) {
         typeof comment.password_hash === 'string' || comment.password_hash === null
           ? comment.password_hash
           : undefined,
+    }
+
+    if (isCommunityAdminEmail(user.email)) {
+      const targetPostId =
+        typeof comment.post_id === 'string' && comment.post_id.trim().length > 0 ? comment.post_id : null
+
+      const { error: deleteError } = await supabase.from('community_comments').delete().eq('id', commentId)
+
+      if (deleteError) {
+        return Response.json({ message: '??????????? ????????' }, { status: 500 })
+      }
+
+      if (targetPostId) {
+        await syncCommunityPostCommentCount(targetPostId)
+      }
+
+      return Response.json({ success: true })
     }
 
     if (!ownershipTarget.author_user_id && !ownershipTarget.password_hash) {

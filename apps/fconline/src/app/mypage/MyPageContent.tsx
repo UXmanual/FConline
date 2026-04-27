@@ -42,27 +42,16 @@ const levelGuideItems = [
   '- 같은 글에 반복 댓글을 달면 XP가 지급되지 않을 수 있음',
 ]
 
-function isInstalledApp() {
+function canShowAppNotificationPrompt() {
   if (typeof window === 'undefined') {
     return false
   }
 
-  const iosNavigator = window.navigator as Navigator & { standalone?: boolean }
-
   return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    window.matchMedia('(display-mode: minimal-ui)').matches ||
-    iosNavigator.standalone === true
+    'Notification' in window &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window
   )
-}
-
-function canShowAppNotificationPrompt() {
-  if (process.env.NODE_ENV !== 'production') {
-    return true
-  }
-
-  return isInstalledApp()
 }
 
 const openSourceLicenses = [

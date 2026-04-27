@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '21.4': [
+    '앱 알림 팝업이 설치형 여부가 아니라 알림을 지원하는 브라우저에서만 노출되도록 기준을 정리했습니다.',
+    '운영자 계정은 작성자 정보가 비어 있는 예전 댓글도 삭제할 수 있도록 관리자 삭제 권한을 보정했습니다.',
+  ],
   '21.3': [
     '마이페이지 앱 알림 팝업이 미허용 전환 후 다시 진입했을 때 재노출되도록 조건을 보정했습니다.',
     '앱 알림 팝업은 나중에를 눌렀을 때만 숨김 상태가 유지되도록 다시 정리했습니다.',
