@@ -51,7 +51,7 @@ export default async function HomePage() {
         <main className="space-y-3">
           <HomeStatusPanel />
           <HomeEventCarousel events={events} />
-          {controllerUsage ? <HomeControllerUsageCard usage={controllerUsage} /> : null}
+          <HomeControllerUsageCard usage={controllerUsage} />
           <HomeCommunityCard />
           <HomeSettingsCard />
         </main>

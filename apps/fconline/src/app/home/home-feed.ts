@@ -22,6 +22,7 @@ export type HomeControllerUsage = {
   items: ControllerUsageItem[]
   basisLabel: string
   sourceUrl: string
+  unavailable?: boolean
 }
 
 const NOTICE_LIST_URL = 'https://fconline.nexon.com/news/notice/list'
@@ -230,7 +231,17 @@ export async function getHomeEvents(): Promise<HomeEventItem[]> {
   return LOCAL_HOME_EVENTS
 }
 
-export async function getHomeControllerUsage(): Promise<HomeControllerUsage | null> {
+const CONTROLLER_USAGE_FALLBACK: HomeControllerUsage = {
+  items: [
+    { label: '키보드', percentage: '0', record: '- 승 - 무 - 패' },
+    { label: '패드', percentage: '0', record: '- 승 - 무 - 패' },
+  ],
+  basisLabel: '공식 경기 1 ON 1 | 전일 12시 업데이트 상위 1만명 기준',
+  sourceUrl: DAILY_SQUAD_URL,
+  unavailable: true,
+}
+
+export async function getHomeControllerUsage(): Promise<HomeControllerUsage> {
   try {
     const html = await fetchHtml(DAILY_SQUAD_URL)
     const sectionMatch = html.match(
@@ -238,7 +249,7 @@ export async function getHomeControllerUsage(): Promise<HomeControllerUsage | nu
     )
 
     if (!sectionMatch) {
-      return null
+      return CONTROLLER_USAGE_FALLBACK
     }
 
     const keyboardPercentage = `${sectionMatch[1]}%`
@@ -248,21 +259,13 @@ export async function getHomeControllerUsage(): Promise<HomeControllerUsage | nu
 
     return {
       items: [
-        {
-          label: '키보드',
-          percentage: keyboardPercentage,
-          record: keyboardRecord,
-        },
-        {
-          label: '패드',
-          percentage: padPercentage,
-          record: padRecord,
-        },
+        { label: '키보드', percentage: keyboardPercentage, record: keyboardRecord },
+        { label: '패드', percentage: padPercentage, record: padRecord },
       ],
       basisLabel: '공식 경기 1 ON 1 | 전일 12시 업데이트 상위 1만명 기준',
       sourceUrl: DAILY_SQUAD_URL,
     }
   } catch {
-    return null
+    return CONTROLLER_USAGE_FALLBACK
   }
 }

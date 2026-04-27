@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '21.1': [
+    '넥슨 서버에서 컨트롤러 이용 비중 데이터를 불러오지 못할 때도 카드가 유지되고, 퍼센트와 전적은 --%·- 승 - 무 - 패로 표시됩니다.',
+  ],
   '21.0': [
     '마이페이지 XP/레벨 영역이 로딩 중 갑자기 튀어나오던 문제를 개선했습니다. 이제 로딩 중에는 스켈레톤 애니메이션이 표시됩니다.',
   ],

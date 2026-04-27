@@ -12,6 +12,7 @@ function formatAnimatedPercentage(value: number, original: string) {
   return `${hasDecimal ? value.toFixed(1) : Math.round(value)}%`
 }
 
+
 export default function HomeControllerUsageCard({ usage }: Props) {
   const cardRef = useRef<HTMLElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
@@ -117,7 +118,7 @@ export default function HomeControllerUsageCard({ usage }: Props) {
       <div className="mt-3 grid grid-cols-2 gap-3">
         {usage.items.map((item, index) => {
           const numericPercentage = percentages[index] ?? 0
-          const isPrimary = numericPercentage === maxPercentage
+          const isPrimary = !usage.unavailable && numericPercentage === maxPercentage
 
           return (
             <article key={item.label} className="rounded-lg px-4 py-4" style={softStyle}>
@@ -128,7 +129,7 @@ export default function HomeControllerUsageCard({ usage }: Props) {
                 className="mt-1 text-[22px] font-extrabold tracking-[-0.03em]"
                 style={{ color: isPrimary ? '#457ae5' : 'var(--app-title)' }}
               >
-                {formatAnimatedPercentage(animatedPercentages[index] ?? 0, item.percentage)}
+                {usage.unavailable ? '--%' : formatAnimatedPercentage(animatedPercentages[index] ?? 0, item.percentage)}
               </p>
               <p className="mt-1 text-[12px] leading-5" style={mutedStyle}>
                 {item.record}
