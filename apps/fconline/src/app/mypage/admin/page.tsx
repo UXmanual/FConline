@@ -10,6 +10,7 @@ type ReportItem = {
   reason: string
   status: string
   created_at: string
+  preview?: string
 }
 
 const TARGET_TYPE_LABELS: Record<string, string> = {
@@ -299,11 +300,16 @@ export default function MyPageAdminPushPage() {
                         <p className="text-[12px] font-semibold" style={titleStyle}>
                           {TARGET_TYPE_LABELS[report.target_type] ?? report.target_type}
                         </p>
-                        <p className="text-[12px] break-all" style={mutedStyle}>
-                          ID: {report.target_id}
-                        </p>
-                        <p className="text-[12px] font-medium" style={titleStyle}>
-                          사유: {report.reason}
+                        {report.preview
+                          ? report.preview.split('\n').map((line, i) => (
+                              <p key={i} className="text-[12px] break-words" style={i === 0 ? mutedStyle : titleStyle}>
+                                {line}
+                              </p>
+                            ))
+                          : <p className="text-[12px] break-all" style={mutedStyle}>ID: {report.target_id}</p>
+                        }
+                        <p className="text-[12px] font-medium" style={{ color: '#d97904' }}>
+                          신고 사유: {report.reason}
                         </p>
                         <p className="text-[11px]" style={mutedStyle}>
                           {new Date(report.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}

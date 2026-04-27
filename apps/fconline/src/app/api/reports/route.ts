@@ -151,7 +151,14 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    return Response.json({ items: data ?? [] })
+    const items = await Promise.all(
+      (data ?? []).map(async (report) => ({
+        ...report,
+        preview: await fetchTargetPreview(supabase, report.target_type, report.target_id),
+      })),
+    )
+
+    return Response.json({ items })
   } catch {
     return Response.json({ message: '신고 목록을 불러오지 못했습니다.' }, { status: 500 })
   }

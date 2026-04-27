@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.7': [
+    '어드민 신고 목록에 제목·댓글 내용을 함께 표시하도록 개선했습니다.',
+  ],
   '20.6': [
     '어드민 페이지 관리자 패스워드를 최상단 공통 블럭으로 분리했습니다.',
   ],
