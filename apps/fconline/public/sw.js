@@ -5,6 +5,7 @@ const ASSET_CACHE_NAME = 'fco-ground-assets-v2'
 const APP_SHELL_ROUTES = [
   '/',
   '/home',
+  '/offline',
   '/matches',
   '/players',
   '/community',
@@ -183,6 +184,7 @@ self.addEventListener('fetch', (event) => {
           }
 
           return (
+            (await caches.match('/offline')) ||
             (await caches.match('/home')) ||
             new Response('Offline', {
               status: 503,

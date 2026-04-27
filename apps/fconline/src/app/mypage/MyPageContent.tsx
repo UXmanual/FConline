@@ -435,7 +435,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       if (typeof window === 'undefined' || !canShowAppNotificationPrompt()) return
       if (isAppNotificationSheetOpen) return
       if (isAppNotificationsEnabled) return
-      if (sessionStorage.getItem('mypage-popup-dismissed') === '1') return
 
       if (process.env.NODE_ENV !== 'production') {
         window.localStorage.removeItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY)
@@ -715,9 +714,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }
 
   const handleDismissAppNotificationSheet = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('mypage-popup-dismissed', '1')
-    }
     closeAppNotificationSheet(false)
   }
 
