@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { rewardLoginXp } from '@/lib/userLevel.server'
 
 function getSafeRedirect(request: NextRequest) {
   const nextPath = request.nextUrl.searchParams.get('next')
@@ -41,11 +42,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createSupabaseSsrClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
       redirectUrl.searchParams.set('auth', 'error')
       return NextResponse.redirect(redirectUrl)
+    }
+
+    if (user?.id) {
+      await rewardLoginXp(user.id).catch(() => undefined)
     }
 
     redirectUrl.searchParams.set('auth', 'success')

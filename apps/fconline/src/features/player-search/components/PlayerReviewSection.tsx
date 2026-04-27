@@ -10,10 +10,12 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import UserLevelBadge from '@/components/user/UserLevelBadge'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
@@ -117,6 +119,7 @@ function ReviewPostCard({
             >
               선수 평가
             </span>
+            <UserLevelBadge level={post.level} />
             <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>
               {post.nickname}
             </span>
@@ -204,6 +207,7 @@ export default function PlayerReviewSection({
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [resolvedReviewNickname, setResolvedReviewNickname] = useState('')
+  const [currentUserLevel, setCurrentUserLevel] = useState<number | null>(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [selectedCardLevel, setSelectedCardLevel] = useState(defaultCardLevel)
@@ -303,6 +307,7 @@ export default function PlayerReviewSection({
   useEffect(() => {
     if (!authUser) {
       setResolvedReviewNickname('')
+      setCurrentUserLevel(null)
       return
     }
 
@@ -319,9 +324,11 @@ export default function PlayerReviewSection({
         }
 
         setResolvedReviewNickname(String(result?.nickname ?? fallbackNickname))
+        setCurrentUserLevel((result?.levelProfile as UserLevelSnapshot | undefined)?.level ?? 1)
       } catch {
         if (!isCancelled) {
           setResolvedReviewNickname(fallbackNickname)
+          setCurrentUserLevel(1)
         }
       }
     }
@@ -596,6 +603,7 @@ export default function PlayerReviewSection({
         throw new Error(result.message ?? '선수 평가를 등록하지 못했습니다.')
       }
 
+      setCurrentUserLevel(Number.isFinite(result.item?.level) ? Number(result.item.level) : currentUserLevel)
       setTitle('')
       setContent('')
       setIsComposerOpen(false)
@@ -673,6 +681,7 @@ export default function PlayerReviewSection({
       }
 
       const nextComment = result.item as CommunityCommentItem
+      setCurrentUserLevel(Number.isFinite(nextComment?.level) ? Number(nextComment.level) : currentUserLevel)
       setComments((current) => [nextComment, ...current])
       setCommentDraft('')
       setPosts((current) =>
@@ -777,9 +786,12 @@ export default function PlayerReviewSection({
             선수평가와 댓글 작성은 Google 로그인 후 이용할 수 있습니다.
           </p>
         ) : authUser ? (
-          <p className="mt-3 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
-            선수평가와 댓글 작성 시 닉네임은 {reviewNickname}으로 표시됩니다.
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+            <span>선수평가와 댓글 작성 시</span>
+            <UserLevelBadge level={currentUserLevel} />
+            <span>{reviewNickname}</span>
+            <span>으로 표시됩니다.</span>
+          </div>
         ) : null}
 
         {aiReviewSummary ? (
@@ -971,6 +983,7 @@ export default function PlayerReviewSection({
                   <p className="font-semibold" style={{ color: 'var(--app-title)' }}>
                     닉네임
                   </p>
+                  <UserLevelBadge level={currentUserLevel} />
                   <p style={{ color: 'var(--app-body-text)' }}>{reviewNickname}</p>
                 </div>
 
@@ -1092,6 +1105,7 @@ export default function PlayerReviewSection({
                       <article key={comment.id} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
+                            <UserLevelBadge level={comment.level} />
                             <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
                               {comment.nickname}
                             </span>
@@ -1131,9 +1145,12 @@ export default function PlayerReviewSection({
               >
                 <div className="flex items-center gap-3">
                   {authUser ? (
-                    <span className="shrink-0 text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                      {reviewNickname}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <UserLevelBadge level={currentUserLevel} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                        {reviewNickname}
+                      </span>
+                    </div>
                   ) : null}
                   <div
                     className="flex h-12 min-w-0 flex-1 items-center rounded-[22px] px-4"

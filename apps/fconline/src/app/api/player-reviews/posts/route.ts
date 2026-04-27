@@ -10,6 +10,7 @@ import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
 import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { getUserLevelMap, getUserLevelProfile, rewardPlayerReviewPostXp } from '@/lib/userLevel.server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const DEFAULT_PAGE = 1
@@ -34,11 +35,16 @@ function mapPostSummary(
   post: PlayerReviewPostRow,
   currentUserId?: string | null,
   currentUserEmail?: string | null,
+  levelMap?: Map<string, number>,
 ): CommunityPostSummary {
   return {
     id: post.id,
     category: '선수',
     nickname: post.nickname,
+    level:
+      typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
+        ? (levelMap?.get(post.author_user_id) ?? 1)
+        : null,
     ipPrefix: post.ip_prefix ?? null,
     title: post.title,
     content: post.content,
@@ -190,7 +196,8 @@ export async function GET(request: NextRequest) {
     }
 
     const typedPosts = (posts ?? []) as unknown as PlayerReviewPostRow[]
-    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email))
+    const levelMap = await getUserLevelMap(typedPosts.map((post) => post.author_user_id))
+    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email, levelMap))
 
     return Response.json({
       items,
@@ -277,10 +284,14 @@ export async function POST(request: NextRequest) {
       { ...(response.data as PlayerReviewPostRow), comment_count: 0 },
       user.id,
       user.email,
+      new Map([[user.id, 1]]),
     )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }
+
+    await rewardPlayerReviewPostXp(user.id, item.id).catch(() => undefined)
+    item.level = (await getUserLevelProfile(user.id).catch(() => null))?.level ?? item.level ?? 1
 
     return Response.json({ item }, { status: 201 })
   } catch {

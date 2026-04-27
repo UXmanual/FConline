@@ -3,6 +3,7 @@
 import { startTransition, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import UserLevelBadge from '@/components/user/UserLevelBadge'
 import { Button } from '@/components/ui/button'
 import LoadingDots from '@/components/ui/LoadingDots'
 import SelectChevron from '@/components/ui/SelectChevron'
@@ -16,8 +17,27 @@ import {
 } from '@/lib/appNotifications'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { MAX_LEVEL, type UserLevelSnapshot } from '@/lib/userLevel'
 
 const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v2'
+
+type MyPageLevelProfile = UserLevelSnapshot & {
+  lastLoginRewardDate?: string | null
+}
+
+const levelGuideItems = [
+  `- 최고 레벨: Lv.${MAX_LEVEL}`,
+  '- 현재 아래 XP 기준으로 누적 경험치가 반영',
+  '- 하루 첫 로그인: +5 XP',
+  '- 커뮤니티 글 작성: +12 XP',
+  '- 선수평가 글 작성: +10 XP',
+  '- 커뮤니티 댓글 작성: +4 XP',
+  '- 선수평가 댓글 작성: +4 XP',
+  '- 하루 첫 글 보너스: +5 XP',
+  '- 하루 첫 댓글 보너스: +3 XP',
+  '- 댓글 XP는 하루 최대 5회까지만 지급',
+  '- 같은 글에 반복 댓글을 달면 XP가 지급되지 않을 수 있음',
+]
 
 function isInstalledApp() {
   if (typeof window === 'undefined') {
@@ -200,6 +220,48 @@ function GoogleBrandIcon() {
   )
 }
 
+function MyPageAuthSkeleton() {
+  return (
+    <>
+      <section className="rounded-lg px-5 py-3" style={{ minHeight: '62px', backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)' }}>
+        <div className="flex min-h-[36px] items-center justify-between gap-3">
+          <div className="home-image-shimmer h-4 w-28 rounded-full" />
+          <div className="flex items-center gap-1.5">
+            <div className="home-image-shimmer h-3.5 w-28 rounded-full" />
+            <div className="home-image-shimmer h-3.5 w-10 rounded-full" />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-lg px-5 py-4" style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)' }}>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="home-image-shimmer h-7 w-12 rounded-[8px]" />
+              <div className="home-image-shimmer h-4 w-24 rounded-full" />
+            </div>
+            <div className="home-image-shimmer h-7 w-20 rounded-[8px]" />
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="home-image-shimmer h-4 w-28 rounded-full" />
+            <div className="home-image-shimmer h-3.5 w-24 rounded-full" />
+          </div>
+
+          <div className="home-image-shimmer h-1.5 w-full rounded-full" />
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="home-image-shimmer h-3.5 w-14 rounded-full" />
+            <div className="home-image-shimmer h-3.5 w-14 rounded-full" />
+          </div>
+
+          <div className="home-image-shimmer h-4 w-20 rounded-full" />
+        </div>
+      </section>
+    </>
+  )
+}
+
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -211,9 +273,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [communityNickname, setCommunityNickname] = useState('')
+  const [userLevelProfile, setUserLevelProfile] = useState<MyPageLevelProfile | null>(null)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
+  const [isLevelGuideOpen, setIsLevelGuideOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(initialPrivacyOpen)
   const [isAccountDeleteOpen, setIsAccountDeleteOpen] = useState(false)
@@ -280,6 +344,41 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     }
   }, [])
 
+  useEffect(() => {
+    if (!authUser) {
+      setUserLevelProfile(null)
+      return
+    }
+
+    let isCancelled = false
+    const fallbackNickname = deriveCommunityNickname(authUser)
+
+    async function syncProfile() {
+      try {
+        const response = await fetch('/api/mypage/nickname', { cache: 'no-store' })
+        const result = await response.json().catch(() => null)
+
+        if (!response.ok || isCancelled) {
+          return
+        }
+
+        setCommunityNickname(String(result?.nickname ?? fallbackNickname))
+        setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? null)
+      } catch {
+        if (!isCancelled) {
+          setCommunityNickname(fallbackNickname)
+          setUserLevelProfile(null)
+        }
+      }
+    }
+
+    void syncProfile()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [authUser])
+
   useLayoutEffect(() => {
     if (!initialPrivacyOpen || !privacySectionRef.current) {
       return
@@ -325,10 +424,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     if (isAppNotificationSheetOpen) return
     if (isAppNotificationsEnabled) return
     if (sessionStorage.getItem('mypage-popup-dismissed') === '1') return
-
-    if (process.env.NODE_ENV !== 'production') {
-      window.localStorage.removeItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY)
-    }
 
     const hasSeenPrompt = window.localStorage.getItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY) === 'true'
     if (hasSeenPrompt) return
@@ -487,6 +582,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         } as User
       })
       setCommunityNickname(result?.nickname ?? trimmedNickname)
+      setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? userLevelProfile)
       setIsEditingNickname(false)
       window.alert('닉네임이 변경되었습니다.')
     } catch (error) {
@@ -818,121 +914,213 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </h1>
         </div>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold" style={titleStyle}>
-                <span style={{ color: '#457ae5' }}>구글 로그인</span>
-                <span>{authUser ? ' 연결됨' : ' 연결 전'}</span>
-              </p>
-
-              {authUser?.email ? (
-                <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium" style={mutedStyle}>
-                  <p className="max-w-[180px] truncate" title={authUser.email}>
-                    {authUser.email}
+        {isAuthLoading ? (
+          <MyPageAuthSkeleton />
+        ) : (
+          <>
+            <section
+              className="rounded-lg px-5 py-3"
+              style={{
+                ...cardStyle,
+                ...surfaceTransitionStyle,
+                minHeight: authUser && !authMessage ? '62px' : undefined,
+              }}
+            >
+              {authUser && !authMessage ? (
+                <div className="flex min-h-[36px] items-center justify-between gap-3">
+                  <p className="text-sm font-semibold" style={titleStyle}>
+                    <span style={{ color: '#457ae5' }}>구글 로그인</span>
+                    <span> 연결됨</span>
                   </p>
-                  <span aria-hidden="true" style={{ color: 'var(--app-muted-text)', opacity: 0.4 }}>
-                    |
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={isAuthPending || isSavingNickname}
-                    className="shrink-0 disabled:opacity-50"
-                    style={mutedStyle}
-                  >
-                    {isAuthPending ? '로그아웃 중...' : '로그아웃'}
-                  </button>
-                </div>
-              ) : null}
-            </div>
 
-            {authMessage ? (
-              <p className="text-[12px] font-semibold leading-[1.35]" style={{ color: '#cf3f5b' }}>
-                {authMessage}
-              </p>
-            ) : null}
+                  <div className="flex min-w-0 items-center justify-end gap-1.5 text-[12px] font-medium" style={mutedStyle}>
+                    <p className="max-w-[180px] truncate" title={authUser.email ?? ''}>
+                      {authUser.email}
+                    </p>
+                    <span aria-hidden="true" style={{ color: 'var(--app-muted-text)', opacity: 0.4 }}>
+                      |
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isAuthPending || isSavingNickname}
+                      className="shrink-0 disabled:opacity-50"
+                      style={mutedStyle}
+                    >
+                      {isAuthPending ? '로그아웃 중...' : '로그아웃'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5 py-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold" style={titleStyle}>
+                      <span style={{ color: '#457ae5' }}>구글 로그인</span>
+                      <span>{authUser ? ' 연결됨' : ' 연결 전'}</span>
+                    </p>
+                  </div>
+
+                  {authMessage ? (
+                    <p className="text-[12px] font-semibold leading-[1.35]" style={{ color: '#cf3f5b' }}>
+                      {authMessage}
+                    </p>
+                  ) : null}
+
+                  {!authUser ? (
+                    <>
+                      <p className="text-sm leading-[1.25]" style={bodyStyle}>
+                        구글 로그인하고 커뮤니티와 선수평가에 참여해요
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        disabled={isAuthPending || isAuthLoading}
+                        className="mt-1 h-10 gap-0 rounded-xl border px-0 text-sm font-medium"
+                        style={googleLoginButtonStyle}
+                      >
+                        <span className="flex items-center gap-[10px] pl-3 pr-3">
+                          <GoogleBrandIcon />
+                          <span className="leading-5">{isAuthPending ? '이동 중...' : 'Google 계정으로 로그인'}</span>
+                        </span>
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </section>
 
             {authUser ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-[12px] font-medium" style={mutedStyle}>
-                  <span className="font-semibold">닉네임</span>
-                  <span aria-hidden="true" style={{ color: 'var(--app-muted-text)', opacity: 0.4 }}>
-                    |
-                  </span>
+          <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+            <div className="space-y-3">
+              {isEditingNickname ? (
+                <div className="flex gap-2">
+                  <input
+                    value={communityNickname}
+                    onChange={(event) => setCommunityNickname(event.target.value.slice(0, 10))}
+                    maxLength={10}
+                    placeholder="닉네임"
+                    className="h-10 min-w-0 flex-1 rounded-[999px] border px-3 text-sm outline-none transition focus:bg-transparent"
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: 'var(--app-input-border)',
+                      color: 'var(--app-title)',
+                    }}
+                  />
                   <button
                     type="button"
-                    onClick={() => setIsEditingNickname((current) => !current)}
-                    className="text-[12px] font-medium"
-                    style={{ color: 'var(--app-muted-text)' }}
+                    onClick={() => {
+                      setCommunityNickname(authUser ? deriveCommunityNickname(authUser) : '')
+                      setIsEditingNickname(false)
+                    }}
+                    disabled={isSavingNickname || isAuthPending}
+                    className="h-10 shrink-0 rounded-[999px] px-4 text-[12px] font-medium disabled:opacity-50"
+                    style={{
+                      backgroundColor: 'var(--app-surface-soft)',
+                      color: 'var(--app-muted-text)',
+                    }}
                   >
-                    {isEditingNickname ? '취소' : '수정'}
+                    취소
+                  </button>
+                  <Button
+                    type="button"
+                    onClick={handleSaveCommunityNickname}
+                    disabled={isSavingNickname || isAuthPending}
+                    className="h-10 rounded-[999px] px-4 text-[12px] font-semibold"
+                    style={{
+                      backgroundColor: 'var(--app-action-badge-bg)',
+                      color: 'var(--app-action-badge-fg)',
+                    }}
+                  >
+                    {isSavingNickname ? '저장 중...' : '저장'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <UserLevelBadge level={userLevelProfile?.level} />
+                    <p className="truncate text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                      {communityNickname}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingNickname(true)}
+                    className="inline-flex h-7 shrink-0 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none"
+                    style={{
+                      backgroundColor: 'var(--app-action-badge-bg)',
+                      color: 'var(--app-action-badge-fg)',
+                    }}
+                  >
+                    닉네임 변경
                   </button>
                 </div>
+              )}
 
-                {isEditingNickname ? (
-                  <div className="flex gap-2">
-                    <input
-                      value={communityNickname}
-                      onChange={(event) => setCommunityNickname(event.target.value.slice(0, 10))}
-                      maxLength={10}
-                      placeholder="닉네임"
-                      className="h-10 min-w-0 flex-1 rounded-[999px] border px-3 text-sm outline-none transition focus:bg-transparent"
+              {userLevelProfile ? (
+                <div className="mt-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
+                      현재 누적 XP {userLevelProfile.xpTotal}
+                    </p>
+                    <p className="text-[12px] font-medium" style={mutedStyle}>
+                      {userLevelProfile.nextLevel ? `다음 레벨까지 ${userLevelProfile.remainingXp} XP` : '최고 레벨 달성'}
+                    </p>
+                  </div>
+                  <div
+                    className="mt-3 h-1.5 overflow-hidden rounded-full"
+                    style={{ backgroundColor: 'rgba(148, 163, 184, 0.2)' }}
+                  >
+                    <div
+                      className="h-full rounded-full"
                       style={{
-                        backgroundColor: 'transparent',
-                        borderColor: 'var(--app-input-border)',
-                        color: 'var(--app-title)',
+                        width: `${userLevelProfile.progressPercent}%`,
+                        backgroundColor: '#457ae5',
                       }}
                     />
-                    <Button
-                      type="button"
-                      onClick={handleSaveCommunityNickname}
-                      disabled={isSavingNickname || isAuthPending}
-                      className="h-10 rounded-[999px] px-4 text-[12px] font-semibold"
-                      style={{
-                        backgroundColor: 'var(--app-action-badge-bg)',
-                        color: 'var(--app-action-badge-fg)',
-                      }}
-                    >
-                      {isSavingNickname ? '저장 중...' : '저장'}
-                    </Button>
                   </div>
-                ) : (
-                  <p className="text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                    {communityNickname}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                <p className="text-sm leading-[1.35]" style={bodyStyle}>
-                  {isAuthLoading ? '로그인 상태를 확인하고 있습니다.' : '구글 로그인하고 커뮤니티와 선수평가에 참여해요'}
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={isAuthPending || isAuthLoading}
-                  className="mt-2 h-10 gap-0 rounded-xl border px-0 text-sm font-medium"
-                  style={googleLoginButtonStyle}
-                >
-                  <span className="flex items-center gap-[10px] pl-3 pr-3">
-                    <GoogleBrandIcon />
-                    <span className="leading-5">{isAuthPending ? '이동 중...' : 'Google 계정으로 로그인'}</span>
-                  </span>
-                </Button>
-              </>
-            )}
-          </div>
-        </section>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-[12px] font-medium" style={mutedStyle}>
+                    <span>{`${userLevelProfile.currentLevelXp} XP`}</span>
+                    <span>{`${userLevelProfile.nextLevelXp ?? userLevelProfile.currentLevelXp} XP`}</span>
+                  </div>
+                </div>
+              ) : null}
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
-          <div className="flex items-center justify-between gap-4">
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsLevelGuideOpen((current) => !current)}
+                  className="block w-full text-left"
+                  aria-expanded={isLevelGuideOpen}
+                >
+                  <p
+                    className={`text-[13px] font-medium ${isLevelGuideOpen ? '' : 'underline underline-offset-2'}`}
+                    style={mutedStyle}
+                  >
+                    레벨업 기준
+                  </p>
+                </button>
+
+                {isLevelGuideOpen ? (
+                  <div className="mt-3 space-y-1">
+                    {levelGuideItems.map((item) => (
+                      <p key={item} className="text-[12px] font-medium leading-[1.22]" style={bodyStyle}>
+                        {item}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </section>
+            ) : null}
+          </>
+        )}
+
+        <section className="rounded-lg px-5 py-3" style={{ ...cardStyle, ...surfaceTransitionStyle, minHeight: '62px' }}>
+          <div className="flex min-h-[36px] items-center justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm leading-[1.35]" style={bodyStyle}>
-                현재 베타 테스트 중입니다.
-              </p>
-              <p className="text-sm leading-[1.35]" style={bodyStyle}>
-                문의나 요청사항은 쪽지로 남겨주세요.
+              <p className="text-sm font-semibold leading-[1.35]" style={{ color: isDarkModeEnabled ? '#ffffff' : 'var(--app-title)' }}>
+                무엇을 도와드릴까요?
               </p>
             </div>
 

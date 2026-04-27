@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { formatRelativeTime, type CommunityPostSummary } from '@/lib/community'
+import { getUserLevelMap } from '@/lib/userLevel.server'
 import CommunityPageClient from './CommunityPageClient'
 
 export const dynamic = 'force-dynamic'
@@ -53,10 +54,16 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       return { items: [], totalCount: 0, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
     }
 
-    const items = (posts as unknown as PostRow[]).map((post) => ({
+    const typedPosts = posts as unknown as PostRow[]
+    const levelMap = await getUserLevelMap(typedPosts.map((post) => post.author_user_id))
+    const items = typedPosts.map((post) => ({
       id: post.id,
       category: post.category as CommunityPostSummary['category'],
       nickname: post.nickname,
+      level:
+        typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
+          ? (levelMap.get(post.author_user_id) ?? 1)
+          : null,
       ipPrefix: post.ip_prefix ?? null,
       title: post.title,
       content: post.content,

@@ -10,6 +10,7 @@ import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
 import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { getUserLevelMap, getUserLevelProfile, rewardPlayerReviewCommentXp } from '@/lib/userLevel.server'
 
 type PlayerReviewCommentRow = {
   id: string
@@ -26,11 +27,16 @@ function mapComment(
   comment: PlayerReviewCommentRow,
   currentUserId?: string | null,
   currentUserEmail?: string | null,
+  levelMap?: Map<string, number>,
 ): CommunityCommentItem {
   return {
     id: comment.id,
     postId: comment.review_post_id,
     nickname: comment.nickname,
+    level:
+      typeof comment.author_user_id === 'string' && comment.author_user_id.trim().length > 0
+        ? (levelMap?.get(comment.author_user_id) ?? 1)
+        : null,
     ipPrefix: comment.ip_prefix ?? null,
     content: comment.content,
     createdAt: comment.created_at,
@@ -104,10 +110,11 @@ export async function GET(request: NextRequest) {
       return Response.json({ message: '선수 평가 댓글을 불러오지 못했습니다.' }, { status: 500 })
     }
 
+    const typedComments = (data ?? []) as PlayerReviewCommentRow[]
+    const levelMap = await getUserLevelMap(typedComments.map((comment) => comment.author_user_id))
+
     return Response.json({
-      items: ((data ?? []) as PlayerReviewCommentRow[]).map((comment) =>
-        mapComment(comment, user?.id, user?.email),
-      ),
+      items: typedComments.map((comment) => mapComment(comment, user?.id, user?.email, levelMap)),
     })
   } catch (error) {
     if (process.env.NODE_ENV === 'development' && isMissingSupabaseConfigError(error)) {
@@ -214,10 +221,13 @@ export async function POST(request: NextRequest) {
 
     await syncPlayerReviewPostCommentCount(postId)
 
-    const item = mapComment(response.data as PlayerReviewCommentRow, user.id, user.email)
+    const item = mapComment(response.data as PlayerReviewCommentRow, user.id, user.email, new Map([[user.id, 1]]))
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }
+
+    await rewardPlayerReviewCommentXp(user.id, item.id, postId, content).catch(() => undefined)
+    item.level = (await getUserLevelProfile(user.id).catch(() => null))?.level ?? item.level ?? 1
 
     return Response.json({ item }, { status: 201 })
   } catch {

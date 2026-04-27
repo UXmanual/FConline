@@ -7,6 +7,7 @@ import {
 } from '@/lib/community'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { getUserLevelProfile } from '@/lib/userLevel.server'
 
 async function isDuplicateCommunityNickname(targetNickname: string, currentUserId: string) {
   const adminSupabase = createSupabaseAdminClient()
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
     return Response.json({
       nickname,
       user: data.user,
+      levelProfile: await getUserLevelProfile(user.id),
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.'
@@ -108,6 +110,7 @@ export async function GET() {
     return Response.json({
       nickname: deriveCommunityNickname(user),
       user,
+      levelProfile: await getUserLevelProfile(user.id),
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : '닉네임을 불러오지 못했습니다.'

@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.0': [
+    '누적 XP 기반 레벨 시스템을 추가하고, 로그인·커뮤니티·선수평가 활동에 따른 레벨 반영 흐름을 적용했습니다.',
+    '레벨 계산 기준을 Lv.99 구조로 확장하고, 구간별 레벨 컬러와 마이페이지 레벨 안내를 함께 정리했습니다.',
+    '마이페이지 로그인/내 정보 카드 레이아웃과 알림·문의·레벨업 기준 UI를 다듬고 로딩 스켈레톤을 보강했습니다.',
+  ],
   '19.9': [
     '메인 배너 이미지를 교체했습니다.',
   ],

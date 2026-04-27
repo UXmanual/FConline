@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import UserLevelBadge from '@/components/user/UserLevelBadge'
 import {
   COMMUNITY_CATEGORIES,
   deriveCommunityNickname,
@@ -19,6 +20,7 @@ import {
 } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const BOARD_TABS = ['자유게시판'] as const
 const POSTS_PER_PAGE = 5
@@ -114,6 +116,7 @@ function PostCard({ post, onDelete, onOpenComments, highlight }: { post: Communi
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-7 items-center rounded-lg px-3 text-[12px] font-semibold" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}>{post.category}</span>
+            <UserLevelBadge level={post.level} />
             <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>{post.nickname}</span>
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
@@ -145,6 +148,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [resolvedCommunityNickname, setResolvedCommunityNickname] = useState('')
+  const [currentUserLevel, setCurrentUserLevel] = useState<number | null>(null)
   const [activeBoard] = useState<BoardTab>('자유게시판')
   const [selectedCategory, setSelectedCategory] = useState<CommunityCategory>('자유')
   const [title, setTitle] = useState('')
@@ -227,6 +231,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   useEffect(() => {
     if (!authUser) {
       setResolvedCommunityNickname('')
+      setCurrentUserLevel(null)
       return
     }
 
@@ -243,9 +248,11 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         }
 
         setResolvedCommunityNickname(String(result?.nickname ?? fallbackNickname))
+        setCurrentUserLevel((result?.levelProfile as UserLevelSnapshot | undefined)?.level ?? 1)
       } catch {
         if (!isCancelled) {
           setResolvedCommunityNickname(fallbackNickname)
+          setCurrentUserLevel(1)
         }
       }
     }
@@ -481,6 +488,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '게시글을 저장하지 못했습니다.')
+      setCurrentUserLevel(Number.isFinite(result.item?.level) ? Number(result.item.level) : currentUserLevel)
       setTitle('')
       setContent('')
       setSelectedCategory('자유')
@@ -541,6 +549,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '댓글을 저장하지 못했습니다.')
       const nextComment = result.item as CommunityCommentItem
+      setCurrentUserLevel(Number.isFinite(nextComment?.level) ? Number(nextComment.level) : currentUserLevel)
       setComments((current) => [nextComment, ...current])
       setCommentDraft('')
       setPosts((current) => current.map((post) => post.id === activeCommentPost.id ? { ...post, commentCount: post.commentCount + 1 } : post))
@@ -624,9 +633,12 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
           커뮤니티 글쓰기는 Google 로그인 후 이용할 수 있습니다.
         </p>
       ) : authUser ? (
-        <p className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
-          게시글 작성 시 닉네임은 {communityNickname}으로 표시됩니다.
-        </p>
+        <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+          <span>게시글 작성 시</span>
+          <UserLevelBadge level={currentUserLevel} />
+          <span>{communityNickname}</span>
+          <span>으로 표시됩니다.</span>
+        </div>
       ) : null}
 
       <section ref={listTopRef} className="space-y-3">
@@ -676,6 +688,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                 </div>
                 <div className="flex items-center gap-2 px-0.5 text-sm">
                   <p className="font-semibold" style={{ color: 'var(--app-title)' }}>닉네임</p>
+                  <UserLevelBadge level={currentUserLevel} />
                   <p style={{ color: 'var(--app-body-text)' }}>{communityNickname}</p>
                 </div>
                 <label className="block">
@@ -714,10 +727,11 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                     {sortedComments.map((comment) => (
                       <article key={comment.id} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
-                            <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
-                          </div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <UserLevelBadge level={comment.level} />
+                          <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
+                          <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
+                        </div>
                           {comment.canDelete ? (
                             <button
                               type="button"
@@ -738,9 +752,12 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
               <form onSubmit={handleCommentSubmit} className="border-t px-5 py-4" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}>
                 <div className="flex items-center gap-3">
                   {authUser ? (
-                    <span className="shrink-0 text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                      {communityNickname}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <UserLevelBadge level={currentUserLevel} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                        {communityNickname}
+                      </span>
+                    </div>
                   ) : null}
                   <div className="flex h-12 min-w-0 flex-1 items-center rounded-[22px] px-4" style={{ backgroundColor: 'var(--app-surface-soft)' }}>
                     <input disabled={!authUser || isSubmittingComment} value={commentDraft} onChange={(event) => setCommentDraft(event.target.value)} placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:font-medium placeholder:text-[var(--app-muted-text)] disabled:cursor-not-allowed" style={{ color: 'var(--app-title)' }} />
