@@ -13,59 +13,74 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
 
 const VALID_TARGET_TYPES = Object.keys(TARGET_TYPE_LABELS)
 
-async function fetchTargetPreview(
+async function fetchTargetInfo(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   targetType: string,
   targetId: string,
-): Promise<string> {
+): Promise<{ preview: string; link: string | null }> {
   try {
     if (targetType === 'community_post') {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('community_posts')
         .select('title, nickname')
         .eq('id', targetId)
-        .single()
-      if (data) return `작성자: ${data.nickname}\n제목: ${data.title}`
+        .maybeSingle()
+      if (error) console.error('[reports] community_post fetch error:', error)
+      if (data) return { preview: `작성자: ${data.nickname}\n제목: ${data.title}`, link: '/community' }
     } else if (targetType === 'community_comment') {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('community_comments')
         .select('content, nickname, post_id')
         .eq('id', targetId)
-        .single()
+        .maybeSingle()
+      if (error) console.error('[reports] community_comment fetch error:', error)
       if (data) {
         const { data: post } = await supabase
           .from('community_posts')
           .select('title')
           .eq('id', data.post_id)
-          .single()
-        return `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: ${post.title}` : ''}`
+          .maybeSingle()
+        return {
+          preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: ${post.title}` : ''}`,
+          link: '/community',
+        }
       }
     } else if (targetType === 'player_review_post') {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('player_review_posts')
-        .select('title, nickname, player_name')
+        .select('title, nickname, player_name, player_id')
         .eq('id', targetId)
-        .single()
-      if (data) return `작성자: ${data.nickname}\n선수: ${data.player_name}\n제목: ${data.title}`
+        .maybeSingle()
+      if (error) console.error('[reports] player_review_post fetch error:', error)
+      if (data) {
+        return {
+          preview: `작성자: ${data.nickname}\n선수: ${data.player_name}\n제목: ${data.title}`,
+          link: data.player_id ? `/players/${data.player_id}` : null,
+        }
+      }
     } else if (targetType === 'player_review_comment') {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('player_review_comments')
         .select('content, nickname, review_post_id')
         .eq('id', targetId)
-        .single()
+        .maybeSingle()
+      if (error) console.error('[reports] player_review_comment fetch error:', error)
       if (data) {
         const { data: post } = await supabase
           .from('player_review_posts')
-          .select('title, player_name')
+          .select('title, player_name, player_id')
           .eq('id', data.review_post_id)
-          .single()
-        return `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: [${post.player_name}] ${post.title}` : ''}`
+          .maybeSingle()
+        return {
+          preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: [${post.player_name}] ${post.title}` : ''}`,
+          link: post?.player_id ? `/players/${post.player_id}` : null,
+        }
       }
     }
-  } catch {
-    // 조회 실패해도 알림은 보냄
+  } catch (error) {
+    console.error('[reports] fetchTargetInfo unexpected error:', error)
   }
-  return `ID: ${targetId}`
+  return { preview: `ID: ${targetId}`, link: null }
 }
 
 function getPushAdminToken() {
@@ -123,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     const typeLabel = TARGET_TYPE_LABELS[targetType] ?? targetType
     const createdAt = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
-    const preview = await fetchTargetPreview(supabase, targetType, targetId)
+    const { preview } = await fetchTargetInfo(supabase, targetType, targetId)
     await sendTelegramAlert(
       `[FCO Ground 신고]\n유형: ${typeLabel}\n${preview}\n사유: ${reason}\n시간: ${createdAt}`,
     )
@@ -152,10 +167,10 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     const items = await Promise.all(
-      (data ?? []).map(async (report) => ({
-        ...report,
-        preview: await fetchTargetPreview(supabase, report.target_type, report.target_id),
-      })),
+      (data ?? []).map(async (report) => {
+        const { preview, link } = await fetchTargetInfo(supabase, report.target_type, report.target_id)
+        return { ...report, preview, link }
+      }),
     )
 
     return Response.json({ items })

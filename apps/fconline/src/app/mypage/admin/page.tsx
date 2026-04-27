@@ -11,6 +11,7 @@ type ReportItem = {
   status: string
   created_at: string
   preview?: string
+  link?: string | null
 }
 
 const TARGET_TYPE_LABELS: Record<string, string> = {
@@ -295,26 +296,37 @@ export default function MyPageAdminPushPage() {
                     className="rounded-lg border p-4 space-y-2"
                     style={{ borderColor: 'var(--app-card-border)', backgroundColor: 'var(--app-surface-soft)' }}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1 min-w-0">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="text-[12px] font-semibold" style={titleStyle}>
                           {TARGET_TYPE_LABELS[report.target_type] ?? report.target_type}
                         </p>
-                        {report.preview
-                          ? report.preview.split('\n').map((line, i) => (
-                              <p key={i} className="text-[12px] break-words" style={i === 0 ? mutedStyle : titleStyle}>
-                                {line}
-                              </p>
-                            ))
-                          : <p className="text-[12px] break-all" style={mutedStyle}>ID: {report.target_id}</p>
-                        }
-                        <p className="text-[12px] font-medium" style={{ color: '#d97904' }}>
-                          신고 사유: {report.reason}
-                        </p>
-                        <p className="text-[11px]" style={mutedStyle}>
-                          {new Date(report.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-                        </p>
+                        {report.link && (
+                          <a
+                            href={report.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 text-[11px] font-semibold underline"
+                            style={{ color: '#457ae5' }}
+                          >
+                            새 창으로 보기
+                          </a>
+                        )}
                       </div>
+                      {report.preview && !report.preview.startsWith('ID:')
+                        ? report.preview.split('\n').map((line, i) => (
+                            <p key={i} className="text-[12px] break-words" style={i === 0 ? mutedStyle : titleStyle}>
+                              {line}
+                            </p>
+                          ))
+                        : <p className="text-[12px] break-all" style={mutedStyle}>ID: {report.target_id}</p>
+                      }
+                      <p className="text-[12px] font-medium" style={{ color: '#d97904' }}>
+                        신고 사유: {report.reason}
+                      </p>
+                      <p className="text-[11px]" style={mutedStyle}>
+                        {new Date(report.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                      </p>
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button
