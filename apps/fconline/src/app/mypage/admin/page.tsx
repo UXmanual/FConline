@@ -58,7 +58,7 @@ export default function MyPageAdminPushPage() {
     const trimmedUrl = broadcastUrl.trim() || '/home'
 
     if (!trimmedAdminToken || !trimmedTitle || !trimmedBody) {
-      window.alert('운영 토큰, 제목, 내용을 모두 입력해 주세요.')
+      window.alert('관리자 패스워드, 제목, 내용을 모두 입력해 주세요.')
       return
     }
 
@@ -93,7 +93,7 @@ export default function MyPageAdminPushPage() {
     if (isLoadingReports) return
     const token = pushAdminToken.trim()
     if (!token) {
-      window.alert('푸시 패스워드를 먼저 입력해 주세요.')
+      window.alert('관리자 패스워드를 먼저 입력해 주세요.')
       return
     }
     setIsLoadingReports(true)
@@ -161,6 +161,26 @@ export default function MyPageAdminPushPage() {
           </h1>
         </div>
 
+        <section className="rounded-lg px-5 pt-7 pb-5" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+          <div className="space-y-3">
+            <p className="text-sm font-semibold" style={titleStyle}>관리자 패스워드</p>
+            <label className="block">
+              <input
+                type="password"
+                value={pushAdminToken}
+                onChange={(event) => setPushAdminToken(event.target.value)}
+                className="h-12 w-full rounded-lg border px-3 text-sm outline-none"
+                style={{
+                  backgroundColor: 'var(--app-input-bg)',
+                  borderColor: 'var(--app-input-border)',
+                  color: 'var(--app-title)',
+                }}
+                placeholder="패스워드를 입력해주세요"
+              />
+            </label>
+          </div>
+        </section>
+
         <section className="rounded-lg px-5 pt-7 pb-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -171,31 +191,11 @@ export default function MyPageAdminPushPage() {
                 type="button"
                 onClick={fillVersionPushTemplate}
                 className="inline-flex items-center justify-center text-[12px] font-semibold"
-                style={{
-                  color: '#457ae5',
-                }}
+                style={{ color: '#457ae5' }}
               >
                 버전업 안내 공지 입력
               </button>
             </div>
-
-            <label className="block">
-              <span className="text-[12px] font-medium" style={mutedStyle}>
-                푸시 패스워드
-              </span>
-              <input
-                type="password"
-                value={pushAdminToken}
-                onChange={(event) => setPushAdminToken(event.target.value)}
-                className="mt-1 h-12 w-full rounded-lg border px-3 text-sm outline-none"
-                style={{
-                  backgroundColor: 'var(--app-input-bg)',
-                  borderColor: 'var(--app-input-border)',
-                  color: 'var(--app-title)',
-                }}
-                placeholder="패스워드를 입력해주세요"
-              />
-            </label>
 
             <label className="block">
               <span className="text-[12px] font-medium" style={mutedStyle}>
