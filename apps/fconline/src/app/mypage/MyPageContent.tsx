@@ -19,7 +19,10 @@ import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { MAX_LEVEL, type UserLevelSnapshot } from '@/lib/userLevel'
 
-const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v2'
+const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v3'
+const LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS = [
+  'app-notifications-bottom-sheet-seen-v2',
+]
 
 type MyPageLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate?: string | null
@@ -449,6 +452,16 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   })
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS.forEach((key) => {
+      window.localStorage.removeItem(key)
+    })
+  }, [])
+
+  useEffect(() => {
     checkPopupRef.current()
 
     const handleMypageEnter = () => checkPopupRef.current()
@@ -733,7 +746,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const unsubscribed = await unsubscribeFromPushNotifications()
         if (!unsubscribed) {
           window.alert('앱 알림 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+          return
         }
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(APP_NOTIFICATION_BOTTOM_SHEET_KEY)
+        }
+
         return
       }
 

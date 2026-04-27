@@ -1,8 +1,24 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 
 export default function OfflinePageClient() {
+  const [retryMessage, setRetryMessage] = useState('')
+
+  const handleRetry = () => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (!window.navigator.onLine) {
+      setRetryMessage('아직 인터넷에 연결되지 않았습니다. 연결 후 다시 시도해 주세요.')
+      return
+    }
+
+    window.location.assign('/home')
+  }
+
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-88px)] w-full max-w-[480px] flex-col justify-center pt-6">
       <section
@@ -33,20 +49,23 @@ export default function OfflinePageClient() {
         <div className="mt-6 flex flex-col gap-3">
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={handleRetry}
             className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
             style={{ backgroundColor: '#457ae5' }}
           >
             다시 시도
           </button>
 
+          {retryMessage ? (
+            <p className="text-center text-[13px] leading-[1.5]" style={{ color: 'var(--app-muted-text)' }}>
+              {retryMessage}
+            </p>
+          ) : null}
+
           <Link
             href="/home"
-            className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold"
-            style={{
-              backgroundColor: 'var(--app-surface-soft)',
-              color: 'var(--app-title)',
-            }}
+            className="block w-full text-center text-sm font-medium"
+            style={{ color: 'var(--app-muted-text)' }}
           >
             홈으로 이동
           </Link>
