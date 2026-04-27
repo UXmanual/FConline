@@ -1,5 +1,6 @@
 .git
 .local
+.turbo
 android
 apps/fconline/.next
 node_modules
