@@ -50,14 +50,14 @@ async function fetchTargetPreview(
     } else if (targetType === 'player_review_comment') {
       const { data } = await supabase
         .from('player_review_comments')
-        .select('content, nickname, post_id')
+        .select('content, nickname, review_post_id')
         .eq('id', targetId)
         .single()
       if (data) {
         const { data: post } = await supabase
           .from('player_review_posts')
           .select('title, player_name')
-          .eq('id', data.post_id)
+          .eq('id', data.review_post_id)
           .single()
         return `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: [${post.player_name}] ${post.title}` : ''}`
       }

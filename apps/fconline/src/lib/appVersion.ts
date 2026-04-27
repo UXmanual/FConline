@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.5': [
+    '신고 알림에 선수평가 댓글 내용이 누락되던 문제를 수정했습니다.',
+  ],
   '20.4': [
     '신고 접수 텔레그램 알림에 작성자·제목·댓글 내용을 포함해 운영자가 바로 내용을 확인할 수 있도록 개선했습니다.',
   ],
