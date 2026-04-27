@@ -14,6 +14,7 @@ import UserLevelBadge from '@/components/user/UserLevelBadge'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
+import { useLockedBodyScroll, useVisualViewportHeight } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
@@ -254,6 +255,13 @@ export default function PlayerReviewSection({
   const sortedComments = [...comments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )
+  const commentSheetViewportHeight = useVisualViewportHeight(activeCommentPost !== null)
+  const commentSheetContainerHeight = commentSheetViewportHeight ? `${commentSheetViewportHeight}px` : '100dvh'
+  const commentSheetMaxHeight = commentSheetViewportHeight
+    ? `${Math.min(commentSheetViewportHeight - 16, Math.max(320, Math.round(commentSheetViewportHeight * 0.72)))}px`
+    : undefined
+
+  useLockedBodyScroll(isComposerOpen || activeCommentPost !== null)
 
   useEffect(() => {
     onTotalCountChange?.(totalCount)
@@ -351,28 +359,6 @@ export default function PlayerReviewSection({
       isCancelled = true
     }
   }, [authUser])
-
-  useEffect(() => {
-    const isOverlayOpen = isComposerOpen || activeCommentPost !== null
-    const previousHtmlOverflow = document.documentElement.style.overflow
-    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
-    const previousOverflow = document.body.style.overflow
-    const previousOverscrollBehavior = document.body.style.overscrollBehavior
-
-    if (isOverlayOpen) {
-      document.documentElement.style.overflow = 'hidden'
-      document.documentElement.style.overscrollBehavior = 'none'
-      document.body.style.overflow = 'hidden'
-      document.body.style.overscrollBehavior = 'none'
-    }
-
-    return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow
-      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior
-      document.body.style.overflow = previousOverflow
-      document.body.style.overscrollBehavior = previousOverscrollBehavior
-    }
-  }, [activeCommentPost, isComposerOpen])
 
   useEffect(() => {
     setSelectedCardLevel(defaultCardLevel)
@@ -1083,13 +1069,14 @@ export default function PlayerReviewSection({
       ) : null}
 
       {activeCommentPost ? (
-        <div className="fixed inset-0 z-[70]">
+        <div className="fixed inset-x-0 top-0 z-[70]" style={{ height: commentSheetContainerHeight }}>
           <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
           <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
             <section
-              className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]"
+              className="pointer-events-auto mx-auto flex w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-w-[440px]"
               style={{
+                maxHeight: commentSheetMaxHeight,
                 paddingBottom: 'env(safe-area-inset-bottom)',
                 transform: isDraggingCommentSheet
                   ? `translateY(${commentSheetOffsetY}px)`

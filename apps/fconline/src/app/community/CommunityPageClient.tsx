@@ -19,6 +19,7 @@ import {
   type CommunityPostSummary,
 } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
+import { useLockedBodyScroll, useVisualViewportHeight } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
@@ -183,6 +184,13 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const pageGroupEnd = Math.min(totalPages, safePageWindowStart + MAX_VISIBLE_PAGES - 1)
   const visiblePages = Array.from({ length: pageGroupEnd - safePageWindowStart + 1 }, (_, index) => safePageWindowStart + index)
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+  const commentSheetViewportHeight = useVisualViewportHeight(activeCommentPost !== null)
+  const commentSheetContainerHeight = commentSheetViewportHeight ? `${commentSheetViewportHeight}px` : '100dvh'
+  const commentSheetMaxHeight = commentSheetViewportHeight
+    ? `${Math.min(commentSheetViewportHeight - 16, Math.max(320, Math.round(commentSheetViewportHeight * 0.72)))}px`
+    : undefined
+
+  useLockedBodyScroll(isComposerOpen || activeCommentPost !== null)
 
   const resetCommentSheetState = useCallback(() => {
     setActiveCommentPost(null)
@@ -306,28 +314,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     cacheRef.current.delete(currentPage)
     void fetchPostsPage(currentPage, false)
   }, [authUser, currentPage, fetchPostsPage, isAuthLoading])
-
-  useEffect(() => {
-    const isOverlayOpen = isComposerOpen || activeCommentPost !== null
-    const previousHtmlOverflow = document.documentElement.style.overflow
-    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
-    const previousOverflow = document.body.style.overflow
-    const previousOverscrollBehavior = document.body.style.overscrollBehavior
-
-    if (isOverlayOpen) {
-      document.documentElement.style.overflow = 'hidden'
-      document.documentElement.style.overscrollBehavior = 'none'
-      document.body.style.overflow = 'hidden'
-      document.body.style.overscrollBehavior = 'none'
-    }
-
-    return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow
-      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior
-      document.body.style.overflow = previousOverflow
-      document.body.style.overscrollBehavior = previousOverscrollBehavior
-    }
-  }, [activeCommentPost, isComposerOpen])
 
   useEffect(() => {
     if (!highlightedPostId) return
@@ -734,11 +720,11 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       ) : null}
 
       {activeCommentPost ? (
-        <div className="fixed inset-0 z-[70]">
+        <div className="fixed inset-x-0 top-0 z-[70]" style={{ height: commentSheetContainerHeight }}>
           <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
           <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-            <section className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: isDraggingCommentSheet ? `translateY(${commentSheetOffsetY}px)` : isCommentSheetVisible ? `translateY(${commentSheetOffsetY}px)` : 'translateY(calc(100dvh + env(safe-area-inset-bottom)))', backgroundColor: 'var(--app-modal-bg)', borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))', boxShadow: isDarkModeEnabled ? '0 -32px 76px rgba(0, 0, 0, 0.58)' : '0 -28px 68px rgba(15, 23, 42, 0.28)', willChange: 'transform', transition: isDraggingCommentSheet ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease' }}>
+            <section className="pointer-events-auto mx-auto flex w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-w-[440px]" style={{ maxHeight: commentSheetMaxHeight, paddingBottom: 'env(safe-area-inset-bottom)', transform: isDraggingCommentSheet ? `translateY(${commentSheetOffsetY}px)` : isCommentSheetVisible ? `translateY(${commentSheetOffsetY}px)` : 'translateY(calc(100dvh + env(safe-area-inset-bottom)))', backgroundColor: 'var(--app-modal-bg)', borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))', boxShadow: isDarkModeEnabled ? '0 -32px 76px rgba(0, 0, 0, 0.58)' : '0 -28px 68px rgba(15, 23, 42, 0.28)', willChange: 'transform', transition: isDraggingCommentSheet ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease' }}>
               <div className="flex cursor-grab justify-center pt-3 active:cursor-grabbing" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }} onPointerDown={handleCommentSheetDragStart}>
                 <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
               </div>
