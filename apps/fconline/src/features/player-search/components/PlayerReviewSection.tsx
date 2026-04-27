@@ -88,11 +88,13 @@ function ReviewPostCard({
   post,
   onDelete,
   onOpenComments,
+  onReport,
   highlight,
 }: {
   post: CommunityPostSummary
   onDelete: (post: CommunityPostSummary) => void
   onOpenComments: (post: CommunityPostSummary) => void
+  onReport?: (post: CommunityPostSummary) => void
   highlight?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -142,6 +144,18 @@ function ReviewPostCard({
               }}
             >
               삭제
+            </button>
+          ) : onReport ? (
+            <button
+              type="button"
+              className="shrink-0 text-[12px] font-medium leading-none"
+              style={{ color: 'var(--app-muted-text)' }}
+              onClick={(event) => {
+                event.stopPropagation()
+                onReport(post)
+              }}
+            >
+              신고
             </button>
           ) : null}
         </div>
@@ -229,6 +243,8 @@ export default function PlayerReviewSection({
   const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
   const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
+  const [reportTarget, setReportTarget] = useState<{ type: string; id: string } | null>(null)
+  const [isReporting, setIsReporting] = useState(false)
   const reviewNickname = resolvedReviewNickname || (authUser ? deriveCommunityNickname(authUser) : '')
   const authUserKey = authUser ? `${authUser.id}:${authUser.email ?? ''}` : ''
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
@@ -620,6 +636,23 @@ export default function PlayerReviewSection({
     }
   }
 
+  async function handleReport(reason: string) {
+    if (!reportTarget || isReporting) return
+    setIsReporting(true)
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetType: reportTarget.type, targetId: reportTarget.id, reason }),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok && response.status !== 409) throw new Error(result?.message ?? '신고를 접수하지 못했습니다.')
+    } finally {
+      setIsReporting(false)
+      setReportTarget(null)
+    }
+  }
+
   async function handleDeletePost(targetPost: CommunityPostSummary) {
     if (!window.confirm('이 선수평가를 삭제할까요?')) {
       return
@@ -844,6 +877,7 @@ export default function PlayerReviewSection({
                 post={post}
                 onDelete={handleDeletePost}
                 onOpenComments={loadComments}
+                onReport={authUser ? (p) => setReportTarget({ type: 'player_review_post', id: p.id }) : undefined}
                 highlight={post.id === highlightedPostId}
               />
             </div>
@@ -1123,6 +1157,15 @@ export default function PlayerReviewSection({
                               >
                                 삭제
                               </button>
+                            ) : authUser ? (
+                              <button
+                                type="button"
+                                onClick={() => setReportTarget({ type: 'player_review_comment', id: comment.id })}
+                                className="text-[12px] font-medium"
+                                style={{ color: 'var(--app-muted-text)' }}
+                              >
+                                신고
+                              </button>
                             ) : null}
                           </div>
                         </div>
@@ -1177,6 +1220,54 @@ export default function PlayerReviewSection({
                   </button>
                 </div>
               </form>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {reportTarget ? (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => setReportTarget(null)}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+              <p className="mb-4 text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
+                신고 사유를 선택해 주세요
+              </p>
+              <div className="space-y-2">
+                {['욕설 / 비방', '광고 / 도배', '성인 / 부적절', '기타'].map((reason) => (
+                  <button
+                    key={reason}
+                    type="button"
+                    disabled={isReporting}
+                    onClick={() => void handleReport(reason)}
+                    className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold disabled:opacity-60"
+                    style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-title)' }}
+                  >
+                    {reason}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setReportTarget(null)}
+                  className="block w-full pt-1 text-center text-sm font-medium"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
+                </button>
+              </div>
             </section>
           </div>
         </div>

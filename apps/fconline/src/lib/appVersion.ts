@@ -3,6 +3,10 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.2': [
+    '커뮤니티와 선수평가 게시글·댓글에 신고 기능을 추가했습니다.',
+    '신고 접수 시 운영자에게 텔레그램 알림이 전송되며, 어드민 페이지에서 확인·처리할 수 있습니다.',
+  ],
   '20.1': [
     '딤 클릭으로 알림 팝업을 닫은 뒤 다른 탭을 거쳐 마이탭으로 돌아오면 팝업이 다시 정상 표시되도록 수정했습니다.',
   ],

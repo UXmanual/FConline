@@ -3,12 +3,31 @@
 import { useState } from 'react'
 import { APP_VERSION } from '@/lib/appVersion'
 
+type ReportItem = {
+  id: string
+  target_type: string
+  target_id: string
+  reason: string
+  status: string
+  created_at: string
+}
+
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  community_post: '커뮤니티 게시글',
+  community_comment: '커뮤니티 댓글',
+  player_review_post: '선수평가 게시글',
+  player_review_comment: '선수평가 댓글',
+}
+
 export default function MyPageAdminPushPage() {
   const [pushAdminToken, setPushAdminToken] = useState('')
   const [broadcastTitle, setBroadcastTitle] = useState('')
   const [broadcastBody, setBroadcastBody] = useState('')
   const [broadcastUrl, setBroadcastUrl] = useState('/home')
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false)
+  const [reports, setReports] = useState<ReportItem[]>([])
+  const [isLoadingReports, setIsLoadingReports] = useState(false)
+  const [reportActionId, setReportActionId] = useState<string | null>(null)
 
   const cardStyle = {
     backgroundColor: 'var(--app-card-bg)',
@@ -67,6 +86,63 @@ export default function MyPageAdminPushPage() {
       window.alert(error instanceof Error ? error.message : '운영 공지 발송에 실패했습니다.')
     } finally {
       setIsSendingBroadcast(false)
+    }
+  }
+
+  async function loadReports() {
+    if (isLoadingReports) return
+    const token = pushAdminToken.trim()
+    if (!token) {
+      window.alert('푸시 패스워드를 먼저 입력해 주세요.')
+      return
+    }
+    setIsLoadingReports(true)
+    try {
+      const response = await fetch(`/api/reports?token=${encodeURIComponent(token)}`)
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.message ?? '신고 목록을 불러오지 못했습니다.')
+      setReports(result.items ?? [])
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '신고 목록을 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingReports(false)
+    }
+  }
+
+  async function handleResolveReport(reportId: string) {
+    if (reportActionId) return
+    setReportActionId(reportId)
+    try {
+      const response = await fetch(`/api/reports/${reportId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminToken: pushAdminToken.trim() }),
+      })
+      if (!response.ok) throw new Error('처리에 실패했습니다.')
+      setReports((prev) => prev.filter((r) => r.id !== reportId))
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '처리에 실패했습니다.')
+    } finally {
+      setReportActionId(null)
+    }
+  }
+
+  async function handleDeleteReportContent(reportId: string) {
+    if (reportActionId) return
+    if (!window.confirm('신고된 콘텐츠를 삭제하고 신고를 해제할까요?')) return
+    setReportActionId(reportId)
+    try {
+      const response = await fetch(`/api/reports/${reportId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminToken: pushAdminToken.trim() }),
+      })
+      if (!response.ok) throw new Error('삭제에 실패했습니다.')
+      setReports((prev) => prev.filter((r) => r.id !== reportId))
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '삭제에 실패했습니다.')
+    } finally {
+      setReportActionId(null)
     }
   }
 
@@ -186,6 +262,78 @@ export default function MyPageAdminPushPage() {
             >
               {isSendingBroadcast ? '발송중...' : '푸시 알림 보내기'}
             </button>
+          </div>
+        </section>
+
+        <section className="rounded-lg px-5 pt-7 pb-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold" style={titleStyle}>
+                신고 관리
+              </p>
+              <button
+                type="button"
+                onClick={() => void loadReports()}
+                disabled={isLoadingReports}
+                className="inline-flex items-center justify-center text-[12px] font-semibold disabled:opacity-60"
+                style={{ color: '#457ae5' }}
+              >
+                {isLoadingReports ? '불러오는 중...' : '목록 불러오기'}
+              </button>
+            </div>
+
+            {reports.length === 0 ? (
+              <p className="py-2 text-sm" style={mutedStyle}>
+                신고 목록 불러오기를 눌러 확인하세요.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {reports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="rounded-lg border p-4 space-y-2"
+                    style={{ borderColor: 'var(--app-card-border)', backgroundColor: 'var(--app-surface-soft)' }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <p className="text-[12px] font-semibold" style={titleStyle}>
+                          {TARGET_TYPE_LABELS[report.target_type] ?? report.target_type}
+                        </p>
+                        <p className="text-[12px] break-all" style={mutedStyle}>
+                          ID: {report.target_id}
+                        </p>
+                        <p className="text-[12px] font-medium" style={titleStyle}>
+                          사유: {report.reason}
+                        </p>
+                        <p className="text-[11px]" style={mutedStyle}>
+                          {new Date(report.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={reportActionId === report.id}
+                        onClick={() => void handleDeleteReportContent(report.id)}
+                        className="flex h-9 flex-1 items-center justify-center rounded-lg text-[12px] font-semibold disabled:opacity-60"
+                        style={{ backgroundColor: '#d94f3d', color: '#ffffff' }}
+                      >
+                        콘텐츠 삭제
+                      </button>
+                      <button
+                        type="button"
+                        disabled={reportActionId === report.id}
+                        onClick={() => void handleResolveReport(report.id)}
+                        className="flex h-9 flex-1 items-center justify-center rounded-lg text-[12px] font-semibold disabled:opacity-60"
+                        style={{ backgroundColor: 'var(--app-surface-strong)', color: 'var(--app-body-text)' }}
+                      >
+                        신고 해제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
