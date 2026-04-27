@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.4': [
+    '신고 접수 텔레그램 알림에 작성자·제목·댓글 내용을 포함해 운영자가 바로 내용을 확인할 수 있도록 개선했습니다.',
+  ],
   '20.3': [
     '신고 사유 선택 후 신고 완료 안내 팝업이 노출되도록 개선했습니다.',
   ],

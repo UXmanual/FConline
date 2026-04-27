@@ -13,6 +13,61 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
 
 const VALID_TARGET_TYPES = Object.keys(TARGET_TYPE_LABELS)
 
+async function fetchTargetPreview(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  targetType: string,
+  targetId: string,
+): Promise<string> {
+  try {
+    if (targetType === 'community_post') {
+      const { data } = await supabase
+        .from('community_posts')
+        .select('title, nickname')
+        .eq('id', targetId)
+        .single()
+      if (data) return `작성자: ${data.nickname}\n제목: ${data.title}`
+    } else if (targetType === 'community_comment') {
+      const { data } = await supabase
+        .from('community_comments')
+        .select('content, nickname, post_id')
+        .eq('id', targetId)
+        .single()
+      if (data) {
+        const { data: post } = await supabase
+          .from('community_posts')
+          .select('title')
+          .eq('id', data.post_id)
+          .single()
+        return `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: ${post.title}` : ''}`
+      }
+    } else if (targetType === 'player_review_post') {
+      const { data } = await supabase
+        .from('player_review_posts')
+        .select('title, nickname, player_name')
+        .eq('id', targetId)
+        .single()
+      if (data) return `작성자: ${data.nickname}\n선수: ${data.player_name}\n제목: ${data.title}`
+    } else if (targetType === 'player_review_comment') {
+      const { data } = await supabase
+        .from('player_review_comments')
+        .select('content, nickname, post_id')
+        .eq('id', targetId)
+        .single()
+      if (data) {
+        const { data: post } = await supabase
+          .from('player_review_posts')
+          .select('title, player_name')
+          .eq('id', data.post_id)
+          .single()
+        return `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: [${post.player_name}] ${post.title}` : ''}`
+      }
+    }
+  } catch {
+    // 조회 실패해도 알림은 보냄
+  }
+  return `ID: ${targetId}`
+}
+
 function getPushAdminToken() {
   const token = process.env.PUSH_ADMIN_TOKEN?.trim()
   if (!token) throw new Error('Missing admin token.')
@@ -68,8 +123,9 @@ export async function POST(request: NextRequest) {
 
     const typeLabel = TARGET_TYPE_LABELS[targetType] ?? targetType
     const createdAt = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+    const preview = await fetchTargetPreview(supabase, targetType, targetId)
     await sendTelegramAlert(
-      `[FCO Ground 신고]\n유형: ${typeLabel}\nID: ${targetId}\n사유: ${reason}\n시간: ${createdAt}`,
+      `[FCO Ground 신고]\n유형: ${typeLabel}\n${preview}\n사유: ${reason}\n시간: ${createdAt}`,
     )
 
     return Response.json({ success: true }, { status: 201 })
