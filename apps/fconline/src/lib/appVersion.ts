@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '21.7': [
+    '모바일 댓글 바텀시트 표시를 다듬었습니다.',
+  ],
   '21.6': [
     '모바일 댓글 바텀시트 동작을 안정화했습니다.',
   ],

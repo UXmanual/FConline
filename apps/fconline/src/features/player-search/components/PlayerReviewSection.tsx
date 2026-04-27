@@ -20,6 +20,9 @@ import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
+const COMMENT_SHEET_MIN_HEIGHT = 320
+const SMALL_COMMENT_SHEET_MAX_COUNT = 3
+const SMALL_COMMENT_SHEET_FIXED_HEIGHT = 360
 const PLAYER_SEARCH_RESULTS_KEY = 'player-search-results'
 const PLAYER_QUERY_CACHE_KEY = 'players-query-cache'
 
@@ -68,10 +71,10 @@ function ReviewSkeletonList({ rows = 5 }: { rows?: number }) {
   )
 }
 
-function CommentSheetSkeleton() {
+function CommentSheetSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-4" aria-hidden="true">
-      {Array.from({ length: 5 }, (_, index) => (
+      {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="space-y-2">
           <div className="flex items-center gap-2">
             <div className="home-image-shimmer h-4 w-16 rounded-full" />
@@ -257,6 +260,9 @@ export default function PlayerReviewSection({
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )
   const { bottomInset: commentSheetKeyboardInset } = useVisualViewportMetrics(activeCommentPost !== null)
+  const commentSheetItemCount = isLoadingComments ? Math.max(activeCommentPost?.commentCount ?? 0, 0) : sortedComments.length
+  const isSmallCommentSheet = commentSheetItemCount <= SMALL_COMMENT_SHEET_MAX_COUNT
+  const commentSheetHeight = isSmallCommentSheet ? `${SMALL_COMMENT_SHEET_FIXED_HEIGHT}px` : undefined
 
   useLockedBodyScroll(
     isComposerOpen || activeCommentPost !== null,
@@ -1077,6 +1083,8 @@ export default function PlayerReviewSection({
             <section
               className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]"
               style={{
+                height: commentSheetHeight,
+                minHeight: `${COMMENT_SHEET_MIN_HEIGHT}px`,
                 paddingBottom: 'env(safe-area-inset-bottom)',
                 transform: isDraggingCommentSheet
                   ? `translateY(${commentSheetOffsetY}px)`
@@ -1099,7 +1107,7 @@ export default function PlayerReviewSection({
                 style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
                 onPointerDown={handleCommentSheetDragStart}
               >
-                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.48)' }} />
               </div>
               <div
                 className="cursor-grab border-b px-5 py-4 active:cursor-grabbing"
@@ -1116,7 +1124,7 @@ export default function PlayerReviewSection({
                 style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', WebkitOverflowScrolling: 'touch' }}
               >
                 {isLoadingComments ? (
-                  <CommentSheetSkeleton />
+                  <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
                 ) : sortedComments.length > 0 ? (
                   <div className="space-y-4">
                     {sortedComments.map((comment) => (

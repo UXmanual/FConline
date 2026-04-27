@@ -26,6 +26,9 @@ import type { UserLevelSnapshot } from '@/lib/userLevel'
 const BOARD_TABS = ['자유게시판'] as const
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
+const COMMENT_SHEET_MIN_HEIGHT = 320
+const SMALL_COMMENT_SHEET_MAX_COUNT = 3
+const SMALL_COMMENT_SHEET_FIXED_HEIGHT = 360
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
 const URL_PART_PATTERN = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/
 
@@ -92,10 +95,10 @@ function CommunityPostSkeletonList({ rows = 5 }: { rows?: number }) {
   )
 }
 
-function CommentSheetSkeleton() {
+function CommentSheetSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-4" aria-hidden="true">
-      {Array.from({ length: 5 }, (_, index) => (
+      {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="space-y-2">
           <div className="flex items-center gap-2">
             <div className="home-image-shimmer h-4 w-16 rounded-full" />
@@ -186,6 +189,9 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const visiblePages = Array.from({ length: pageGroupEnd - safePageWindowStart + 1 }, (_, index) => safePageWindowStart + index)
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
   const { bottomInset: commentSheetKeyboardInset } = useVisualViewportMetrics(activeCommentPost !== null)
+  const commentSheetItemCount = isLoadingComments ? Math.max(activeCommentPost?.commentCount ?? 0, 0) : sortedComments.length
+  const isSmallCommentSheet = commentSheetItemCount <= SMALL_COMMENT_SHEET_MAX_COUNT
+  const commentSheetHeight = isSmallCommentSheet ? `${SMALL_COMMENT_SHEET_FIXED_HEIGHT}px` : undefined
 
   useLockedBodyScroll(
     isComposerOpen || activeCommentPost !== null,
@@ -724,15 +730,15 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
           <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
           <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-            <section className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]" style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: isDraggingCommentSheet ? `translateY(${commentSheetOffsetY}px)` : isCommentSheetVisible ? `translateY(${commentSheetOffsetY}px)` : 'translateY(calc(100% + env(safe-area-inset-bottom)))', backgroundColor: 'var(--app-modal-bg)', borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))', boxShadow: isDarkModeEnabled ? '0 -32px 76px rgba(0, 0, 0, 0.58)' : '0 -28px 68px rgba(15, 23, 42, 0.28)', willChange: 'transform', transition: isDraggingCommentSheet ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease' }}>
+            <section className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]" style={{ height: commentSheetHeight, minHeight: `${COMMENT_SHEET_MIN_HEIGHT}px`, paddingBottom: 'env(safe-area-inset-bottom)', transform: isDraggingCommentSheet ? `translateY(${commentSheetOffsetY}px)` : isCommentSheetVisible ? `translateY(${commentSheetOffsetY}px)` : 'translateY(calc(100% + env(safe-area-inset-bottom)))', backgroundColor: 'var(--app-modal-bg)', borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))', boxShadow: isDarkModeEnabled ? '0 -32px 76px rgba(0, 0, 0, 0.58)' : '0 -28px 68px rgba(15, 23, 42, 0.28)', willChange: 'transform', transition: isDraggingCommentSheet ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease' }}>
               <div className="flex cursor-grab justify-center pt-3 active:cursor-grabbing" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }} onPointerDown={handleCommentSheetDragStart}>
-                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.48)' }} />
               </div>
               <div className="cursor-grab border-b px-5 py-4 active:cursor-grabbing" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }} onPointerDown={handleCommentSheetDragStart}>
                 <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>댓글 <span className="font-[600] text-[#457ae5]">{activeCommentPost.commentCount}</span></p>
               </div>
               <div ref={commentsScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', WebkitOverflowScrolling: 'touch' }}>
-                {isLoadingComments ? <CommentSheetSkeleton /> : sortedComments.length > 0 ? (
+                {isLoadingComments ? <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} /> : sortedComments.length > 0 ? (
                   <div className="space-y-4">
                     {sortedComments.map((comment) => (
                       <article key={comment.id} className="space-y-1.5">
