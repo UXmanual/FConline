@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '20.9': [
+    '로그인 필수 전환에 따라 게시글 우측 하단 IP 표시를 제거했습니다.',
+  ],
   '20.8': [
     '어드민 신고 목록에서 실제 게시글·댓글 내용이 표시되지 않던 문제를 수정했습니다.',
     '신고된 콘텐츠를 새 창으로 바로 열어볼 수 있는 링크를 추가했습니다.',

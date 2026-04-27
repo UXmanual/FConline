@@ -135,7 +135,6 @@ function PostCard({ post, onDelete, onOpenComments, onReport, highlight }: { pos
           <span style={{ color: 'var(--app-title)' }}>댓글</span>
           <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
         </button>
-        {post.ipPrefix ? <span className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{post.ipPrefix}</span> : null}
       </div>
     </article>
   )
