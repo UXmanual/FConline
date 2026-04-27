@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '21.6': [
+    '모바일 댓글 바텀시트 동작을 안정화했습니다.',
+  ],
   '21.5': [
     '모바일 브라우저에서 댓글 입력 중 키패드가 올라와도 뒤 페이지가 함께 밀리거나 스크롤되지 않도록 댓글 바텀시트 스크롤 락을 보강했습니다.',
     '커뮤니티와 선수평가 댓글 바텀시트 높이를 모바일 viewport 기준으로 다시 계산해 키보드가 올라온 상황에서도 입력 영역이 더 안정적으로 유지되도록 조정했습니다.',

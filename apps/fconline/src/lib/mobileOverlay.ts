@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 
-export function useLockedBodyScroll(isLocked: boolean) {
+type VisualViewportMetrics = {
+  height: number | null
+  bottomInset: number
+}
+
+export function useLockedBodyScroll(
+  isLocked: boolean,
+  scrollableRef?: RefObject<HTMLElement | null> | null,
+) {
   useEffect(() => {
     if (!isLocked || typeof window === 'undefined') {
       return
@@ -27,7 +35,40 @@ export function useLockedBodyScroll(isLocked: boolean) {
     document.body.style.right = '0'
     document.body.style.width = '100%'
 
+    let touchStartY = 0
+
+    const handleTouchStart = (event: TouchEvent) => {
+      touchStartY = event.touches[0]?.clientY ?? 0
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const scrollable = scrollableRef?.current ?? null
+      const target = event.target as Node | null
+
+      if (scrollable && target && scrollable.contains(target)) {
+        const currentY = event.touches[0]?.clientY ?? touchStartY
+        const deltaY = currentY - touchStartY
+        const isScrollable = scrollable.scrollHeight > scrollable.clientHeight
+        const isAtTop = scrollable.scrollTop <= 0
+        const isAtBottom =
+          scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1
+
+        if (!isScrollable || (isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
+          event.preventDefault()
+        }
+
+        return
+      }
+
+      event.preventDefault()
+    }
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: false })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+
     return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchmove', handleTouchMove)
       document.documentElement.style.overflow = previousHtmlOverflow
       document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior
       document.body.style.overflow = previousBodyOverflow
@@ -39,37 +80,60 @@ export function useLockedBodyScroll(isLocked: boolean) {
       document.body.style.width = previousBodyWidth
       window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' })
     }
-  }, [isLocked])
+  }, [isLocked, scrollableRef])
 }
 
-export function useVisualViewportHeight(isEnabled: boolean) {
-  const [viewportHeight, setViewportHeight] = useState<number | null>(() =>
-    typeof window === 'undefined' ? null : Math.round(window.visualViewport?.height ?? window.innerHeight),
-  )
+export function useVisualViewportMetrics(isEnabled: boolean) {
+  const [metrics, setMetrics] = useState<VisualViewportMetrics>(() => {
+    if (typeof window === 'undefined') {
+      return { height: null, bottomInset: 0 }
+    }
+
+    const visualViewport = window.visualViewport
+    const height = Math.round(visualViewport?.height ?? window.innerHeight)
+    const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight)
+    const bottomInset = Math.max(
+      0,
+      Math.round(layoutHeight - ((visualViewport?.height ?? window.innerHeight) + (visualViewport?.offsetTop ?? 0))),
+    )
+
+    return { height, bottomInset }
+  })
 
   useEffect(() => {
     if (!isEnabled || typeof window === 'undefined') {
       return
     }
 
-    const updateViewportHeight = () => {
-      const nextHeight = window.visualViewport?.height ?? window.innerHeight
-      setViewportHeight(Math.round(nextHeight))
+    const updateViewportMetrics = () => {
+      const visualViewport = window.visualViewport
+      const height = Math.round(visualViewport?.height ?? window.innerHeight)
+      const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight)
+      const bottomInset = Math.max(
+        0,
+        Math.round(layoutHeight - ((visualViewport?.height ?? window.innerHeight) + (visualViewport?.offsetTop ?? 0))),
+      )
+
+      setMetrics({ height, bottomInset })
     }
 
-    updateViewportHeight()
+    updateViewportMetrics()
 
     const visualViewport = window.visualViewport
-    visualViewport?.addEventListener('resize', updateViewportHeight)
-    visualViewport?.addEventListener('scroll', updateViewportHeight)
-    window.addEventListener('resize', updateViewportHeight)
+    visualViewport?.addEventListener('resize', updateViewportMetrics)
+    visualViewport?.addEventListener('scroll', updateViewportMetrics)
+    window.addEventListener('resize', updateViewportMetrics)
 
     return () => {
-      visualViewport?.removeEventListener('resize', updateViewportHeight)
-      visualViewport?.removeEventListener('scroll', updateViewportHeight)
-      window.removeEventListener('resize', updateViewportHeight)
+      visualViewport?.removeEventListener('resize', updateViewportMetrics)
+      visualViewport?.removeEventListener('scroll', updateViewportMetrics)
+      window.removeEventListener('resize', updateViewportMetrics)
     }
   }, [isEnabled])
 
-  return isEnabled ? viewportHeight : null
+  if (!isEnabled) {
+    return { height: null, bottomInset: 0 }
+  }
+
+  return metrics
 }

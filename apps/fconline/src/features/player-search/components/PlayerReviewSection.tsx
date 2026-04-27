@@ -14,7 +14,7 @@ import UserLevelBadge from '@/components/user/UserLevelBadge'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
-import { useLockedBodyScroll, useVisualViewportHeight } from '@/lib/mobileOverlay'
+import { useLockedBodyScroll, useVisualViewportMetrics } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
@@ -209,6 +209,7 @@ export default function PlayerReviewSection({
   const router = useRouter()
   const isDarkModeEnabled = useDarkModeEnabled()
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
+  const composerScrollRef = useRef<HTMLElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map())
   const dragPointerIdRef = useRef<number | null>(null)
@@ -255,13 +256,12 @@ export default function PlayerReviewSection({
   const sortedComments = [...comments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )
-  const commentSheetViewportHeight = useVisualViewportHeight(activeCommentPost !== null)
-  const commentSheetContainerHeight = commentSheetViewportHeight ? `${commentSheetViewportHeight}px` : '100dvh'
-  const commentSheetMaxHeight = commentSheetViewportHeight
-    ? `${Math.min(commentSheetViewportHeight - 16, Math.max(320, Math.round(commentSheetViewportHeight * 0.72)))}px`
-    : undefined
+  const { bottomInset: commentSheetKeyboardInset } = useVisualViewportMetrics(activeCommentPost !== null)
 
-  useLockedBodyScroll(isComposerOpen || activeCommentPost !== null)
+  useLockedBodyScroll(
+    isComposerOpen || activeCommentPost !== null,
+    activeCommentPost ? commentsScrollRef : isComposerOpen ? composerScrollRef : null,
+  )
 
   useEffect(() => {
     onTotalCountChange?.(totalCount)
@@ -958,6 +958,7 @@ export default function PlayerReviewSection({
             style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
           >
             <section
+              ref={composerScrollRef}
               className="max-h-[calc(100vh-96px-env(safe-area-inset-bottom))] w-full overflow-y-auto rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
               style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
             >
@@ -1069,20 +1070,19 @@ export default function PlayerReviewSection({
       ) : null}
 
       {activeCommentPost ? (
-        <div className="fixed inset-x-0 top-0 z-[70]" style={{ height: commentSheetContainerHeight }}>
+        <div className="fixed inset-0 z-[70]">
           <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
           <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
             <section
-              className="pointer-events-auto mx-auto flex w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-w-[440px]"
+              className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]"
               style={{
-                maxHeight: commentSheetMaxHeight,
                 paddingBottom: 'env(safe-area-inset-bottom)',
                 transform: isDraggingCommentSheet
                   ? `translateY(${commentSheetOffsetY}px)`
                   : isCommentSheetVisible
                     ? `translateY(${commentSheetOffsetY}px)`
-                    : 'translateY(calc(100dvh + env(safe-area-inset-bottom)))',
+                    : 'translateY(calc(100% + env(safe-area-inset-bottom)))',
                 backgroundColor: 'var(--app-modal-bg)',
                 borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))',
                 boxShadow: isDarkModeEnabled
@@ -1113,7 +1113,7 @@ export default function PlayerReviewSection({
               <div
                 ref={commentsScrollRef}
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
-                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', WebkitOverflowScrolling: 'touch' }}
               >
                 {isLoadingComments ? (
                   <CommentSheetSkeleton />
@@ -1206,6 +1206,13 @@ export default function PlayerReviewSection({
               </form>
             </section>
           </div>
+          {commentSheetKeyboardInset > 0 ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
+              style={{ height: `${commentSheetKeyboardInset}px`, backgroundColor: 'var(--app-modal-bg, #ffffff)', transition: 'height 180ms ease' }}
+            />
+          ) : null}
         </div>
       ) : null}
 
