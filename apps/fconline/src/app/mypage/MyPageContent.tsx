@@ -275,6 +275,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [communityNickname, setCommunityNickname] = useState('')
   const [userLevelProfile, setUserLevelProfile] = useState<MyPageLevelProfile | null>(null)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
@@ -319,6 +320,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(user)
+      if (user) setIsProfileLoading(true)
       setCommunityNickname(user ? deriveCommunityNickname(user) : '')
       setIsEditingNickname(false)
       setIsAuthLoading(false)
@@ -334,6 +336,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(session?.user ?? null)
+      if (session?.user) setIsProfileLoading(true)
       setCommunityNickname(session?.user ? deriveCommunityNickname(session.user) : '')
       setIsEditingNickname(false)
       setIsAuthLoading(false)
@@ -348,6 +351,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   useEffect(() => {
     if (!authUser) {
       setUserLevelProfile(null)
+      setIsProfileLoading(false)
       return
     }
 
@@ -359,16 +363,22 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const response = await fetch('/api/mypage/nickname', { cache: 'no-store' })
         const result = await response.json().catch(() => null)
 
-        if (!response.ok || isCancelled) {
+        if (isCancelled) return
+
+        if (!response.ok) {
+          setCommunityNickname(fallbackNickname)
+          setIsProfileLoading(false)
           return
         }
 
         setCommunityNickname(String(result?.nickname ?? fallbackNickname))
         setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? null)
+        setIsProfileLoading(false)
       } catch {
         if (!isCancelled) {
           setCommunityNickname(fallbackNickname)
           setUserLevelProfile(null)
+          setIsProfileLoading(false)
         }
       }
     }
@@ -1071,7 +1081,19 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </div>
               )}
 
-              {userLevelProfile ? (
+              {isProfileLoading ? (
+                <div className="mt-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="home-image-shimmer h-[18px] w-32 rounded-full" />
+                    <div className="home-image-shimmer h-3.5 w-24 rounded-full" />
+                  </div>
+                  <div className="home-image-shimmer mt-3 h-1.5 w-full rounded-full" />
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="home-image-shimmer h-3.5 w-10 rounded-full" />
+                    <div className="home-image-shimmer h-3.5 w-10 rounded-full" />
+                  </div>
+                </div>
+              ) : userLevelProfile ? (
                 <div className="mt-1">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
