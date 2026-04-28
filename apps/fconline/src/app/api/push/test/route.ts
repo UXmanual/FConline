@@ -4,6 +4,7 @@ import {
   sendPushNotificationBatch,
   type StoredPushSubscription,
 } from '@/lib/pushNotifications'
+import { normalizePushTargetUrl } from '@/lib/appUrl'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
 type PushSubscriptionRow = StoredPushSubscription & {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       title: 'FCO Ground 테스트 알림',
       body: '앱 알림 테스트가 정상적으로 도착했습니다.',
       data: {
-        url: '/mypage',
+        url: normalizePushTargetUrl('/mypage'),
       },
     })
 

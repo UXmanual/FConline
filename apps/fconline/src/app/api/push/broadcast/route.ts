@@ -5,6 +5,7 @@ import {
   type PushNotificationPayload,
   type StoredPushSubscription,
 } from '@/lib/pushNotifications'
+import { normalizePushTargetUrl } from '@/lib/appUrl'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
 type PushSubscriptionRow = StoredPushSubscription & {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     const adminToken = normalizeValue(body.adminToken)
     const title = normalizeValue(body.title)
     const bodyText = normalizeValue(body.body)
-    const targetUrl = normalizeValue(body.url) || '/home'
+    const targetUrl = normalizePushTargetUrl(normalizeValue(body.url))
 
     if (!adminToken || adminToken !== getPushAdminToken()) {
       return Response.json({ message: '운영 공지 발송 권한이 없습니다.' }, { status: 401 })

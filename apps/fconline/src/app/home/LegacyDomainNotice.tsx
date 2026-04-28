@@ -1,8 +1,8 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { OFFICIAL_APP_HOST } from '@/lib/appUrl'
 
-const OFFICIAL_HOST = 'fconlineground.com'
 const PLAY_STORE_APP_URL = 'market://details?id=com.fcoground.app'
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.fcoground.app'
 
@@ -41,10 +41,11 @@ export default function LegacyDomainNotice() {
     }
 
     const currentHost = window.location.hostname.toLowerCase()
-    const isOfficialHost = currentHost === OFFICIAL_HOST
+    const isOfficialHost = currentHost === OFFICIAL_APP_HOST
     const isLegacyVercelHost = currentHost.endsWith('.vercel.app')
+    const isAndroid = /android/i.test(window.navigator.userAgent)
 
-    return !isOfficialHost && isLegacyVercelHost
+    return isAndroid && !isOfficialHost && isLegacyVercelHost
   })()
 
   if (!isVisible) {

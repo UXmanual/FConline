@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '22.8': [
+    '업데이트 안내 화면과 알림 이동 동작을 더 안정적으로 다듬었습니다.',
+  ],
   '22.7': [
     '구 Vercel 도메인 업데이트 팝업을 화면 중앙에 고정하고 라이트/다크 모드 모두에서 타이틀과 버튼이 더 잘 보이도록 색상을 보정했습니다.',
   ],
