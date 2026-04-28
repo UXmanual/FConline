@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '22.6': [
+    '구 Vercel 도메인에서 노출되는 베타 앱 업데이트 팝업을 단일 타이틀과 Play 스토어 업데이트 버튼만 남도록 단순화했습니다.',
+  ],
   '22.5': [
     '이전 Vercel 주소로 접속한 베타 앱 사용자에게 Play 스토어 업데이트 안내 팝업을 노출하고 스토어 앱으로 바로 연결되도록 정리했습니다.',
   ],
