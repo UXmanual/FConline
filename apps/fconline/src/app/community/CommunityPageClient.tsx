@@ -120,10 +120,15 @@ function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isComme
         <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" />
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
-        <button type="button" onClick={() => onOpenComments(post)} className="inline-flex items-center gap-1 text-[12px] font-medium">
-          <span style={{ color: 'var(--app-title)' }}>댓글</span>
-          <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
-        </button>
+        <div className="relative">
+          <button type="button" onClick={() => onOpenComments(post)} className="inline-flex items-center gap-1 text-[12px] font-medium">
+            <span style={{ color: 'var(--app-title)' }}>댓글</span>
+            <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
+          </button>
+          {isCommentOpen && (
+            <div className="absolute w-px" style={{ left: '10px', top: '100%', height: '36px', backgroundColor: 'var(--app-card-border)' }} />
+          )}
+        </div>
       </div>
     </article>
   )
@@ -589,31 +594,43 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
             <div key={post.id} data-post-id={post.id}>
               <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} />
               {activeCommentPost?.id === post.id && (
-                <div ref={commentsScrollRef} className="rounded-b-lg border-x border-b px-5 pb-3 pt-5" style={{ backgroundColor: 'var(--app-comment-section-bg)', borderColor: 'var(--app-card-border)' }}>
+                <div ref={commentsScrollRef} className="rounded-b-lg border-x border-b px-5 pt-4 pb-3" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--app-card-border)' }}>
                   {isLoadingComments ? (
-                    <div className="pl-4">
+                    <div className="pl-8">
                       <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
                     </div>
                   ) : sortedComments.length > 0 ? (
-                    <div className="space-y-4 pl-4">
-                      {sortedComments.map((comment) => (
-                        <article key={comment.id} className="space-y-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <UserLevelBadge level={comment.level} />
-                              <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
-                              <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
-                              <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
+                    <div className="space-y-4">
+                      {sortedComments.map((comment, index) => {
+                        const isLast = index === sortedComments.length - 1
+                        return (
+                          <div key={comment.id} className="flex gap-2">
+                            <div className="relative w-5 shrink-0">
+                              <div className="absolute w-px" style={{ left: '9px', top: 0, height: '13px', backgroundColor: 'var(--app-card-border)' }} />
+                              <div className="absolute h-px" style={{ left: '9px', top: '13px', width: '11px', backgroundColor: 'var(--app-card-border)' }} />
+                              {!isLast && (
+                                <div className="absolute w-px" style={{ left: '9px', top: '13px', bottom: '-16px', backgroundColor: 'var(--app-card-border)' }} />
+                              )}
                             </div>
-                            {comment.canDelete ? (
-                              <button type="button" onClick={() => void handleDeleteComment(comment)} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
-                            ) : authUser ? (
-                              <button type="button" onClick={() => setReportTarget({ type: 'community_comment', id: comment.id })} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>신고</button>
-                            ) : null}
+                            <article className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <UserLevelBadge level={comment.level} />
+                                  <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
+                                  <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+                                  <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
+                                </div>
+                                {comment.canDelete ? (
+                                  <button type="button" onClick={() => void handleDeleteComment(comment)} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
+                                ) : authUser ? (
+                                  <button type="button" onClick={() => setReportTarget({ type: 'community_comment', id: comment.id })} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>신고</button>
+                                ) : null}
+                              </div>
+                              <LinkifiedText text={comment.content} className="text-sm leading-6" />
+                            </article>
                           </div>
-                          <LinkifiedText text={comment.content} className="text-sm leading-6" />
-                        </article>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="py-5 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>첫 댓글을 남겨보세요.</p>
