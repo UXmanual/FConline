@@ -29,8 +29,6 @@ type MyPageLevelProfile = UserLevelSnapshot & {
 }
 
 const levelGuideItems = [
-  `- 최고 레벨: Lv.${MAX_LEVEL}`,
-  '- 현재 아래 XP 기준으로 누적 경험치가 반영',
   '- 하루 첫 로그인: +5 XP',
   '- 커뮤니티 글 작성: +12 XP',
   '- 선수평가 글 작성: +10 XP',
@@ -240,7 +238,7 @@ function MyPageAuthSkeleton() {
             <div className="home-image-shimmer h-3.5 w-24 rounded-full" />
           </div>
 
-          <div className="home-image-shimmer h-1.5 w-full rounded-full" />
+          <div className="home-image-shimmer h-2 w-full rounded-full" />
 
           <div className="flex items-center justify-between gap-3">
             <div className="home-image-shimmer h-3.5 w-14 rounded-full" />
@@ -1091,7 +1089,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                     <div className="home-image-shimmer h-[18px] w-32 rounded-full" />
                     <div className="home-image-shimmer h-3.5 w-24 rounded-full" />
                   </div>
-                  <div className="home-image-shimmer mt-3 h-1.5 w-full rounded-full" />
+                  <div className="home-image-shimmer mt-3 h-2 w-full rounded-full" />
                   <div className="mt-2 flex items-center justify-between gap-3">
                     <div className="home-image-shimmer h-3.5 w-10 rounded-full" />
                     <div className="home-image-shimmer h-3.5 w-10 rounded-full" />
@@ -1108,14 +1106,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                     </p>
                   </div>
                   <div
-                    className="mt-3 h-1.5 overflow-hidden rounded-full"
+                    className="mt-3 h-2 overflow-hidden rounded-full"
                     style={{ backgroundColor: 'rgba(148, 163, 184, 0.2)' }}
                   >
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${userLevelProfile.progressPercent}%`,
-                        backgroundColor: '#457ae5',
+                        background: 'linear-gradient(to right, #3b6fd4, #5b9cf6)',
                       }}
                     />
                   </div>
