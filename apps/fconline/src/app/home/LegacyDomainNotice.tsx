@@ -52,7 +52,7 @@ export default function LegacyDomainNotice() {
   }
 
   return (
-    <div className="fixed inset-0 z-[160] flex items-end justify-center bg-[rgba(10,14,20,0.58)] px-5 pb-[calc(env(safe-area-inset-bottom)+92px)] pt-6 sm:items-center sm:pb-6">
+    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-[rgba(10,14,20,0.58)] px-5 py-6">
       <section
         className="w-full max-w-[420px] rounded-[28px] border px-5 pb-5 pt-5 shadow-[0_24px_64px_rgba(15,23,42,0.28)]"
         style={{
@@ -63,14 +63,18 @@ export default function LegacyDomainNotice() {
         <div className="space-y-4">
           <h2
             className="text-[20px] font-bold leading-7"
-            style={{ color: 'var(--app-body-text)' }}
+            style={{ color: 'var(--app-title)' }}
           >
             앱 업데이트를 해주세요
           </h2>
           <div className="pt-1">
             <Button
               type="button"
-              className="h-11 w-full rounded-[16px] text-sm font-semibold"
+              className="h-11 w-full rounded-[16px] border-0 text-sm font-semibold"
+              style={{
+                backgroundColor: 'var(--app-accent-blue)',
+                color: '#ffffff',
+              }}
               onClick={() => {
                 openPlayStore()
               }}
