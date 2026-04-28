@@ -40,6 +40,7 @@ android/twa/.idea/
 android/twa/app-release-*.aab
 android/twa/app-release-*.apk
 android/twa/app-release-*.idsig
+.gradle-home/
 
 # vercel
 .vercel

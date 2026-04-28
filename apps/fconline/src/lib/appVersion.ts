@@ -3,6 +3,11 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '22.3': [
+    '서비스 기본 도메인을 fconlineground.com 기준으로 정리했습니다.',
+    'Google 로그인과 데이터 삭제 안내 링크를 새 도메인 흐름에 맞게 정비했습니다.',
+    'Android 베타 앱의 웹 연결 대상과 App Links 기준 도메인을 새 주소로 맞췄습니다.',
+  ],
   '21.7': [
     '모바일 댓글 바텀시트 표시를 다듬었습니다.',
   ],

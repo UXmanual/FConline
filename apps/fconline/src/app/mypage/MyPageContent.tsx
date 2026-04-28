@@ -170,7 +170,7 @@ export const privacyContent = [
   '10. 개인정보 보호책임자 및 문의처',
   '개인정보 보호 관련 문의, 열람 요청, 정정 요청, 삭제 요청, 처리 정지 요청, 탈퇴 요청은 아래 연락처로 접수할 수 있습니다.',
   '- 이메일: uxdmanual@gmail.com',
-  '- 데이터 삭제 요청 안내: https://fconlinemanual.vercel.app/data-deletion',
+  '- 데이터 삭제 요청 안내: https://fconlineground.com/data-deletion',
   '11. 자동 수집 장치의 설치, 운영 및 거부',
   '서비스는 로그인 유지, 보안 처리, 접속 상태 관리, 서비스 품질 개선을 위해 쿠키 또는 이와 유사한 기술을 사용할 수 있습니다.',
   '이용자는 브라우저 설정을 통해 쿠키 저장을 거부하거나 삭제할 수 있습니다. 다만 이 경우 로그인 유지 또는 일부 기능 이용이 제한될 수 있습니다.',
@@ -891,19 +891,19 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     }
 
     if (!matchedService) {
-      if (item.includes('https://fconlinemanual.vercel.app/data-deletion')) {
-        const [before, after] = item.split('https://fconlinemanual.vercel.app/data-deletion')
+      if (item.includes('https://fconlineground.com/data-deletion')) {
+        const [before, after] = item.split('https://fconlineground.com/data-deletion')
 
         return (
           <>
             {before}
             <a
-              href="https://fconlinemanual.vercel.app/data-deletion"
+              href="https://fconlineground.com/data-deletion"
               target="_blank"
               rel="noreferrer"
               className="underline underline-offset-2"
             >
-              https://fconlinemanual.vercel.app/data-deletion
+              https://fconlineground.com/data-deletion
             </a>
             {after}
           </>

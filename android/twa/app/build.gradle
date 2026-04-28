@@ -50,7 +50,7 @@ def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias
 
 def twaManifest = [
     applicationId: 'com.fcoground.app',
-    hostName: 'fconlinemanual.vercel.app', // The domain being opened in the TWA.
+    hostName: 'fconlineground.com', // The domain being opened in the TWA.
     launchUrl: '/home', // The start path for the TWA. Must be relative to the domain.
     name: 'FCO Ground', // The application name.
     launcherName: 'FCO Ground', // The name shown on the Android Launcher.
@@ -97,7 +97,7 @@ android {
         applicationId "com.fcoground.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 179
+        versionCode 2026042801
         versionName "18.2"
 
         // The name for the application
@@ -116,7 +116,7 @@ android {
             // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
             // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
             // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://fconlinemanual.vercel.app/manifest.webmanifest'
+            resValue "string", "webManifestUrl", 'https://fconlineground.com/manifest.webmanifest'
         
 
         

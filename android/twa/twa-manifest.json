@@ -1,6 +1,6 @@
 {
   "packageId": "com.fcoground.app",
-  "host": "fconlinemanual.vercel.app",
+  "host": "fconlineground.com",
   "name": "FCO Ground",
   "launcherName": "FCO Ground",
   "display": "standalone",
@@ -11,17 +11,17 @@
   "backgroundColor": "#121318",
   "enableNotifications": true,
   "startUrl": "/home",
-  "iconUrl": "https://fconlinemanual.vercel.app/icons/icon-512.png",
-  "maskableIconUrl": "https://fconlinemanual.vercel.app/icons/icon-512.png",
+  "iconUrl": "https://fconlineground.com/icons/icon-512.png",
+  "maskableIconUrl": "https://fconlineground.com/icons/icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "C:\\Users\\Rich\\FConline\\.local\\android\\fcoground-release.keystore",
     "alias": "fcoground"
   },
-  "appVersionCode": 179,
+  "appVersionCode": 2026042801,
   "appVersion": "18.2",
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://fconlinemanual.vercel.app/manifest.webmanifest",
+  "webManifestUrl": "https://fconlineground.com/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
