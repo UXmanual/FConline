@@ -177,17 +177,22 @@ function ReviewPostCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation()
-            onOpenComments(post)
-          }}
-          className="inline-flex items-center gap-1 text-[12px] font-medium"
-        >
-          <span style={{ color: 'var(--app-title)' }}>댓글</span>
-          <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpenComments(post)
+            }}
+            className="inline-flex items-center gap-1 text-[12px] font-medium"
+          >
+            <span style={{ color: 'var(--app-title)' }}>댓글</span>
+            <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
+          </button>
+          {isCommentOpen && post.commentCount > 0 && (
+            <div className="absolute w-px" style={{ left: '10px', top: 'calc(100% + 4px)', height: '20px', backgroundColor: 'var(--app-thread-line)' }} />
+          )}
+        </div>
       </div>
     </article>
   )
@@ -800,20 +805,21 @@ export default function PlayerReviewSection({
                 {isCommentOpen ? (
                   <div
                     ref={commentsScrollRef}
-                    className="rounded-b-lg border-x border-b px-5 pb-3 pt-5"
+                    className="rounded-b-lg border-x border-b px-5 pt-0 pb-3"
                     style={{
-                      backgroundColor: 'var(--app-comment-section-bg)',
+                      backgroundColor: 'var(--app-card-bg)',
                       borderColor: 'var(--app-card-border)',
                     }}
                   >
                     {isLoadingComments ? (
-                      <div className="pl-4">
+                      <div className="pl-8">
                         <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
                       </div>
                     ) : sortedComments.length > 0 ? (
-                      <div className="space-y-4 pl-4">
+                      <div className="relative space-y-4 pl-7">
+                        <div className="absolute top-0 bottom-0 w-px" style={{ left: '10px', backgroundColor: 'var(--app-thread-line)' }} />
                         {sortedComments.map((comment) => (
-                          <article key={comment.id} className="space-y-1.5">
+                          <article key={comment.id} className="min-w-0 space-y-1">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex min-w-0 items-center gap-2">
                                 <UserLevelBadge level={comment.level} />
@@ -825,27 +831,25 @@ export default function PlayerReviewSection({
                                   {comment.createdAtLabel}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {comment.canDelete ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleDeleteComment(comment)}
-                                    className="text-[12px] font-medium"
-                                    style={{ color: 'var(--app-muted-text)' }}
-                                  >
-                                    삭제
-                                  </button>
-                                ) : authUser ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setReportTarget({ type: 'player_review_comment', id: comment.id })}
-                                    className="text-[12px] font-medium"
-                                    style={{ color: 'var(--app-muted-text)' }}
-                                  >
-                                    신고
-                                  </button>
-                                ) : null}
-                              </div>
+                              {comment.canDelete ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteComment(comment)}
+                                  className="shrink-0 text-[12px] font-medium"
+                                  style={{ color: 'var(--app-muted-text)' }}
+                                >
+                                  삭제
+                                </button>
+                              ) : authUser ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setReportTarget({ type: 'player_review_comment', id: comment.id })}
+                                  className="shrink-0 text-[12px] font-medium"
+                                  style={{ color: 'var(--app-muted-text)' }}
+                                >
+                                  신고
+                                </button>
+                              ) : null}
                             </div>
                             <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--app-body-text)' }}>
                               {comment.content}
@@ -853,13 +857,9 @@ export default function PlayerReviewSection({
                           </article>
                         ))}
                       </div>
-                    ) : (
-                      <p className="py-6 pl-4 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>
-                        첫 댓글을 남겨보세요.
-                      </p>
-                    )}
+                    ) : null}
 
-                    <form onSubmit={handleCommentSubmit} className="mt-4 flex items-center gap-2">
+                    <form onSubmit={handleCommentSubmit} className={`${sortedComments.length > 0 || isLoadingComments ? 'mt-4' : ''} flex items-center gap-2`}>
                       <div className="flex h-11 min-w-0 flex-1 items-center rounded-[22px] px-4" style={{ backgroundColor: 'var(--app-comment-input-bg)' }}>
                         <input
                           disabled={!authUser || isSubmittingComment}

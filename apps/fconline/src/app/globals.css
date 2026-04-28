@@ -60,6 +60,7 @@
   --app-surface-strong: #eef2f6;
   --app-comment-section-bg: color-mix(in srgb, var(--app-card-bg) 60%, var(--app-surface-soft));
   --app-comment-input-bg: var(--app-surface-soft);
+  --app-thread-line: #d4dce6;
   --app-title: #1e2124;
   --app-body-text: #5f6b76;
   --app-muted-text: #96a0aa;
@@ -164,7 +165,8 @@ html.app-dark-mode {
   --app-surface-soft: #202229;
   --app-surface-strong: #23262d;
   --app-comment-section-bg: var(--app-surface-strong);
-  --app-comment-input-bg: var(--app-card-bg);
+  --app-comment-input-bg: var(--app-surface-strong);
+  --app-thread-line: #3c4054;
   --app-title: #f3f4f6;
   --app-body-text: #b2b5be;
   --app-muted-text: #8d919c;
