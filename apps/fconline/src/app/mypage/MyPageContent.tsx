@@ -1460,10 +1460,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
             >
               <form className="space-y-5" onSubmit={handleSubmitContact}>
                 <div>
-                  <div
-                    className="mx-auto mb-4 h-1.5 w-12 rounded-full"
-                    style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
-                  />
                   <p className="text-[16px] font-semibold tracking-[-0.02em]" style={titleStyle}>
                     <span style={{ color: '#457ae5' }}>앱문의</span>
                     <span>{' 보내기'}</span>
