@@ -53,6 +53,7 @@ export default function PlayerDetailPanel({
 }: Props) {
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
   const [isChemistryApplied, setIsChemistryApplied] = useState(false)
+  const [teamColorBoost, setTeamColorBoost] = useState(0)
   const [activeTab, setActiveTab] = useState<'detail' | 'review'>(initialTab)
   const [reviewCount, setReviewCount] = useState(0)
   const [imageSrcIndex, setImageSrcIndex] = useState(0)
@@ -75,7 +76,7 @@ export default function PlayerDetailPanel({
     [strongLevel],
   )
   const chemistryBoost = isChemistryApplied ? 4 : 0
-  const totalStatBoost = abilityBoost + chemistryBoost
+  const totalStatBoost = abilityBoost + chemistryBoost + teamColorBoost
 
   const currentOverall = useMemo(() => {
     if (detail.overall == null) {
@@ -83,8 +84,8 @@ export default function PlayerDetailPanel({
     }
 
     const baseOverall = detail.overall - getStrongPoint(1)
-    return baseOverall + getStrongPoint(strongLevel) + chemistryBoost
-  }, [chemistryBoost, detail.overall, strongLevel])
+    return baseOverall + getStrongPoint(strongLevel) + chemistryBoost + teamColorBoost
+  }, [chemistryBoost, detail.overall, strongLevel, teamColorBoost])
 
   const currentPrice = formatPriceWithKoreanUnits(detail.prices[strongLevel])
 
@@ -124,7 +125,7 @@ export default function PlayerDetailPanel({
       Object.fromEntries(
         STRONG_LEVELS.map((level) => {
           const levelAbilityBoost = getStrongPoint(level) - getStrongPoint(1)
-          const levelTotalStatBoost = levelAbilityBoost + chemistryBoost
+          const levelTotalStatBoost = levelAbilityBoost + chemistryBoost + teamColorBoost
           const levelAbilities = detail.abilities.map((ability) => ({
             ...ability,
             value: ability.value + levelTotalStatBoost,
@@ -147,7 +148,7 @@ export default function PlayerDetailPanel({
           ]
         }),
       ),
-    [chemistryBoost, detail.abilities, detail.overall, detail.position, detail.traits, playerName],
+    [chemistryBoost, detail.abilities, detail.overall, detail.position, detail.traits, playerName, teamColorBoost],
   )
 
   const imageCandidates = useMemo(() => getPlayerImageCandidates(spid), [spid])
@@ -430,32 +431,26 @@ export default function PlayerDetailPanel({
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <InfoCard label="현재 금액" value={currentPrice} />
           <FootInfoCard leftFoot={detail.leftFoot} rightFoot={detail.rightFoot} />
+          {detail.nationName ? (
+            <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+              <p className="app-player-muted text-xs font-medium">국적</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="app-player-title truncate text-sm font-semibold">{detail.nationName}</p>
+                {detail.nationLogo && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={detail.nationLogo} alt={detail.nationName} className="h-4 w-auto shrink-0 rounded-[3px] object-contain" />
+                )}
+              </div>
+            </div>
+          ) : (
+            <InfoCard label="국적" value="-" />
+          )}
           <InfoCard label="키" value={detail.height ? `${detail.height}cm` : '-'} />
           <InfoCard label="몸무게" value={detail.weight ? `${detail.weight}kg` : '-'} />
           <InfoCard label="체형" value={detail.bodyType} />
           <InfoCard label="급여" value={detail.pay?.toString() ?? '-'} />
         </div>
-
-        {detail.nationName && (
-          <div className="mt-4 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="app-player-muted text-xs font-medium">국적</p>
-                <p className="app-player-title truncate text-sm font-semibold">{detail.nationName}</p>
-              </div>
-              {detail.nationLogo && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={detail.nationLogo}
-                  alt={detail.nationName}
-                  className="h-4 w-auto shrink-0 rounded-[3px] object-contain"
-                />
-              )}
-            </div>
-          </div>
-        )}
 
         {detail.traits.length > 0 && (
           <div className="mt-4 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
@@ -618,7 +613,7 @@ export default function PlayerDetailPanel({
         </div>
 
         <div
-          className="mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-2.5"
+          className="mt-4 flex min-h-12 items-center justify-between gap-4 rounded-lg px-4 py-2.5"
           style={{ backgroundColor: 'var(--app-player-soft-bg)' }}
         >
           <div className="flex items-center gap-1">
@@ -655,8 +650,40 @@ export default function PlayerDetailPanel({
           </button>
         </div>
 
+        <div className="mt-4 flex min-h-12 items-center justify-between rounded-lg px-4 py-2.5" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+          <div className="flex items-center gap-1">
+            <p className="app-player-title text-sm font-semibold">팀컬러</p>
+            <p className="text-sm font-semibold transition-colors" style={{ color: teamColorBoost > 0 ? 'var(--app-player-toggle-on)' : 'var(--app-player-muted)' }}>
+              {teamColorBoost > 0 ? '적용중' : '미적용'}
+            </p>
+          </div>
+          <div className="relative -ml-8 -mr-4 flex self-stretch items-center justify-end gap-1 pl-8 pr-4">
+            <span className="pointer-events-none text-sm font-semibold leading-none" style={{ color: teamColorBoost > 0 ? '#457ae5' : 'var(--app-player-muted)' }}>
+              {teamColorBoost > 0 ? `+${teamColorBoost}` : '0'}
+            </span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="pointer-events-none" style={{ color: teamColorBoost > 0 ? '#457ae5' : 'var(--app-player-muted)', flexShrink: 0 }}>
+              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <select
+              value={teamColorBoost}
+              onChange={(event) => setTeamColorBoost(Number(event.target.value))}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            >
+              <option value={0}>0</option>
+              {Array.from({ length: 9 }, (_, index) => (
+                <option key={index + 1} value={index + 1}>+{index + 1}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4 flex min-h-12 items-center justify-between rounded-lg px-4 py-2.5" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+          <p className="app-player-muted text-sm font-medium">현재 금액</p>
+          <p className="app-player-title text-sm font-semibold">{currentPrice}</p>
+        </div>
+
         {detail.skillMove != null && (
-          <div className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
+          <div className="mt-4 flex min-h-12 items-center justify-between rounded-lg px-4 py-2.5" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
             <p className="app-player-muted text-sm font-medium">개인기</p>
             <div className="flex gap-0.5">
               {Array.from({ length: 6 }, (_, index) => (
@@ -689,6 +716,7 @@ export default function PlayerDetailPanel({
               stat={ability}
               abilityBoost={abilityBoost}
               chemistryBoost={chemistryBoost}
+              teamColorBoost={teamColorBoost}
             />
           ))}
         </div>
@@ -1095,14 +1123,17 @@ function AbilityCard({
   stat,
   abilityBoost,
   chemistryBoost,
+  teamColorBoost,
 }: {
   stat: AbilityStat
   abilityBoost: number
   chemistryBoost: number
+  teamColorBoost: number
 }) {
   const color = getAbilityValueColor(stat.value)
   const showAbilityBoost = abilityBoost > 0
   const showChemistryBoost = chemistryBoost > 0
+  const showTeamColorBoost = teamColorBoost > 0
 
   return (
     <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-player-soft-bg)' }}>
@@ -1111,7 +1142,7 @@ function AbilityCard({
         <span className="block text-[18px] font-bold leading-none tracking-[-0.02em]" style={{ color }}>
           {stat.value}
         </span>
-        {(showAbilityBoost || showChemistryBoost) && (
+        {(showAbilityBoost || showChemistryBoost || showTeamColorBoost) && (
           <span className="flex items-end gap-1 pb-0.5 text-[12px] leading-none tracking-[-0.01em]">
             {showAbilityBoost && (
               <span className="font-semibold" style={{ color: 'var(--app-player-boost)' }}>
@@ -1119,17 +1150,19 @@ function AbilityCard({
               </span>
             )}
             {showAbilityBoost && showChemistryBoost && (
-              <span
-                aria-hidden="true"
-                className="font-medium"
-                style={{ color: 'color-mix(in srgb, var(--app-player-muted) 34%, transparent)' }}
-              >
-                |
-              </span>
+              <span aria-hidden="true" className="font-medium" style={{ color: 'color-mix(in srgb, var(--app-player-muted) 34%, transparent)' }}>|</span>
             )}
             {showChemistryBoost && (
               <span className="font-semibold" style={{ color: 'var(--app-player-boost)' }}>
                 +{chemistryBoost}
+              </span>
+            )}
+            {(showAbilityBoost || showChemistryBoost) && showTeamColorBoost && (
+              <span aria-hidden="true" className="font-medium" style={{ color: 'color-mix(in srgb, var(--app-player-muted) 34%, transparent)' }}>|</span>
+            )}
+            {showTeamColorBoost && (
+              <span className="font-semibold" style={{ color: 'var(--app-player-boost)' }}>
+                +{teamColorBoost}
               </span>
             )}
           </span>

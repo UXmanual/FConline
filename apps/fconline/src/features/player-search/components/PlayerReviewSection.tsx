@@ -6,23 +6,18 @@ import {
   useEffect,
   useRef,
   useState,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import UserLevelBadge from '@/components/user/UserLevelBadge'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
-import { useDarkModeEnabled } from '@/lib/darkMode'
-import { useLockedBodyScroll, useVisualViewportMetrics } from '@/lib/mobileOverlay'
+import { useLockedBodyScroll } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
-const COMMENT_SHEET_MIN_HEIGHT = 320
-const SMALL_COMMENT_SHEET_MAX_COUNT = 3
-const SMALL_COMMENT_SHEET_FIXED_HEIGHT = 360
 const PLAYER_SEARCH_RESULTS_KEY = 'player-search-results'
 const PLAYER_QUERY_CACHE_KEY = 'players-query-cache'
 
@@ -94,12 +89,14 @@ function ReviewPostCard({
   onOpenComments,
   onReport,
   highlight,
+  isCommentOpen,
 }: {
   post: CommunityPostSummary
   onDelete: (post: CommunityPostSummary) => void
   onOpenComments: (post: CommunityPostSummary) => void
   onReport?: (post: CommunityPostSummary) => void
   highlight?: boolean
+  isCommentOpen?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const cardLevelMatch = post.title.match(/^\[(\d+카)\]\s*(.*)$/)
@@ -108,10 +105,11 @@ function ReviewPostCard({
 
   return (
     <article
-      className="rounded-lg px-5 py-4"
+      className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`}
       style={{
         backgroundColor: 'var(--app-card-bg)',
         border: '1px solid var(--app-card-border)',
+        borderBottom: isCommentOpen ? 'none' : undefined,
         boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined,
       }}
       onClick={() => setExpanded((current) => !current)}
@@ -119,12 +117,6 @@ function ReviewPostCard({
       <div className="min-w-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className="inline-flex h-7 items-center rounded-lg px-3 text-[12px] font-semibold"
-              style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
-            >
-              선수 평가
-            </span>
             <UserLevelBadge level={post.level} />
             <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>
               {post.nickname}
@@ -210,13 +202,10 @@ export default function PlayerReviewSection({
   initialHighlightedPostId = null,
 }: Props) {
   const router = useRouter()
-  const isDarkModeEnabled = useDarkModeEnabled()
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
   const composerScrollRef = useRef<HTMLElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map())
-  const dragPointerIdRef = useRef<number | null>(null)
-  const dragStartYRef = useRef(0)
   const currentPageRef = useRef(1)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
@@ -238,9 +227,6 @@ export default function PlayerReviewSection({
   const [isLoadingComments, setIsLoadingComments] = useState(false)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
-  const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
-  const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
-  const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
   const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
   const [reportTarget, setReportTarget] = useState<{ type: string; id: string } | null>(null)
@@ -259,15 +245,8 @@ export default function PlayerReviewSection({
   const sortedComments = [...comments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )
-  const { bottomInset: commentSheetKeyboardInset } = useVisualViewportMetrics(activeCommentPost !== null)
-  const commentSheetItemCount = isLoadingComments ? Math.max(activeCommentPost?.commentCount ?? 0, 0) : sortedComments.length
-  const isSmallCommentSheet = commentSheetItemCount <= SMALL_COMMENT_SHEET_MAX_COUNT
-  const commentSheetHeight = isSmallCommentSheet ? `${SMALL_COMMENT_SHEET_FIXED_HEIGHT}px` : undefined
 
-  useLockedBodyScroll(
-    isComposerOpen || activeCommentPost !== null,
-    activeCommentPost ? commentsScrollRef : isComposerOpen ? composerScrollRef : null,
-  )
+  useLockedBodyScroll(isComposerOpen, isComposerOpen ? composerScrollRef : null)
 
   useEffect(() => {
     onTotalCountChange?.(totalCount)
@@ -280,19 +259,11 @@ export default function PlayerReviewSection({
     window.sessionStorage.removeItem(PLAYER_QUERY_CACHE_KEY)
   }
 
-  const resetCommentSheetState = useCallback(() => {
+  const closeCommentSection = useCallback(() => {
     setActiveCommentPost(null)
     setComments([])
     setCommentDraft('')
-    setCommentSheetOffsetY(0)
-    setIsDraggingCommentSheet(false)
-    setIsCommentSheetVisible(false)
-    dragPointerIdRef.current = null
   }, [])
-
-  const closeCommentSheet = useCallback(() => {
-    resetCommentSheetState()
-  }, [resetCommentSheetState])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -385,46 +356,6 @@ export default function PlayerReviewSection({
 
     return () => window.cancelAnimationFrame(frameId)
   }, [highlightedPostId, posts])
-
-  useEffect(() => {
-    if (!activeCommentPost) return
-    setCommentSheetOffsetY(0)
-    setIsCommentSheetVisible(false)
-    const frameId = window.requestAnimationFrame(() => setIsCommentSheetVisible(true))
-    return () => window.cancelAnimationFrame(frameId)
-  }, [activeCommentPost])
-
-  useEffect(() => {
-    if (!isDraggingCommentSheet) return
-
-    function handlePointerMove(event: PointerEvent) {
-      if (dragPointerIdRef.current !== event.pointerId) return
-      setCommentSheetOffsetY(Math.max(0, event.clientY - dragStartYRef.current))
-    }
-
-    function handlePointerEnd(event: PointerEvent) {
-      if (dragPointerIdRef.current !== event.pointerId) return
-      dragPointerIdRef.current = null
-      setIsDraggingCommentSheet(false)
-
-      if (commentSheetOffsetY > 96) {
-        closeCommentSheet()
-        return
-      }
-
-      setCommentSheetOffsetY(0)
-    }
-
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerEnd)
-    window.addEventListener('pointercancel', handlePointerEnd)
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerEnd)
-      window.removeEventListener('pointercancel', handlePointerEnd)
-    }
-  }, [closeCommentSheet, commentSheetOffsetY, isDraggingCommentSheet])
 
   const aiReviewSummary = aiReviewSummariesByLevel?.[aiSelectedCardLevel] ?? null
 
@@ -524,12 +455,6 @@ export default function PlayerReviewSection({
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function handleCommentSheetDragStart(event: ReactPointerEvent<HTMLElement>) {
-    dragPointerIdRef.current = event.pointerId
-    dragStartYRef.current = event.clientY - commentSheetOffsetY
-    setIsDraggingCommentSheet(true)
-  }
-
   function openComposer() {
     if (isAuthLoading) {
       return
@@ -552,6 +477,11 @@ export default function PlayerReviewSection({
   }
 
   async function loadComments(post: CommunityPostSummary) {
+    if (activeCommentPost?.id === post.id) {
+      closeCommentSection()
+      return
+    }
+
     try {
       setActiveCommentPost(post)
       setComments([])
@@ -565,9 +495,12 @@ export default function PlayerReviewSection({
       }
 
       setComments(result.items ?? [])
+      setTimeout(() => {
+        commentsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 100)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '선수평가 댓글을 불러오지 못했습니다.')
-      closeCommentSheet()
+      closeCommentSection()
     } finally {
       setIsLoadingComments(false)
     }
@@ -660,7 +593,7 @@ export default function PlayerReviewSection({
       }
 
       if (activeCommentPost?.id === targetPost.id) {
-        closeCommentSheet()
+        closeCommentSection()
       }
 
       invalidatePlayerSearchCaches()
@@ -721,7 +654,6 @@ export default function PlayerReviewSection({
           ),
         })
       }
-      commentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '선수평가 댓글을 저장하지 못했습니다.')
     } finally {
@@ -807,13 +739,6 @@ export default function PlayerReviewSection({
           <p className="mt-3 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
             선수평가와 댓글 작성은 Google 로그인 후 이용할 수 있습니다.
           </p>
-        ) : authUser ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
-            <span>선수평가와 댓글 작성 시</span>
-            <UserLevelBadge level={currentUserLevel} />
-            <span>{reviewNickname}</span>
-            <span>으로 표시됩니다.</span>
-          </div>
         ) : null}
 
         {aiReviewSummary ? (
@@ -860,17 +785,122 @@ export default function PlayerReviewSection({
         {isLoadingPosts ? (
           <ReviewSkeletonList />
         ) : posts.length > 0 ? (
-          posts.map((post) => (
-            <div key={post.id} data-post-id={post.id}>
-              <ReviewPostCard
-                post={post}
-                onDelete={handleDeletePost}
-                onOpenComments={loadComments}
-                onReport={authUser ? (p) => setReportTarget({ type: 'player_review_post', id: p.id }) : undefined}
-                highlight={post.id === highlightedPostId}
-              />
-            </div>
-          ))
+          posts.map((post) => {
+            const isCommentOpen = activeCommentPost?.id === post.id
+            return (
+              <div key={post.id} data-post-id={post.id}>
+                <ReviewPostCard
+                  post={post}
+                  onDelete={handleDeletePost}
+                  onOpenComments={loadComments}
+                  onReport={authUser ? (p) => setReportTarget({ type: 'player_review_post', id: p.id }) : undefined}
+                  highlight={post.id === highlightedPostId}
+                  isCommentOpen={isCommentOpen}
+                />
+                {isCommentOpen ? (
+                  <div
+                    ref={commentsScrollRef}
+                    className="rounded-b-lg border-x border-b px-5 pb-3 pt-5"
+                    style={{
+                      backgroundColor: 'var(--app-comment-section-bg)',
+                      borderColor: 'var(--app-card-border)',
+                    }}
+                  >
+                    {isLoadingComments ? (
+                      <div className="pl-4">
+                        <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
+                      </div>
+                    ) : sortedComments.length > 0 ? (
+                      <div className="space-y-4 pl-4">
+                        {sortedComments.map((comment) => (
+                          <article key={comment.id} className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <UserLevelBadge level={comment.level} />
+                                <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>
+                                  {comment.nickname}
+                                </span>
+                                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+                                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
+                                  {comment.createdAtLabel}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {comment.canDelete ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDeleteComment(comment)}
+                                    className="text-[12px] font-medium"
+                                    style={{ color: 'var(--app-muted-text)' }}
+                                  >
+                                    삭제
+                                  </button>
+                                ) : authUser ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setReportTarget({ type: 'player_review_comment', id: comment.id })}
+                                    className="text-[12px] font-medium"
+                                    style={{ color: 'var(--app-muted-text)' }}
+                                  >
+                                    신고
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                            <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--app-body-text)' }}>
+                              {comment.content}
+                            </p>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="py-6 pl-4 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>
+                        첫 댓글을 남겨보세요.
+                      </p>
+                    )}
+
+                    <form onSubmit={handleCommentSubmit} className="mt-4 flex items-center gap-2">
+                      <div className="flex h-11 min-w-0 flex-1 items-center rounded-[22px] px-4" style={{ backgroundColor: 'var(--app-comment-input-bg)' }}>
+                        <input
+                          disabled={!authUser || isSubmittingComment}
+                          value={commentDraft}
+                          onChange={(event) => setCommentDraft(event.target.value)}
+                          onFocus={() => {
+                            setTimeout(() => {
+                              commentsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                            }, 320)
+                          }}
+                          placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'}
+                          className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:font-medium placeholder:text-[var(--app-muted-text)] disabled:cursor-not-allowed"
+                          style={{ color: 'var(--app-title)' }}
+                        />
+                      </div>
+                      <button
+                        disabled={!authUser || isSubmittingComment}
+                        type="submit"
+                        className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition disabled:opacity-60"
+                        style={{ backgroundColor: '#457ae5' }}
+                      >
+                        {isSubmittingComment ? '등록 중...' : '등록'}
+                      </button>
+                    </form>
+
+                    <button
+                      type="button"
+                      onClick={() => closeCommentSection()}
+                      className="mt-3 flex w-full items-center justify-center gap-1 py-1.5 text-[12px] font-medium"
+                      style={{ color: 'var(--app-muted-text)' }}
+                    >
+                      <span>댓글 접기</span>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <path d="M9 7.5L6 4.5L3 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )
+          })
         ) : (
           <div
             className="rounded-lg px-5 py-8 text-center text-sm"
@@ -970,10 +1000,6 @@ export default function PlayerReviewSection({
             >
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div>
-                  <div
-                    className="mx-auto mb-4 h-1.5 w-12 rounded-full"
-                    style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
-                  />
                   <p className="text-[16px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
                     <span style={{ color: '#457ae5' }}>{playerName}</span>
                     <span>{' 선수 평가'}</span>
@@ -1004,9 +1030,6 @@ export default function PlayerReviewSection({
                 </div>
 
                 <div className="flex items-center gap-2 px-0.5 text-sm">
-                  <p className="font-semibold" style={{ color: 'var(--app-title)' }}>
-                    닉네임
-                  </p>
                   <UserLevelBadge level={currentUserLevel} />
                   <p style={{ color: 'var(--app-body-text)' }}>{reviewNickname}</p>
                 </div>
@@ -1032,19 +1055,23 @@ export default function PlayerReviewSection({
                   <span className="hidden" style={{ color: 'var(--app-title)' }}>
                     내용
                   </span>
-                  <textarea
-                    required
-                    value={content}
-                    onChange={(event) => setContent(event.target.value)}
-                    placeholder={`${playerName} 선수 평가를 입력해 주세요`}
-                    rows={4}
-                    className="min-h-[104px] w-full rounded-[22px] border-0 px-4 py-3 text-sm leading-6 outline-none transition"
-                    style={{
-                      backgroundColor: 'var(--app-surface-soft)',
-                      color: 'var(--app-title)',
-                      resize: 'none',
-                    }}
-                  />
+                  <div className="relative">
+                    <textarea
+                      required
+                      value={content}
+                      onChange={(event) => setContent(event.target.value.slice(0, 300))}
+                      maxLength={300}
+                      placeholder={`${playerName} 선수 평가를 입력해 주세요`}
+                      rows={4}
+                      className="min-h-[104px] w-full rounded-[22px] border-0 px-4 pb-9 pt-4 text-sm leading-6 outline-none transition"
+                      style={{
+                        backgroundColor: 'var(--app-surface-soft)',
+                        color: 'var(--app-title)',
+                        resize: 'none',
+                      }}
+                    />
+                    <span className="pointer-events-none absolute bottom-4 right-4 text-[12px]" style={{ color: 'var(--app-muted-text)' }}>{content.length}/300</span>
+                  </div>
                 </label>
 
                 <div className="mt-7 flex flex-col gap-3">
@@ -1072,155 +1099,6 @@ export default function PlayerReviewSection({
               </form>
             </section>
           </div>
-        </div>
-      ) : null}
-
-      {activeCommentPost ? (
-        <div className="fixed inset-0 z-[70]">
-          <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
-          <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-            <section
-              className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]"
-              style={{
-                height: commentSheetHeight,
-                minHeight: `${COMMENT_SHEET_MIN_HEIGHT}px`,
-                paddingBottom: 'env(safe-area-inset-bottom)',
-                transform: isDraggingCommentSheet
-                  ? `translateY(${commentSheetOffsetY}px)`
-                  : isCommentSheetVisible
-                    ? `translateY(${commentSheetOffsetY}px)`
-                    : 'translateY(calc(100% + env(safe-area-inset-bottom)))',
-                backgroundColor: 'var(--app-modal-bg)',
-                borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))',
-                boxShadow: isDarkModeEnabled
-                  ? '0 -32px 76px rgba(0, 0, 0, 0.58)'
-                  : '0 -28px 68px rgba(15, 23, 42, 0.28)',
-                willChange: 'transform',
-                transition: isDraggingCommentSheet
-                  ? 'none'
-                  : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease',
-              }}
-            >
-              <div
-                className="flex cursor-grab justify-center pt-3 active:cursor-grabbing"
-                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
-                onPointerDown={handleCommentSheetDragStart}
-              >
-                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.48)' }} />
-              </div>
-              <div
-                className="cursor-grab border-b px-5 py-4 active:cursor-grabbing"
-                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}
-                onPointerDown={handleCommentSheetDragStart}
-              >
-                <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
-                  댓글 <span className="font-[600] text-[#457ae5]">{activeCommentPost.commentCount}</span>
-                </p>
-              </div>
-              <div
-                ref={commentsScrollRef}
-                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
-                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', WebkitOverflowScrolling: 'touch' }}
-              >
-                {isLoadingComments ? (
-                  <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
-                ) : sortedComments.length > 0 ? (
-                  <div className="space-y-4">
-                    {sortedComments.map((comment) => (
-                      <article key={comment.id} className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <UserLevelBadge level={comment.level} />
-                            <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
-                              {comment.nickname}
-                            </span>
-                            <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
-                              {comment.createdAtLabel}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {comment.canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => void handleDeleteComment(comment)}
-                                className="text-[12px] font-medium"
-                                style={{ color: 'var(--app-muted-text)' }}
-                              >
-                                삭제
-                              </button>
-                            ) : authUser ? (
-                              <button
-                                type="button"
-                                onClick={() => setReportTarget({ type: 'player_review_comment', id: comment.id })}
-                                className="text-[12px] font-medium"
-                                style={{ color: 'var(--app-muted-text)' }}
-                              >
-                                신고
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                        <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--app-body-text)' }}>
-                          {comment.content}
-                        </p>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="py-10 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>
-                    첫 댓글을 남겨보세요.
-                  </p>
-                )}
-              </div>
-              <form
-                onSubmit={handleCommentSubmit}
-                className="border-t px-5 py-4"
-                style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}
-              >
-                <div className="flex items-center gap-3">
-                  {authUser ? (
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <UserLevelBadge level={currentUserLevel} />
-                      <span className="text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                        {reviewNickname}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div
-                    className="flex h-12 min-w-0 flex-1 items-center rounded-[22px] px-4"
-                    style={{
-                      backgroundColor: 'var(--app-surface-soft)',
-                    }}
-                  >
-                    <input
-                      disabled={!authUser || isSubmittingComment}
-                      value={commentDraft}
-                      onChange={(event) => setCommentDraft(event.target.value)}
-                      placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'}
-                      className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:font-medium placeholder:text-[var(--app-muted-text)] disabled:cursor-not-allowed"
-                      style={{ color: 'var(--app-title)' }}
-                    />
-                  </div>
-                  <button
-                    disabled={!authUser || isSubmittingComment}
-                    type="submit"
-                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
-                    style={{ backgroundColor: '#457ae5' }}
-                  >
-                    {isSubmittingComment ? '등록 중...' : '등록'}
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
-          {commentSheetKeyboardInset > 0 ? (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
-              style={{ height: `${commentSheetKeyboardInset}px`, backgroundColor: 'var(--app-modal-bg, #ffffff)', transition: 'height 180ms ease' }}
-            />
-          ) : null}
         </div>
       ) : null}
 

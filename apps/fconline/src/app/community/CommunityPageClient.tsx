@@ -6,29 +6,23 @@ import {
   useEffect,
   useRef,
   useState,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import UserLevelBadge from '@/components/user/UserLevelBadge'
 import {
-  COMMUNITY_CATEGORIES,
   deriveCommunityNickname,
-  type CommunityCategory,
   type CommunityCommentItem,
   type CommunityPostSummary,
 } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
-import { useLockedBodyScroll, useVisualViewportMetrics } from '@/lib/mobileOverlay'
+import { useLockedBodyScroll } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const BOARD_TABS = ['자유게시판'] as const
 const POSTS_PER_PAGE = 5
 const MAX_VISIBLE_PAGES = 5
-const COMMENT_SHEET_MIN_HEIGHT = 320
-const SMALL_COMMENT_SHEET_MAX_COUNT = 3
-const SMALL_COMMENT_SHEET_FIXED_HEIGHT = 360
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
 const URL_PART_PATTERN = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/
 
@@ -62,13 +56,6 @@ function BoardTabButton({ active, label, count, isDarkModeEnabled }: { active: b
   )
 }
 
-function CategoryChip({ active, label, onClick }: { active: boolean; label: CommunityCategory; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="inline-flex h-9 items-center justify-center rounded-xl px-4 text-[12px] font-semibold transition" style={{ backgroundColor: active ? '#457ae5' : 'var(--app-surface-soft)', color: active ? '#fff' : 'var(--app-body-text)' }}>
-      {label}
-    </button>
-  )
-}
 
 function CommunityPostSkeletonList({ rows = 5 }: { rows?: number }) {
   return (
@@ -112,30 +99,28 @@ function CommentSheetSkeleton({ rows = 5 }: { rows?: number }) {
   )
 }
 
-function PostCard({ post, onDelete, onOpenComments, onReport, highlight }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; highlight?: boolean }) {
-  const [expanded, setExpanded] = useState(false)
+function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isCommentOpen }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; highlight?: boolean; isCommentOpen?: boolean }) {
   return (
-    <article className="rounded-lg px-5 py-4" style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }} onClick={() => setExpanded((current) => !current)}>
+    <article className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`} style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', borderBottom: isCommentOpen ? 'none' : undefined, boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }}>
       <div className="min-w-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-7 items-center rounded-lg px-3 text-[12px] font-semibold" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}>{post.category}</span>
             <UserLevelBadge level={post.level} />
             <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>{post.nickname}</span>
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
             <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
           </div>
           {post.canDelete ? (
-            <button type="button" aria-label="게시글 삭제" onClick={(event) => { event.stopPropagation(); onDelete(post) }} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
+            <button type="button" aria-label="게시글 삭제" onClick={() => onDelete(post)} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
           ) : onReport ? (
-            <button type="button" aria-label="게시글 신고" onClick={(event) => { event.stopPropagation(); onReport(post) }} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>신고</button>
+            <button type="button" aria-label="게시글 신고" onClick={() => onReport(post)} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>신고</button>
           ) : null}
         </div>
-        <h2 className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'}`} style={{ color: 'var(--app-title)' }}>{post.title}</h2>
-        {expanded ? <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" /> : null}
+        <h2 className="mt-3 whitespace-normal break-words text-[15px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>{post.title}</h2>
+        <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" />
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
-        <button type="button" onClick={(event) => { event.stopPropagation(); onOpenComments(post) }} className="inline-flex items-center gap-1 text-[12px] font-medium">
+        <button type="button" onClick={() => onOpenComments(post)} className="inline-flex items-center gap-1 text-[12px] font-medium">
           <span style={{ color: 'var(--app-title)' }}>댓글</span>
           <span className="font-[600] text-[#457ae5]">{post.commentCount}</span>
         </button>
@@ -148,17 +133,15 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const router = useRouter()
   const isDarkModeEnabled = useDarkModeEnabled()
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
+  const commentInputRef = useRef<HTMLInputElement | null>(null)
   const composerScrollRef = useRef<HTMLElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map([[initialData.page, initialData]]))
-  const dragPointerIdRef = useRef<number | null>(null)
-  const dragStartYRef = useRef(0)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [resolvedCommunityNickname, setResolvedCommunityNickname] = useState('')
   const [currentUserLevel, setCurrentUserLevel] = useState<number | null>(null)
   const [activeBoard] = useState<BoardTab>('자유게시판')
-  const [selectedCategory, setSelectedCategory] = useState<CommunityCategory>('자유')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [posts, setPosts] = useState(initialData.items)
@@ -173,9 +156,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [isLoadingComments, setIsLoadingComments] = useState(false)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
-  const [commentSheetOffsetY, setCommentSheetOffsetY] = useState(0)
-  const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false)
-  const [isDraggingCommentSheet, setIsDraggingCommentSheet] = useState(false)
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
   const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
   const [reportTarget, setReportTarget] = useState<{ type: string; id: string } | null>(null)
@@ -188,29 +168,14 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const pageGroupEnd = Math.min(totalPages, safePageWindowStart + MAX_VISIBLE_PAGES - 1)
   const visiblePages = Array.from({ length: pageGroupEnd - safePageWindowStart + 1 }, (_, index) => safePageWindowStart + index)
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-  const { bottomInset: commentSheetKeyboardInset } = useVisualViewportMetrics(activeCommentPost !== null)
-  const commentSheetItemCount = isLoadingComments ? Math.max(activeCommentPost?.commentCount ?? 0, 0) : sortedComments.length
-  const isSmallCommentSheet = commentSheetItemCount <= SMALL_COMMENT_SHEET_MAX_COUNT
-  const commentSheetHeight = isSmallCommentSheet ? `${SMALL_COMMENT_SHEET_FIXED_HEIGHT}px` : undefined
 
-  useLockedBodyScroll(
-    isComposerOpen || activeCommentPost !== null,
-    activeCommentPost ? commentsScrollRef : isComposerOpen ? composerScrollRef : null,
-  )
+  useLockedBodyScroll(isComposerOpen, isComposerOpen ? composerScrollRef : null)
 
-  const resetCommentSheetState = useCallback(() => {
+  const closeCommentSection = useCallback(() => {
     setActiveCommentPost(null)
     setComments([])
     setCommentDraft('')
-    setCommentSheetOffsetY(0)
-    setIsDraggingCommentSheet(false)
-    setIsCommentSheetVisible(false)
-    dragPointerIdRef.current = null
   }, [])
-
-  const closeCommentSheet = useCallback(() => {
-    resetCommentSheetState()
-  }, [resetCommentSheetState])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -330,39 +295,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     return () => window.cancelAnimationFrame(frameId)
   }, [highlightedPostId, posts])
 
-  useEffect(() => {
-    if (!activeCommentPost) return
-    setCommentSheetOffsetY(0)
-    setIsCommentSheetVisible(false)
-    const frameId = window.requestAnimationFrame(() => setIsCommentSheetVisible(true))
-    return () => window.cancelAnimationFrame(frameId)
-  }, [activeCommentPost])
-
-  useEffect(() => {
-    if (!isDraggingCommentSheet) return
-    function handlePointerMove(event: PointerEvent) {
-      if (dragPointerIdRef.current !== event.pointerId) return
-      setCommentSheetOffsetY(Math.max(0, event.clientY - dragStartYRef.current))
-    }
-    function handlePointerEnd(event: PointerEvent) {
-      if (dragPointerIdRef.current !== event.pointerId) return
-      dragPointerIdRef.current = null
-      setIsDraggingCommentSheet(false)
-      if (commentSheetOffsetY > 96) {
-        closeCommentSheet()
-        return
-      }
-      setCommentSheetOffsetY(0)
-    }
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerEnd)
-    window.addEventListener('pointercancel', handlePointerEnd)
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerEnd)
-      window.removeEventListener('pointercancel', handlePointerEnd)
-    }
-  }, [closeCommentSheet, commentSheetOffsetY, isDraggingCommentSheet])
 
   useEffect(() => {
     if (isLoadingPosts) return
@@ -418,12 +350,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function handleCommentSheetDragStart(event: ReactPointerEvent<HTMLElement>) {
-    dragPointerIdRef.current = event.pointerId
-    dragStartYRef.current = event.clientY - commentSheetOffsetY
-    setIsDraggingCommentSheet(true)
-  }
-
   function openComposer() {
     if (isAuthLoading) {
       return
@@ -445,18 +371,23 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   }
 
   async function loadComments(post: CommunityPostSummary) {
+    if (activeCommentPost?.id === post.id) {
+      closeCommentSection()
+      return
+    }
+    setActiveCommentPost(post)
+    setComments([])
+    setCommentDraft('')
+    setIsLoadingComments(true)
     try {
-      setActiveCommentPost(post)
-      setComments([])
-      setCommentDraft('')
-      setIsLoadingComments(true)
       const response = await fetch(`/api/community/comments?postId=${post.id}`, { cache: 'no-store' })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '댓글을 불러오지 못했습니다.')
       setComments(result.items ?? [])
+      setTimeout(() => commentsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 불러오지 못했습니다.')
-      closeCommentSheet()
+      closeCommentSection()
     } finally {
       setIsLoadingComments(false)
     }
@@ -482,14 +413,14 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       const response = await fetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: selectedCategory, title: trimmedTitle, content: trimmedContent }),
+        body: JSON.stringify({ category: '자유', title: trimmedTitle, content: trimmedContent }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '게시글을 저장하지 못했습니다.')
       setCurrentUserLevel(Number.isFinite(result.item?.level) ? Number(result.item.level) : currentUserLevel)
       setTitle('')
       setContent('')
-      setSelectedCategory('자유')
+
       setIsComposerOpen(false)
       setHighlightedPostId(result.item?.id ?? null)
       cacheRef.current.clear()
@@ -531,7 +462,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.message ?? '게시글을 삭제하지 못했습니다.')
-      if (activeCommentPost?.id === targetPost.id) closeCommentSheet()
+      if (activeCommentPost?.id === targetPost.id) closeCommentSection()
       cacheRef.current.clear()
       const nextTotalCount = Math.max(0, totalCount - 1)
       const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / POSTS_PER_PAGE))
@@ -577,7 +508,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
           items: cached.items.map((post) => post.id === activeCommentPost.id ? { ...post, commentCount: post.commentCount + 1 } : post),
         })
       }
-      commentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+      commentsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 저장하지 못했습니다.')
     } finally {
@@ -648,13 +579,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         <p className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
           커뮤니티 글쓰기는 Google 로그인 후 이용할 수 있습니다.
         </p>
-      ) : authUser ? (
-        <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
-          <span>게시글 작성 시</span>
-          <UserLevelBadge level={currentUserLevel} />
-          <span>{communityNickname}</span>
-          <span>으로 표시됩니다.</span>
-        </div>
       ) : null}
 
       <section ref={listTopRef} className="space-y-3">
@@ -663,7 +587,62 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         ) : posts.length > 0 ? (
           posts.map((post) => (
             <div key={post.id} data-post-id={post.id}>
-              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} highlight={post.id === highlightedPostId} />
+              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} />
+              {activeCommentPost?.id === post.id && (
+                <div ref={commentsScrollRef} className="rounded-b-lg border-x border-b px-5 pb-3 pt-5" style={{ backgroundColor: 'var(--app-comment-section-bg)', borderColor: 'var(--app-card-border)' }}>
+                  {isLoadingComments ? (
+                    <div className="pl-4">
+                      <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
+                    </div>
+                  ) : sortedComments.length > 0 ? (
+                    <div className="space-y-4 pl-4">
+                      {sortedComments.map((comment) => (
+                        <article key={comment.id} className="space-y-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <UserLevelBadge level={comment.level} />
+                              <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
+                              <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+                              <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
+                            </div>
+                            {comment.canDelete ? (
+                              <button type="button" onClick={() => void handleDeleteComment(comment)} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
+                            ) : authUser ? (
+                              <button type="button" onClick={() => setReportTarget({ type: 'community_comment', id: comment.id })} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>신고</button>
+                            ) : null}
+                          </div>
+                          <LinkifiedText text={comment.content} className="text-sm leading-6" />
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="py-5 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>첫 댓글을 남겨보세요.</p>
+                  )}
+                  <form onSubmit={handleCommentSubmit} className="mt-4 flex items-center gap-2">
+                    <div className="flex h-11 min-w-0 flex-1 items-center rounded-[22px] px-4" style={{ backgroundColor: 'var(--app-comment-input-bg)' }}>
+                      <input
+                        ref={commentInputRef}
+                        disabled={!authUser || isSubmittingComment}
+                        value={commentDraft}
+                        onChange={(event) => setCommentDraft(event.target.value)}
+                        onFocus={() => setTimeout(() => commentInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300)}
+                        placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'}
+                        className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:font-medium placeholder:text-[var(--app-muted-text)] disabled:cursor-not-allowed"
+                        style={{ color: 'var(--app-title)' }}
+                      />
+                    </div>
+                    <button disabled={!authUser || isSubmittingComment} type="submit" className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition disabled:opacity-60" style={{ backgroundColor: '#457ae5' }}>
+                      {isSubmittingComment ? '등록 중...' : '등록'}
+                    </button>
+                  </form>
+                  <button type="button" onClick={() => closeCommentSection()} className="mt-3 flex w-full items-center justify-center gap-1 py-1.5 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>
+                    <span>댓글 접기</span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <path d="M9 7.5L6 4.5L3 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
           ))
         ) : (
@@ -691,19 +670,12 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
           <div className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
             <section ref={composerScrollRef} className="max-h-[calc(100vh-96px-env(safe-area-inset-bottom))] w-full overflow-y-auto rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}>
               <form className="space-y-5" onSubmit={handleSubmit}>
-                <div className="pt-3">
-                  <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+                <div>
                   <p className="text-[16px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
-                    글쓰기
+                    <span style={{ color: '#457ae5' }}>자유게시판</span>{' 글쓰기'}
                   </p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {COMMUNITY_CATEGORIES.map((option) => (
-                      <CategoryChip key={option} label={option} active={option === selectedCategory} onClick={() => setSelectedCategory(option)} />
-                    ))}
-                  </div>
                 </div>
                 <div className="flex items-center gap-2 px-0.5 text-sm">
-                  <p className="font-semibold" style={{ color: 'var(--app-title)' }}>닉네임</p>
                   <UserLevelBadge level={currentUserLevel} />
                   <p style={{ color: 'var(--app-body-text)' }}>{communityNickname}</p>
                 </div>
@@ -713,7 +685,10 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                 </label>
                 <label className="block">
                   <span className="hidden" style={{ color: 'var(--app-title)' }}>내용</span>
-                  <textarea required value={content} onChange={(event) => setContent(event.target.value)} placeholder="자유롭게 내용을 작성해 주세요" rows={4} className="min-h-[104px] w-full rounded-[22px] border-0 px-4 py-3 text-sm leading-6 outline-none transition" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-title)', resize: 'none' }} />
+                  <div className="relative">
+                    <textarea required value={content} onChange={(event) => setContent(event.target.value.slice(0, 300))} maxLength={300} placeholder="자유롭게 내용을 작성해 주세요" rows={4} className="min-h-[104px] w-full rounded-[22px] border-0 px-4 pb-9 pt-4 text-sm leading-6 outline-none transition" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-title)', resize: 'none' }} />
+                    <span className="pointer-events-none absolute bottom-4 right-4 text-[12px]" style={{ color: 'var(--app-muted-text)' }}>{content.length}/300</span>
+                  </div>
                 </label>
                 <div className="mt-7 flex flex-col gap-3">
                   <button type="submit" disabled={isSubmittingPost} className="order-1 flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white transition disabled:opacity-70" style={{ backgroundColor: '#457ae5' }}>{isSubmittingPost ? '등록 중...' : '글쓰기'}</button>
@@ -725,82 +700,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         </div>
       ) : null}
 
-      {activeCommentPost ? (
-        <div className="fixed inset-0 z-[70]">
-          <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} />
-          <button type="button" aria-label="댓글 바텀시트 닫기" className="absolute inset-0" onClick={closeCommentSheet} />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-            <section className="pointer-events-auto mx-auto flex max-h-[50vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border-t sm:max-h-[42vh] sm:max-w-[440px]" style={{ height: commentSheetHeight, minHeight: `${COMMENT_SHEET_MIN_HEIGHT}px`, paddingBottom: 'env(safe-area-inset-bottom)', transform: isDraggingCommentSheet ? `translateY(${commentSheetOffsetY}px)` : isCommentSheetVisible ? `translateY(${commentSheetOffsetY}px)` : 'translateY(calc(100% + env(safe-area-inset-bottom)))', backgroundColor: 'var(--app-modal-bg)', borderColor: 'var(--app-card-border, rgba(148, 163, 184, 0.22))', boxShadow: isDarkModeEnabled ? '0 -32px 76px rgba(0, 0, 0, 0.58)' : '0 -28px 68px rgba(15, 23, 42, 0.28)', willChange: 'transform', transition: isDraggingCommentSheet ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, border-color 180ms ease' }}>
-              <div className="flex cursor-grab justify-center pt-3 active:cursor-grabbing" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }} onPointerDown={handleCommentSheetDragStart}>
-                <span className="h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.48)' }} />
-              </div>
-              <div className="cursor-grab border-b px-5 py-4 active:cursor-grabbing" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }} onPointerDown={handleCommentSheetDragStart}>
-                <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>댓글 <span className="font-[600] text-[#457ae5]">{activeCommentPost.commentCount}</span></p>
-              </div>
-              <div ref={commentsScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', WebkitOverflowScrolling: 'touch' }}>
-                {isLoadingComments ? <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} /> : sortedComments.length > 0 ? (
-                  <div className="space-y-4">
-                    {sortedComments.map((comment) => (
-                      <article key={comment.id} className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <UserLevelBadge level={comment.level} />
-                          <span className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
-                          <span className="text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
-                        </div>
-                          {comment.canDelete ? (
-                            <button
-                              type="button"
-                              onClick={() => void handleDeleteComment(comment)}
-                              className="text-[12px] font-medium"
-                              style={{ color: 'var(--app-muted-text)' }}
-                            >
-                              삭제
-                            </button>
-                          ) : authUser ? (
-                            <button
-                              type="button"
-                              onClick={() => setReportTarget({ type: 'community_comment', id: comment.id })}
-                              className="text-[12px] font-medium"
-                              style={{ color: 'var(--app-muted-text)' }}
-                            >
-                              신고
-                            </button>
-                          ) : null}
-                        </div>
-                        <LinkifiedText text={comment.content} className="text-sm leading-6" />
-                      </article>
-                    ))}
-                  </div>
-                ) : <p className="py-10 text-center text-sm" style={{ color: 'var(--app-muted-text)' }}>첫 댓글을 남겨보세요.</p>}
-              </div>
-              <form onSubmit={handleCommentSubmit} className="border-t px-5 py-4" style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)', borderColor: 'var(--app-divider, #eef2f6)' }}>
-                <div className="flex items-center gap-3">
-                  {authUser ? (
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <UserLevelBadge level={currentUserLevel} />
-                      <span className="text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                        {communityNickname}
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="flex h-12 min-w-0 flex-1 items-center rounded-[22px] px-4" style={{ backgroundColor: 'var(--app-surface-soft)' }}>
-                    <input disabled={!authUser || isSubmittingComment} value={commentDraft} onChange={(event) => setCommentDraft(event.target.value)} placeholder={authUser ? '댓글을 입력해주세요' : '로그인 후 이용해주세요'} className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:font-medium placeholder:text-[var(--app-muted-text)] disabled:cursor-not-allowed" style={{ color: 'var(--app-title)' }} />
-                  </div>
-                  <button disabled={!authUser || isSubmittingComment} type="submit" className="inline-flex h-11 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4" style={{ backgroundColor: '#457ae5' }}>{isSubmittingComment ? '등록 중...' : '등록'}</button>
-                </div>
-              </form>
-            </section>
-          </div>
-          {commentSheetKeyboardInset > 0 ? (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
-              style={{ height: `${commentSheetKeyboardInset}px`, backgroundColor: 'var(--app-modal-bg, #ffffff)', transition: 'height 180ms ease' }}
-            />
-          ) : null}
-        </div>
-      ) : null}
 
       {reportTarget ? (
         <div className="fixed inset-0 z-[80]">
