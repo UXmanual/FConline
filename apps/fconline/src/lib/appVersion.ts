@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '22.5': [
+    '이전 Vercel 주소로 접속한 베타 앱 사용자에게 Play 스토어 업데이트 안내 팝업을 노출하고 스토어 앱으로 바로 연결되도록 정리했습니다.',
+  ],
   '22.4': [
     '마이페이지 문의 팝업의 상단 핸들 영역을 제거하고 글쓰기 팝업과 같은 여백 규칙으로 정리했습니다.',
   ],

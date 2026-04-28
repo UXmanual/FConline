@@ -4,6 +4,7 @@ import HomeControllerUsageCard from './HomeControllerUsageCard'
 import HomeCommunityCard from './HomeCommunityCard'
 import HomeSettingsCard from './HomeSettingsCard'
 import HomeLogo from './HomeLogo'
+import HomePageClient from './HomePageClient'
 import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
 export const revalidate = 60
@@ -39,7 +40,7 @@ export default async function HomePage() {
   const bodyStyle = { color: 'var(--app-body-text)' }
 
   return (
-    <>
+    <HomePageClient>
       <div className="space-y-4 pt-5">
         <header className="flex items-center justify-between gap-3">
           <div className="flex h-6 items-center gap-3">
@@ -56,6 +57,6 @@ export default async function HomePage() {
           <HomeSettingsCard />
         </main>
       </div>
-    </>
+    </HomePageClient>
   )
 }
