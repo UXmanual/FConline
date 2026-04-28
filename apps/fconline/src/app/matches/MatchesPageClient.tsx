@@ -25,7 +25,7 @@ const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
 const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v6'
 const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v5'
 const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-meta-cache.v2'
-const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v7'
+const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v8'
 const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v3'
 const VOLTA_TOP_CACHE_KEY = 'fconline.match.volta-top-cache.v3'
 const LEGACY_MATCH_CACHE_KEYS = ['fconline.match.official-top-cache.v2', 'fconline.match.volta-top-cache.v2'] as const
@@ -2871,7 +2871,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
       const todayKey = getKstDateKey()
       const cached = readJsonStorage<OfficialTeamColorMetaCacheEntry>(OFFICIAL_TEAM_COLOR_META_CACHE_KEY)
 
-      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5) {
+      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5 && cached.items.some((item) => item.emblemUrl != null)) {
         setOfficialTeamColorMetaItems(cached.items)
         setOfficialTeamColorMetaSampleSize(cached.sampleSize || 100)
         setOfficialTeamColorMetaLoading(false)
