@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.4': '2026-04-29T15:30:00+09:00',
   '23.3': '2026-04-29T14:00:00+09:00',
   '23.2': '2026-04-29T11:32:00+09:00',
   '23.1': '2026-04-29T11:05:11+09:00',
@@ -12,6 +13,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.4': [
+    '마이페이지에서 프로필 사진을 직접 등록하고 변경할 수 있습니다.',
+    '선택한 이미지는 자동으로 정사각형 리사이즈 후 업로드되며 모바일과 PC 모두 지원합니다.',
+  ],
   '23.3': [
     '알림함 항목을 탭하면 본문이 펼쳐지고 다시 탭하면 접히도록 개선했습니다.',
     '알림 본문은 기본 2줄로 줄여서 표시하고 탭 시 전체 내용을 확인할 수 있습니다.',

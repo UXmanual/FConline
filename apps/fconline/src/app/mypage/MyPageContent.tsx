@@ -1,8 +1,9 @@
 'use client'
 
-import { startTransition, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { startTransition, ChangeEvent, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import { PencilSimple } from '@phosphor-icons/react/dist/ssr'
 import UserLevelBadge from '@/components/user/UserLevelBadge'
 import { Button } from '@/components/ui/button'
 import LoadingDots from '@/components/ui/LoadingDots'
@@ -226,9 +227,12 @@ function MyPageAuthSkeleton() {
       <section className="rounded-lg px-5 py-4" style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)' }}>
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="home-image-shimmer h-7 w-12 rounded-[8px]" />
-              <div className="home-image-shimmer h-4 w-24 rounded-full" />
+            <div className="flex items-center gap-3">
+              <div className="home-image-shimmer h-10 w-10 shrink-0 rounded-full" />
+              <div className="flex items-center gap-2">
+                <div className="home-image-shimmer h-7 w-12 rounded-[8px]" />
+                <div className="home-image-shimmer h-4 w-24 rounded-full" />
+              </div>
             </div>
             <div className="home-image-shimmer h-7 w-20 rounded-[8px]" />
           </div>
@@ -261,6 +265,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const privacySectionRef = useRef<HTMLElement | null>(null)
   const checkPopupRef = useRef<() => void>(() => {})
   const [authUser, setAuthUser] = useState<User | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [communityNickname, setCommunityNickname] = useState('')
@@ -307,6 +314,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(user)
+      setAvatarUrl((user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (user) setIsProfileLoading(true)
       setCommunityNickname(user ? deriveCommunityNickname(user) : '')
       setIsEditingNickname(false)
@@ -323,6 +331,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(session?.user ?? null)
+      setAvatarUrl((session?.user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (session?.user) setIsProfileLoading(true)
       setCommunityNickname(session?.user ? deriveCommunityNickname(session.user) : '')
       setIsEditingNickname(false)
@@ -654,6 +663,85 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       window.alert(error instanceof Error ? error.message : '연동 계정을 삭제하지 못했습니다.')
     } finally {
       setIsAuthPending(false)
+    }
+  }
+
+  const resizeImageToJpeg = (file: File, targetSize = 200): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      const objectUrl = URL.createObjectURL(file)
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        const canvas = document.createElement('canvas')
+        canvas.width = targetSize
+        canvas.height = targetSize
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) {
+          reject(new Error('Canvas를 사용할 수 없습니다.'))
+          return
+        }
+
+        const size = Math.min(img.width, img.height)
+        const offsetX = (img.width - size) / 2
+        const offsetY = (img.height - size) / 2
+        ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize)
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob)
+            else reject(new Error('이미지 변환에 실패했습니다.'))
+          },
+          'image/jpeg',
+          0.85,
+        )
+      }
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('이미지를 불러오지 못했습니다.'))
+      }
+
+      img.src = objectUrl
+    })
+
+  const handleAvatarFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file || !authUser) return
+
+    try {
+      setIsUploadingAvatar(true)
+
+      const resized = await resizeImageToJpeg(file)
+      const supabase = getSupabaseBrowserClient()
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(authUser.id, resized, { upsert: true, contentType: 'image/jpeg' })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(authUser.id)
+
+      const response = await fetch('/api/mypage/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: publicUrl }),
+      })
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.message ?? '프로필 사진을 저장하지 못했습니다.')
+      }
+
+      setAvatarUrl(`${publicUrl}?t=${Date.now()}`)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '프로필 사진 업로드에 실패했습니다.')
+    } finally {
+      setIsUploadingAvatar(false)
     }
   }
 
@@ -1060,11 +1148,53 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <UserLevelBadge level={userLevelProfile?.level} />
-                    <p className="truncate text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                      {communityNickname}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label="프로필 사진 변경"
+                      className="relative shrink-0"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                    >
+                      <div
+                        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full"
+                        style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
+                      >
+                        {isUploadingAvatar ? (
+                          <LoadingDots size="sm" showLabel={false} />
+                        ) : avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt="프로필 사진"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[20px] leading-none">😀</span>
+                        )}
+                      </div>
+                      {!isUploadingAvatar && (
+                        <span
+                          className="absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full"
+                          style={{ backgroundColor: isDarkModeEnabled ? '#6b7a99' : '#b0bac9' }}
+                          aria-hidden="true"
+                        >
+                          <PencilSimple size={9} weight="fill" color="white" />
+                        </span>
+                      )}
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFileChange}
+                    />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <UserLevelBadge level={userLevelProfile?.level} />
+                      <p className="truncate text-sm font-medium" style={{ color: 'var(--app-title)' }}>
+                        {communityNickname}
+                      </p>
+                    </div>
                   </div>
                   <button
                     type="button"
