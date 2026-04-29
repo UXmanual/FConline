@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.5': '2026-04-29T17:30:00+09:00',
   '23.4': '2026-04-29T15:30:00+09:00',
   '23.3': '2026-04-29T14:00:00+09:00',
   '23.2': '2026-04-29T11:32:00+09:00',
@@ -13,6 +14,12 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.5': [
+    '마이페이지 프로필 영역을 개편했습니다. 아바타, 레벨, 닉네임, 다음 레벨까지 XP를 한눈에 확인할 수 있습니다.',
+    '닉네임 변경이 하단 시트 팝업으로 변경되었습니다.',
+    '닉네임 조건(2~10자, 한글·영문·숫자·_·-)과 중복·금지단어 오류를 인라인으로 안내합니다.',
+    '프로필 사진 업로드 방식을 서버 경유로 변경해 안정성을 개선했습니다.',
+  ],
   '23.4': [
     '마이페이지에서 프로필 사진을 직접 등록하고 변경할 수 있습니다.',
     '선택한 이미지는 자동으로 정사각형 리사이즈 후 업로드되며 모바일과 PC 모두 지원합니다.',

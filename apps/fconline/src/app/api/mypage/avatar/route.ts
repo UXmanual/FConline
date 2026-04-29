@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 
+const BUCKET = 'fconlineground'
+
 export async function POST(request: NextRequest) {
   try {
     const authSupabase = await createSupabaseSsrClient()
@@ -13,24 +15,37 @@ export async function POST(request: NextRequest) {
       return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })
     }
 
-    const body = await request.json().catch(() => null)
-    const avatarUrl = String(body?.avatarUrl ?? '').trim()
+    const formData = await request.formData()
+    const file = formData.get('avatar') as File | null
 
-    if (!avatarUrl) {
-      return Response.json({ message: '유효하지 않은 URL입니다.' }, { status: 400 })
+    if (!file) {
+      return Response.json({ message: '이미지가 없습니다.' }, { status: 400 })
     }
 
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const filePath = `${user.id}/avatar`
     const adminSupabase = createSupabaseAdminClient()
-    const { error } = await adminSupabase.auth.admin.updateUserById(user.id, {
+
+    const { error: uploadError } = await adminSupabase.storage
+      .from(BUCKET)
+      .upload(filePath, buffer, { upsert: true, contentType: 'image/jpeg' })
+
+    if (uploadError) throw uploadError
+
+    const {
+      data: { publicUrl },
+    } = adminSupabase.storage.from(BUCKET).getPublicUrl(filePath)
+
+    const { error: updateError } = await adminSupabase.auth.admin.updateUserById(user.id, {
       user_metadata: {
         ...user.user_metadata,
-        custom_avatar_url: avatarUrl,
+        custom_avatar_url: publicUrl,
       },
     })
 
-    if (error) throw error
+    if (updateError) throw updateError
 
-    return Response.json({ avatarUrl })
+    return Response.json({ avatarUrl: publicUrl })
   } catch (error) {
     const message = error instanceof Error ? error.message : '프로필 사진을 저장하지 못했습니다.'
     return Response.json({ message }, { status: 500 })
@@ -49,6 +64,9 @@ export async function DELETE() {
     }
 
     const adminSupabase = createSupabaseAdminClient()
+
+    await adminSupabase.storage.from(BUCKET).remove([`${user.id}/avatar`])
+
     const { error } = await adminSupabase.auth.admin.updateUserById(user.id, {
       user_metadata: {
         ...user.user_metadata,

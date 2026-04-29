@@ -144,6 +144,8 @@ export function canBypassCommunityNicknamePolicy(email?: string | null) {
   return isCommunityAdminEmail(email)
 }
 
+const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9_-]+$/
+
 export function validateCommunityNickname(value: string, email?: string | null) {
   const normalized = normalizeCommunityNickname(value)
 
@@ -153,6 +155,14 @@ export function validateCommunityNickname(value: string, email?: string | null) 
 
   if (canBypassCommunityNicknamePolicy(email)) {
     return null
+  }
+
+  if (normalized.length < 2) {
+    return '닉네임은 2자 이상이어야 합니다.'
+  }
+
+  if (!NICKNAME_PATTERN.test(normalized)) {
+    return '닉네임은 한글, 영문, 숫자와 특수기호(_),(-)만 사용 가능합니다.'
   }
 
   const moderationTarget = normalizeNicknameForModeration(normalized)

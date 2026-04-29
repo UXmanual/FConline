@@ -20,6 +20,20 @@ import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 import { MAX_LEVEL, type UserLevelSnapshot } from '@/lib/userLevel'
 
+const DEFAULT_AVATARS = [
+  '😀', '😄', '😎', '🤓', '🥳', '😇', '🤩', '😏', '🥸', '🤗',
+  '😈', '👻', '🐶', '🐱', '🦊', '🐼', '🦁', '🐯', '🐸', '🦄',
+  '🐙', '🦋', '🐧', '🦉', '🐺', '🐻', '🐨', '🐹', '🦝', '🐲',
+]
+
+function pickDefaultAvatar(userId: string) {
+  let hash = 0
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0
+  }
+  return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length]
+}
+
 const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v3'
 const LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS = [
   'app-notifications-bottom-sheet-seen-v2',
@@ -228,7 +242,7 @@ function MyPageAuthSkeleton() {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="home-image-shimmer h-10 w-10 shrink-0 rounded-full" />
+              <div className="home-image-shimmer h-[60px] w-[60px] shrink-0 rounded-full" />
               <div className="flex items-center gap-2">
                 <div className="home-image-shimmer h-7 w-12 rounded-[8px]" />
                 <div className="home-image-shimmer h-4 w-24 rounded-full" />
@@ -275,6 +289,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
+  const [nicknameError, setNicknameError] = useState<string | null>(null)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isLevelGuideOpen, setIsLevelGuideOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
@@ -495,7 +510,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }, [isAppNotificationSheetOpen, isDarkModeEnabled])
 
   useEffect(() => {
-    const isOverlayOpen = isAppNotificationSheetOpen || isContactModalOpen
+    const isOverlayOpen = isAppNotificationSheetOpen || isContactModalOpen || isEditingNickname
     const previousHtmlOverflow = document.documentElement.style.overflow
     const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
     const previousBodyOverflow = document.body.style.overflow
@@ -514,7 +529,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       document.body.style.overflow = previousBodyOverflow
       document.body.style.overscrollBehavior = previousBodyOverscrollBehavior
     }
-  }, [isAppNotificationSheetOpen, isContactModalOpen])
+  }, [isAppNotificationSheetOpen, isContactModalOpen, isEditingNickname])
 
   const handleGoogleLogin = async () => {
     try {
@@ -580,12 +595,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     const validationMessage = validateCommunityNickname(trimmedNickname, authUser.email)
 
     if (validationMessage) {
-      window.alert(validationMessage)
+      setNicknameError(validationMessage)
       return
     }
 
     try {
       setIsSavingNickname(true)
+      setNicknameError(null)
 
       const response = await fetch('/api/mypage/nickname', {
         method: 'POST',
@@ -595,7 +611,8 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       const result = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(result?.message ?? '닉네임을 저장하지 못했습니다.')
+        setNicknameError(result?.message ?? '닉네임을 저장하지 못했습니다.')
+        return
       }
 
       setAuthUser((current) => {
@@ -613,10 +630,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       })
       setCommunityNickname(result?.nickname ?? trimmedNickname)
       setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? userLevelProfile)
+      setNicknameError(null)
       setIsEditingNickname(false)
-      window.alert('닉네임이 변경되었습니다.')
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.')
+      setNicknameError(error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.')
     } finally {
       setIsSavingNickname(false)
     }
@@ -716,20 +733,12 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       setIsUploadingAvatar(true)
 
       const resized = await resizeImageToJpeg(file)
-      const supabase = getSupabaseBrowserClient()
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(authUser.id, resized, { upsert: true, contentType: 'image/jpeg' })
-
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(authUser.id)
+      const formData = new FormData()
+      formData.append('avatar', new Blob([resized], { type: 'image/jpeg' }), 'avatar.jpg')
 
       const response = await fetch('/api/mypage/avatar', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarUrl: publicUrl }),
+        body: formData,
       })
       const result = await response.json().catch(() => null)
 
@@ -737,7 +746,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         throw new Error(result?.message ?? '프로필 사진을 저장하지 못했습니다.')
       }
 
-      setAvatarUrl(`${publicUrl}?t=${Date.now()}`)
+      const supabase = getSupabaseBrowserClient()
+      await supabase.auth.refreshSession()
+
+      setAvatarUrl(`${result.avatarUrl}?t=${Date.now()}`)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '프로필 사진 업로드에 실패했습니다.')
     } finally {
@@ -1104,49 +1116,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
             {authUser ? (
           <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
             <div className="space-y-3">
-              {isEditingNickname ? (
-                <div className="flex gap-2">
-                  <input
-                    value={communityNickname}
-                    onChange={(event) => setCommunityNickname(event.target.value.slice(0, 10))}
-                    maxLength={10}
-                    placeholder="닉네임"
-                    className="h-10 min-w-0 flex-1 rounded-[999px] border px-3 text-sm outline-none transition focus:bg-transparent"
-                    style={{
-                      backgroundColor: 'transparent',
-                      borderColor: 'var(--app-input-border)',
-                      color: 'var(--app-title)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCommunityNickname(authUser ? deriveCommunityNickname(authUser) : '')
-                      setIsEditingNickname(false)
-                    }}
-                    disabled={isSavingNickname || isAuthPending}
-                    className="h-10 shrink-0 rounded-[999px] px-4 text-[12px] font-medium disabled:opacity-50"
-                    style={{
-                      backgroundColor: 'var(--app-surface-soft)',
-                      color: 'var(--app-muted-text)',
-                    }}
-                  >
-                    취소
-                  </button>
-                  <Button
-                    type="button"
-                    onClick={handleSaveCommunityNickname}
-                    disabled={isSavingNickname || isAuthPending}
-                    className="h-10 rounded-[999px] px-4 text-[12px] font-semibold"
-                    style={{
-                      backgroundColor: 'var(--app-action-badge-bg)',
-                      color: 'var(--app-action-badge-fg)',
-                    }}
-                  >
-                    {isSavingNickname ? '저장 중...' : '저장'}
-                  </Button>
-                </div>
-              ) : (
+              {(
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <button
@@ -1157,7 +1127,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                       disabled={isUploadingAvatar}
                     >
                       <div
-                        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full"
+                        className="flex h-[60px] w-[60px] items-center justify-center overflow-hidden rounded-full"
                         style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
                       >
                         {isUploadingAvatar ? (
@@ -1169,16 +1139,18 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <span className="text-[20px] leading-none">😀</span>
+                          <span className="text-[28px] leading-none">
+                            {authUser ? pickDefaultAvatar(authUser.id) : '😀'}
+                          </span>
                         )}
                       </div>
                       {!isUploadingAvatar && (
                         <span
-                          className="absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full"
+                          className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full"
                           style={{ backgroundColor: isDarkModeEnabled ? '#6b7a99' : '#b0bac9' }}
                           aria-hidden="true"
                         >
-                          <PencilSimple size={9} weight="fill" color="white" />
+                          <PencilSimple size={11} weight="fill" color="white" />
                         </span>
                       )}
                     </button>
@@ -1189,32 +1161,41 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                       className="hidden"
                       onChange={handleAvatarFileChange}
                     />
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <UserLevelBadge level={userLevelProfile?.level} />
-                      <p className="truncate text-sm font-medium" style={{ color: 'var(--app-title)' }}>
-                        {communityNickname}
-                      </p>
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      {userLevelProfile && (
+                        <p className="text-[12px] font-medium" style={mutedStyle}>
+                          {userLevelProfile.nextLevel
+                            ? `다음 레벨까지 ${userLevelProfile.remainingXp} XP 남았습니다`
+                            : '최고 레벨 달성'}
+                        </p>
+                      )}
+                      <div className="flex min-w-0 items-center gap-2">
+                        <UserLevelBadge level={userLevelProfile?.level} className="!text-[16px]" />
+                        <p className="truncate text-[16px] font-medium leading-none" style={{ color: 'var(--app-title)' }}>
+                          {communityNickname}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingNickname(true)}
+                          className="inline-flex h-6 shrink-0 items-center justify-center rounded-[8px] px-2.5 text-[11px] font-semibold"
+                          style={{
+                            backgroundColor: 'var(--app-action-badge-bg)',
+                            color: 'var(--app-action-badge-fg)',
+                          }}
+                        >
+                          변경
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingNickname(true)}
-                    className="inline-flex h-7 shrink-0 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none"
-                    style={{
-                      backgroundColor: 'var(--app-action-badge-bg)',
-                      color: 'var(--app-action-badge-fg)',
-                    }}
-                  >
-                    닉네임 변경
-                  </button>
                 </div>
               )}
 
               {isProfileLoading ? (
-                <div className="mt-1">
-                  <div className="flex items-center justify-between gap-3">
+
+                <div className="mt-4">
+                  <div className="flex items-center gap-3">
                     <div className="home-image-shimmer h-[18px] w-32 rounded-full" />
-                    <div className="home-image-shimmer h-3.5 w-24 rounded-full" />
                   </div>
                   <div className="home-image-shimmer mt-3 h-2 w-full rounded-full" />
                   <div className="mt-2 flex items-center justify-between gap-3">
@@ -1223,13 +1204,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                   </div>
                 </div>
               ) : userLevelProfile ? (
-                <div className="mt-1">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="mt-4">
+                  <div className="flex items-center gap-3">
                     <p className="text-sm font-semibold" style={{ color: 'var(--app-title)' }}>
                       현재 누적 XP {userLevelProfile.xpTotal}
-                    </p>
-                    <p className="text-[12px] font-medium" style={mutedStyle}>
-                      {userLevelProfile.nextLevel ? `다음 레벨까지 ${userLevelProfile.remainingXp} XP` : '최고 레벨 달성'}
                     </p>
                   </div>
                   <div
@@ -1553,6 +1531,85 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                   style={{ color: 'var(--app-muted-text)' }}
                 >
                   나중에
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {isEditingNickname ? (
+        <div className="fixed inset-0 z-[60]">
+          <button
+            type="button"
+            aria-label="닉네임 변경 닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => {
+              setCommunityNickname(authUser ? deriveCommunityNickname(authUser) : '')
+              setNicknameError(null)
+              setIsEditingNickname(false)
+            }}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div
+                className="mx-auto mb-4 h-1.5 w-12 rounded-full"
+                style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
+              />
+              <p className="text-[18px] font-semibold tracking-[-0.02em]" style={titleStyle}>
+                닉네임 변경
+              </p>
+              <div className="mt-5 space-y-2">
+                <input
+                  autoFocus
+                  value={communityNickname}
+                  onChange={(event) => {
+                    setCommunityNickname(event.target.value.slice(0, 10))
+                    setNicknameError(null)
+                  }}
+                  maxLength={10}
+                  placeholder="닉네임을 입력해주세요"
+                  className="h-12 w-full rounded-[22px] border-0 px-4 text-sm outline-none transition"
+                  style={{
+                    backgroundColor: 'var(--app-surface-soft)',
+                    color: 'var(--app-title)',
+                  }}
+                />
+                <p
+                  className="px-1 text-[12px] font-medium leading-[1.5]"
+                  style={{ color: nicknameError ? '#cf3f5b' : 'var(--app-muted-text)' }}
+                >
+                  {nicknameError ?? '닉네임은 2~10자의 한글, 영문, 숫자와 특수기호(_),(-)만 사용 가능합니다'}
+                </p>
+              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={handleSaveCommunityNickname}
+                  disabled={isSavingNickname || isAuthPending}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  {isSavingNickname ? '저장 중...' : '변경하기'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCommunityNickname(authUser ? deriveCommunityNickname(authUser) : '')
+                    setIsEditingNickname(false)
+                  }}
+                  disabled={isSavingNickname}
+                  className="block w-full text-center text-sm font-medium disabled:opacity-60"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
                 </button>
               </div>
             </section>
