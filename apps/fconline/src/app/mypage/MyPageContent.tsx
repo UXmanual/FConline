@@ -1152,26 +1152,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </>
         )}
 
-        <section className="rounded-lg px-5 py-3" style={{ ...cardStyle, ...surfaceTransitionStyle, minHeight: '62px' }}>
-          <div className="flex min-h-[36px] items-center justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold leading-[1.35]" style={{ color: isDarkModeEnabled ? '#ffffff' : 'var(--app-title)' }}>
-                무엇을 도와드릴까요?
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsContactModalOpen(true)}
-              aria-label="문의 보내기"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[18px] leading-none"
-              style={badgeStyle}
-            >
-              📧
-            </button>
-          </div>
-        </section>
-
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1">
@@ -1247,6 +1227,26 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                   aria-hidden="true"
                 />
               )}
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-lg px-5 py-3" style={{ ...cardStyle, ...surfaceTransitionStyle, minHeight: '62px' }}>
+          <div className="flex min-h-[36px] items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold leading-[1.35]" style={{ color: isDarkModeEnabled ? '#ffffff' : 'var(--app-title)' }}>
+                무엇을 도와드릴까요?
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsContactModalOpen(true)}
+              aria-label="문의하기"
+              className="shrink-0 text-sm font-medium"
+              style={mutedStyle}
+            >
+              문의하기
             </button>
           </div>
         </section>

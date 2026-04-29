@@ -599,11 +599,31 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                     </div>
                   ) : sortedComments.length > 0 ? (
                     <div className="relative space-y-4 pl-7">
-                      <div className="absolute top-0 bottom-0 w-px" style={{ left: '10px', backgroundColor: 'var(--app-thread-line)' }} />
-                      {sortedComments.map((comment) => {
+                      <div
+                        aria-hidden="true"
+                        className="absolute top-0 bottom-0 w-px"
+                        style={{ left: '10px', backgroundColor: 'var(--app-thread-line)' }}
+                      />
+                      {sortedComments.map((comment, index) => {
+                        const isLastComment = index === sortedComments.length - 1
+
                         return (
-                          <article key={comment.id} className="min-w-0 space-y-1">
-                            <div className="flex items-center justify-between gap-3">
+                          <article key={comment.id} className="relative min-w-0 space-y-1">
+                            <div className="relative flex items-center justify-between gap-3">
+                              {isLastComment ? (
+                                <>
+                                  <div
+                                    aria-hidden="true"
+                                    className="absolute left-[-19px] top-[calc(50%-9px)] bottom-[-12px] w-[3px]"
+                                    style={{ backgroundColor: 'var(--app-card-bg)' }}
+                                  />
+                                  <div
+                                    aria-hidden="true"
+                                    className="absolute left-[-18px] top-[calc(50%-10px)] h-[10px] w-[10px] rounded-bl-[10px] border-b border-l"
+                                    style={{ borderColor: 'var(--app-thread-line)' }}
+                                  />
+                                </>
+                              ) : null}
                               <div className="flex min-w-0 items-center gap-2">
                                 <UserLevelBadge level={comment.level} />
                                 <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>

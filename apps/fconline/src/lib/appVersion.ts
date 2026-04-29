@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.2': '2026-04-29T12:35:00+09:00',
   '23.1': '2026-04-29T12:05:00+09:00',
   '23.0': '2026-04-29T11:45:00+09:00',
   '22.9': '2026-04-29T11:15:00+09:00',
@@ -10,6 +11,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.2': [
+    '커뮤니티 댓글 마지막 연결선의 곡선 위치를 다듬어 Lv 배지 기준 정렬을 보정했습니다.',
+    '마이페이지 문의하기 블록을 앱 알림 아래로 이동하고 텍스트 버튼 스타일로 정리했습니다.',
+  ],
   '23.1': [
     '최근 7일 안의 버전 업데이트 알림이 알림함에 누적 표시되도록 변경했습니다.',
   ],
