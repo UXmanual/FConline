@@ -1,6 +1,6 @@
 'use client'
 
-import { APP_VERSION, RELEASE_NOTES_BY_VERSION, RELEASE_PUBLISHED_AT_BY_VERSION } from '@/lib/appVersion'
+import { RELEASE_NOTES_BY_VERSION, RELEASE_PUBLISHED_AT_BY_VERSION } from '@/lib/appVersion'
 
 export const NOTIFICATION_FEED_CACHE_NAME = 'fco-ground-notification-feed-v1'
 export const NOTIFICATION_FEED_CACHE_URL = '/__notifications_feed__'
@@ -51,18 +51,20 @@ function isFiniteDate(value: string) {
   return Number.isFinite(new Date(value).getTime())
 }
 
-export function getReleaseNotification(): ReleaseNotificationFeedItem {
-  const notes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? []
-
-  return {
-    id: `release-${APP_VERSION}`,
-    kind: 'release',
-    title: `버전 ${APP_VERSION} 업데이트`,
-    body: notes.join(' ').trim() || '새 버전 업데이트가 적용되었습니다.',
-    createdAt: getReleasePublishedAt(APP_VERSION),
-    url: '/notifications',
-    version: APP_VERSION,
-  }
+export function getReleaseNotifications(): ReleaseNotificationFeedItem[] {
+  return Object.entries(RELEASE_NOTES_BY_VERSION)
+    .map(([version, notes]) => {
+      return {
+        id: `release-${version}`,
+        kind: 'release' as const,
+        title: `버전 ${version} 업데이트`,
+        body: notes.join(' ').trim() || '새 버전 업데이트가 적용되었습니다.',
+        createdAt: getReleasePublishedAt(version),
+        url: '/notifications',
+        version,
+      }
+    })
+    .filter((item) => isRecentNotification(item.createdAt))
 }
 
 export function isRecentNotification(createdAt: string) {
@@ -115,12 +117,12 @@ export async function readStoredPushNotifications() {
 }
 
 export function buildNotificationFeed(pushNotifications: PushNotificationFeedItem[]) {
-  const releaseNotification = getReleaseNotification()
+  const releaseNotifications = getReleaseNotifications()
   const recentPushNotifications = pushNotifications.filter((item) => {
     return !isUpdatePushNotification(item) && isRecentNotification(item.createdAt)
   })
 
-  return [releaseNotification, ...recentPushNotifications]
+  return [...releaseNotifications, ...recentPushNotifications]
     .filter((item) => isRecentNotification(item.createdAt))
     .sort((left, right) => {
       return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
