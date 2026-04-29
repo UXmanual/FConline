@@ -3,11 +3,15 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.0': '2026-04-29T11:45:00+09:00',
   '22.9': '2026-04-29T11:15:00+09:00',
   '22.8': '2026-04-29T09:30:00+09:00',
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.0': [
+    '하단 홈 탭 재진입 시 알림 레드닷이 잠깐 보였다가 사라지는 현상을 줄이기 위해 읽음 상태 확인 전 초기 표시 흐름을 정리했습니다.',
+  ],
   '22.9': [
     '라이트·다크 모드에 맞춰 홈/앱 스플래시 배경과 표시 흐름을 정리했습니다.',
     '홈 알림 아이콘과 알림함을 추가하고, 최신 버전 노트와 최근 7일 알림을 함께 확인할 수 있도록 구성했습니다.',

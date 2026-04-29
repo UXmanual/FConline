@@ -21,7 +21,8 @@ function HomeNotificationIcon() {
 }
 
 export default function HomeNotificationsButton() {
-  const [showUnreadDot, setShowUnreadDot] = useState(true)
+  const [showUnreadDot, setShowUnreadDot] = useState(false)
+  const [isUnreadStateReady, setIsUnreadStateReady] = useState(false)
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -36,6 +37,7 @@ export default function HomeNotificationsButton() {
 
       if (!user) {
         setShowUnreadDot(true)
+        setIsUnreadStateReady(true)
         return
       }
 
@@ -47,6 +49,7 @@ export default function HomeNotificationsButton() {
 
       const notifications = buildNotificationFeed(storedPushNotifications)
       setShowUnreadDot(hasUnreadNotifications(user.id, notifications))
+      setIsUnreadStateReady(true)
     }
 
     void syncUnreadState()
@@ -98,7 +101,7 @@ export default function HomeNotificationsButton() {
       style={{ color: 'var(--app-nav-icon)' }}
     >
       <HomeNotificationIcon />
-      {showUnreadDot ? (
+      {isUnreadStateReady && showUnreadDot ? (
         <span
           aria-hidden="true"
           className="absolute right-[2px] top-[2px] h-[6px] w-[6px] rounded-full"
