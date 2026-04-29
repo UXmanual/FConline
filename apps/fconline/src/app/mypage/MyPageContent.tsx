@@ -38,6 +38,7 @@ const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v
 const LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS = [
   'app-notifications-bottom-sheet-seen-v2',
 ]
+const COMMUNITY_NICKNAME_CACHE_KEY_PREFIX = 'mypage-community-nickname'
 
 type MyPageLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate?: string | null
@@ -239,35 +240,59 @@ function MyPageAuthSkeleton() {
       </section>
 
       <section className="rounded-lg px-5 py-4" style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)' }}>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="home-image-shimmer h-[60px] w-[60px] shrink-0 rounded-full" />
-              <div className="flex items-center gap-2">
-                <div className="home-image-shimmer h-7 w-12 rounded-[8px]" />
-                <div className="home-image-shimmer h-4 w-24 rounded-full" />
+              <div className="flex min-w-0 flex-col gap-2">
+                <div className="home-image-shimmer h-3.5 w-28 rounded-full" />
+                <div className="flex items-center gap-2">
+                  <div className="home-image-shimmer h-5 w-12 rounded-[8px]" />
+                  <div className="home-image-shimmer h-4 w-24 rounded-full" />
+                </div>
               </div>
             </div>
-            <div className="home-image-shimmer h-7 w-20 rounded-[8px]" />
+            <div className="home-image-shimmer h-6 w-12 rounded-[8px]" />
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <div className="home-image-shimmer h-4 w-28 rounded-full" />
-            <div className="home-image-shimmer h-3.5 w-24 rounded-full" />
-          </div>
-
+          <div className="home-image-shimmer h-4 w-36 rounded-full" />
           <div className="home-image-shimmer h-2 w-full rounded-full" />
-
           <div className="flex items-center justify-between gap-3">
             <div className="home-image-shimmer h-3.5 w-14 rounded-full" />
             <div className="home-image-shimmer h-3.5 w-14 rounded-full" />
           </div>
-
-          <div className="home-image-shimmer h-4 w-20 rounded-full" />
+          <div className="home-image-shimmer h-4 w-18 rounded-full" />
         </div>
       </section>
     </>
   )
+}
+
+function getCommunityNicknameCacheKey(userId: string) {
+  return `${COMMUNITY_NICKNAME_CACHE_KEY_PREFIX}:${userId}`
+}
+
+function readCachedCommunityNickname(userId: string) {
+  if (typeof window === 'undefined' || !userId) {
+    return ''
+  }
+
+  return window.localStorage.getItem(getCommunityNicknameCacheKey(userId)) ?? ''
+}
+
+function writeCachedCommunityNickname(userId: string, nickname: string) {
+  if (typeof window === 'undefined' || !userId) {
+    return
+  }
+
+  const normalized = normalizeCommunityNickname(nickname)
+
+  if (!normalized) {
+    window.localStorage.removeItem(getCommunityNicknameCacheKey(userId))
+    return
+  }
+
+  window.localStorage.setItem(getCommunityNicknameCacheKey(userId), normalized)
 }
 
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
@@ -290,6 +315,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
   const [nicknameError, setNicknameError] = useState<string | null>(null)
+  const [nicknameSheetKeyboardOffset, setNicknameSheetKeyboardOffset] = useState(0)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isLevelGuideOpen, setIsLevelGuideOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
@@ -305,6 +331,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isAppNotificationSheetOpen, setIsAppNotificationSheetOpen] = useState(false)
   const authStatus = searchParams.get('auth')
   const authMessage = authStatus === 'error' ? '로그인 처리 중 문제가 발생했습니다. 다시 시도해 주세요.' : null
+  const nicknameSheetVisualBottomOffset = Math.max(0, nicknameSheetKeyboardOffset - 20)
+  const nicknameSheetBottomOffset =
+    nicknameSheetKeyboardOffset > 0
+      ? `${nicknameSheetVisualBottomOffset}px`
+      : 'calc(env(safe-area-inset-bottom) + 20px)'
   const googleLoginButtonStyle = isDarkModeEnabled
     ? {
         backgroundColor: '#131314',
@@ -331,7 +362,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       setAuthUser(user)
       setAvatarUrl((user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (user) setIsProfileLoading(true)
-      setCommunityNickname(user ? deriveCommunityNickname(user) : '')
+      setCommunityNickname(user ? readCachedCommunityNickname(user.id) || deriveCommunityNickname(user) : '')
       setIsEditingNickname(false)
       setIsAuthLoading(false)
     }
@@ -348,7 +379,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       setAuthUser(session?.user ?? null)
       setAvatarUrl((session?.user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (session?.user) setIsProfileLoading(true)
-      setCommunityNickname(session?.user ? deriveCommunityNickname(session.user) : '')
+      setCommunityNickname(
+        session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
+      )
       setIsEditingNickname(false)
       setIsAuthLoading(false)
     })
@@ -367,6 +400,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     }
 
     let isCancelled = false
+    const userId = authUser.id
     const fallbackNickname = deriveCommunityNickname(authUser)
 
     async function syncProfile() {
@@ -378,16 +412,20 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
         if (!response.ok) {
           setCommunityNickname(fallbackNickname)
+          writeCachedCommunityNickname(userId, fallbackNickname)
           setIsProfileLoading(false)
           return
         }
 
-        setCommunityNickname(String(result?.nickname ?? fallbackNickname))
+        const resolvedNickname = String(result?.nickname ?? fallbackNickname)
+        setCommunityNickname(resolvedNickname)
+        writeCachedCommunityNickname(userId, resolvedNickname)
         setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? null)
         setIsProfileLoading(false)
       } catch {
         if (!isCancelled) {
           setCommunityNickname(fallbackNickname)
+          writeCachedCommunityNickname(userId, fallbackNickname)
           setUserLevelProfile(null)
           setIsProfileLoading(false)
         }
@@ -511,25 +549,70 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
   useEffect(() => {
     const isOverlayOpen = isAppNotificationSheetOpen || isContactModalOpen || isEditingNickname
-    const previousHtmlOverflow = document.documentElement.style.overflow
-    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior
-    const previousBodyOverflow = document.body.style.overflow
-    const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior
 
-    if (isOverlayOpen) {
-      document.documentElement.style.overflow = 'hidden'
-      document.documentElement.style.overscrollBehavior = 'none'
-      document.body.style.overflow = 'hidden'
-      document.body.style.overscrollBehavior = 'none'
-    }
+    if (!isOverlayOpen) return
+
+    const scrollY = window.scrollY
+    const prevPosition = document.body.style.position
+    const prevTop = document.body.style.top
+    const prevWidth = document.body.style.width
+    const prevBodyOverscroll = document.body.style.overscrollBehavior
+    const prevHtmlOverscroll = document.documentElement.style.overscrollBehavior
+
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    document.body.style.overscrollBehavior = 'none'
+    document.documentElement.style.overscrollBehavior = 'none'
 
     return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow
-      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior
-      document.body.style.overflow = previousBodyOverflow
-      document.body.style.overscrollBehavior = previousBodyOverscrollBehavior
+      document.body.style.position = prevPosition
+      document.body.style.top = prevTop
+      document.body.style.width = prevWidth
+      document.body.style.overscrollBehavior = prevBodyOverscroll
+      document.documentElement.style.overscrollBehavior = prevHtmlOverscroll
+      window.scrollTo(0, scrollY)
     }
   }, [isAppNotificationSheetOpen, isContactModalOpen, isEditingNickname])
+
+  useEffect(() => {
+    if (!isEditingNickname || typeof window === 'undefined') {
+      setNicknameSheetKeyboardOffset(0)
+      return
+    }
+
+    const prevent = (e: TouchEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      e.preventDefault()
+    }
+    document.addEventListener('touchmove', prevent, { passive: false })
+
+    const viewport = window.visualViewport
+    const update = () => {
+      if (viewport) {
+        const offset = Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height)
+        setNicknameSheetKeyboardOffset(offset)
+      }
+    }
+
+    if (viewport) {
+      viewport.addEventListener('resize', update)
+      viewport.addEventListener('scroll', update)
+      update()
+    }
+    window.addEventListener('resize', update)
+
+    return () => {
+      document.removeEventListener('touchmove', prevent)
+      if (viewport) {
+        viewport.removeEventListener('resize', update)
+        viewport.removeEventListener('scroll', update)
+      }
+      window.removeEventListener('resize', update)
+      setNicknameSheetKeyboardOffset(0)
+    }
+  }, [isEditingNickname])
 
   const handleGoogleLogin = async () => {
     try {
@@ -628,7 +711,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           },
         } as User
       })
-      setCommunityNickname(result?.nickname ?? trimmedNickname)
+      const resolvedNickname = result?.nickname ?? trimmedNickname
+      setCommunityNickname(resolvedNickname)
+      writeCachedCommunityNickname(authUser.id, resolvedNickname)
       setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? userLevelProfile)
       setNicknameError(null)
       setIsEditingNickname(false)
@@ -926,11 +1011,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const titleStyle = { color: 'var(--app-title)' }
   const bodyStyle = { color: 'var(--app-body-text)' }
   const mutedStyle = { color: 'var(--app-muted-text)' }
-  const badgeStyle = {
-    backgroundColor: 'var(--app-badge-bg)',
-    color: 'var(--app-badge-fg)',
-    transition: 'background-color 180ms ease, color 180ms ease',
-  }
   const surfaceTransitionStyle = {
     transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
   }
@@ -1552,17 +1632,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
             }}
           />
           <div
-            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+            className="absolute left-1/2 z-20 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: nicknameSheetBottomOffset }}
           >
             <section
               className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
               style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
             >
-              <div
-                className="mx-auto mb-4 h-1.5 w-12 rounded-full"
-                style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }}
-              />
               <p className="text-[18px] font-semibold tracking-[-0.02em]" style={titleStyle}>
                 닉네임 변경
               </p>

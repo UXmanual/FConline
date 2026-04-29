@@ -21,6 +21,47 @@ type PostRow = {
   created_at: string
 }
 
+async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
+  const normalizedIds = [...new Set(userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))]
+
+  if (normalizedIds.length === 0) {
+    return new Map<string, string>()
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const avatarUrlMap = new Map<string, string>()
+  let page = 1
+  const perPage = 1000
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
+
+    if (error || !data?.users?.length) {
+      break
+    }
+
+    for (const user of data.users) {
+      if (!normalizedIds.includes(user.id)) {
+        continue
+      }
+
+      const avatarUrl = user.user_metadata?.custom_avatar_url
+
+      if (typeof avatarUrl === 'string' && avatarUrl.trim()) {
+        avatarUrlMap.set(user.id, avatarUrl.trim())
+      }
+    }
+
+    if (data.users.length < perPage || avatarUrlMap.size >= normalizedIds.length) {
+      break
+    }
+
+    page += 1
+  }
+
+  return avatarUrlMap
+}
+
 type InitialCommunityData = {
   items: CommunityPostSummary[]
   totalCount: number
@@ -55,7 +96,10 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
     }
 
     const typedPosts = posts as unknown as PostRow[]
-    const levelMap = await getUserLevelMap(typedPosts.map((post) => post.author_user_id))
+    const [levelMap, avatarUrlMap] = await Promise.all([
+      getUserLevelMap(typedPosts.map((post) => post.author_user_id)),
+      getAvatarUrlMap(typedPosts.map((post) => post.author_user_id)),
+    ])
     const items = typedPosts.map((post) => ({
       id: post.id,
       category: post.category as CommunityPostSummary['category'],
@@ -63,6 +107,10 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       level:
         typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
           ? (levelMap.get(post.author_user_id) ?? 1)
+          : null,
+      avatarUrl:
+        typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
+          ? (avatarUrlMap.get(post.author_user_id) ?? null)
           : null,
       ipPrefix: post.ip_prefix ?? null,
       title: post.title,

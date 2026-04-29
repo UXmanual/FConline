@@ -103,12 +103,28 @@ function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isComme
   return (
     <article className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`} style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', borderBottom: isCommentOpen ? 'none' : undefined, boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }}>
       <div className="min-w-0">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <UserLevelBadge level={post.level} />
-            <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>{post.nickname}</span>
-            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
-            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+              style={{ backgroundColor: 'var(--app-surface-soft)' }}
+            >
+              {post.avatarUrl ? (
+                <img src={post.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-lg leading-none">😀</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <UserLevelBadge level={post.level} />
+                <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>{post.nickname}</span>
+                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{post.createdAtLabel}</span>
+              </div>
+              <h2 className="mt-3 whitespace-normal break-words text-[15px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>{post.title}</h2>
+              <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" />
+            </div>
           </div>
           {post.canDelete ? (
             <button type="button" aria-label="게시글 삭제" onClick={() => onDelete(post)} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
@@ -116,8 +132,6 @@ function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isComme
             <button type="button" aria-label="게시글 신고" onClick={() => onReport(post)} className="shrink-0 text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>신고</button>
           ) : null}
         </div>
-        <h2 className="mt-3 whitespace-normal break-words text-[15px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>{post.title}</h2>
-        <LinkifiedText text={post.content} className="mt-3 text-sm leading-6" />
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="relative">
@@ -609,7 +623,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
 
                         return (
                           <article key={comment.id} className="relative min-w-0 space-y-1">
-                            <div className="relative flex items-center justify-between gap-3">
+                            <div className="relative flex items-start justify-between gap-3">
                               {isLastComment ? (
                                 <>
                                   <div
@@ -624,11 +638,26 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                                   />
                                 </>
                               ) : null}
-                              <div className="flex min-w-0 items-center gap-2">
-                                <UserLevelBadge level={comment.level} />
-                                <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
-                                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
-                                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
+                              <div className="flex min-w-0 items-start gap-3">
+                                <div
+                                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                  style={{ backgroundColor: 'var(--app-surface-soft)' }}
+                                >
+                                  {comment.avatarUrl ? (
+                                    <img src={comment.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-lg leading-none">😀</span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <UserLevelBadge level={comment.level} />
+                                    <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>{comment.nickname}</span>
+                                    <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+                                    <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>{comment.createdAtLabel}</span>
+                                  </div>
+                                  <LinkifiedText text={comment.content} className="mt-2 text-sm leading-6" />
+                                </div>
                               </div>
                               {comment.canDelete ? (
                                 <button type="button" onClick={() => void handleDeleteComment(comment)} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>삭제</button>
@@ -636,7 +665,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                                 <button type="button" onClick={() => setReportTarget({ type: 'community_comment', id: comment.id })} className="shrink-0 text-[12px] font-medium" style={{ color: 'var(--app-muted-text)' }}>신고</button>
                               ) : null}
                             </div>
-                            <LinkifiedText text={comment.content} className="text-sm leading-6" />
                           </article>
                         )
                       })}

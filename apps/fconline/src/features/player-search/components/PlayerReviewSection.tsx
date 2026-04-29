@@ -115,18 +115,50 @@ function ReviewPostCard({
       onClick={() => setExpanded((current) => !current)}
     >
       <div className="min-w-0">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <UserLevelBadge level={post.level} />
-            <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>
-              {post.nickname}
-            </span>
-            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
-              ·
-            </span>
-            <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
-              {post.createdAtLabel}
-            </span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+              style={{ backgroundColor: 'var(--app-surface-soft)' }}
+            >
+              {post.avatarUrl ? (
+                <img src={post.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-lg leading-none">😀</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <UserLevelBadge level={post.level} />
+                <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-body-text)' }}>
+                  {post.nickname}
+                </span>
+                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
+                  ·
+                </span>
+                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
+                  {post.createdAtLabel}
+                </span>
+              </div>
+              <h2
+                className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${
+                  expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'
+                }`}
+                style={{ color: 'var(--app-title)' }}
+              >
+                {cardLevelLabel ? <span style={{ color: '#457ae5' }}>{`[${cardLevelLabel}] `}</span> : null}
+                <span>{titleBody}</span>
+              </h2>
+
+              <p
+                className={`mt-3 text-sm leading-6 ${
+                  expanded ? 'whitespace-pre-wrap break-words' : 'line-clamp-2 break-words'
+                }`}
+                style={{ color: 'var(--app-body-text)' }}
+              >
+                {post.content}
+              </p>
+            </div>
           </div>
 
           {post.canDelete ? (
@@ -155,25 +187,6 @@ function ReviewPostCard({
             </button>
           ) : null}
         </div>
-
-        <h2
-          className={`mt-3 text-[15px] font-semibold tracking-[-0.02em] ${
-            expanded ? 'whitespace-normal break-words' : 'overflow-hidden text-ellipsis whitespace-nowrap'
-          }`}
-          style={{ color: 'var(--app-title)' }}
-        >
-          {cardLevelLabel ? <span style={{ color: '#457ae5' }}>{`[${cardLevelLabel}] `}</span> : null}
-          <span>{titleBody}</span>
-        </h2>
-
-        <p
-          className={`mt-3 text-sm leading-6 ${
-            expanded ? 'whitespace-pre-wrap break-words' : 'line-clamp-2 break-words'
-          }`}
-          style={{ color: 'var(--app-body-text)' }}
-        >
-          {post.content}
-        </p>
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
@@ -816,18 +829,52 @@ export default function PlayerReviewSection({
                     ) : sortedComments.length > 0 ? (
                       <div className="relative space-y-4 pl-7">
                         <div className="absolute top-0 bottom-0 w-px" style={{ left: '10px', backgroundColor: 'var(--app-thread-line)' }} />
-                        {sortedComments.map((comment) => (
-                          <article key={comment.id} className="min-w-0 space-y-1">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <UserLevelBadge level={comment.level} />
-                                <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>
-                                  {comment.nickname}
-                                </span>
-                                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
-                                <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
-                                  {comment.createdAtLabel}
-                                </span>
+                        {sortedComments.map((comment, index) => {
+                          const isLastComment = index === sortedComments.length - 1
+
+                          return (
+                          <article key={comment.id} className="relative min-w-0 space-y-1">
+                            <div className="relative flex items-start justify-between gap-3">
+                              {isLastComment ? (
+                                <>
+                                  <div
+                                    aria-hidden="true"
+                                    className="absolute left-[-19px] top-[calc(50%-9px)] bottom-[-12px] w-[3px]"
+                                    style={{ backgroundColor: 'var(--app-card-bg)' }}
+                                  />
+                                  <div
+                                    aria-hidden="true"
+                                    className="absolute left-[-18px] top-[calc(50%-10px)] h-[10px] w-[10px] rounded-bl-[10px] border-b border-l"
+                                    style={{ borderColor: 'var(--app-thread-line)' }}
+                                  />
+                                </>
+                              ) : null}
+                              <div className="flex min-w-0 items-start gap-3">
+                                <div
+                                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                  style={{ backgroundColor: 'var(--app-surface-soft)' }}
+                                >
+                                  {comment.avatarUrl ? (
+                                    <img src={comment.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-lg leading-none">😀</span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <UserLevelBadge level={comment.level} />
+                                    <span className="text-[12px] font-semibold leading-none" style={{ color: 'var(--app-title)' }}>
+                                      {comment.nickname}
+                                    </span>
+                                    <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>·</span>
+                                    <span className="text-[12px] font-medium leading-none" style={{ color: 'var(--app-muted-text)' }}>
+                                      {comment.createdAtLabel}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--app-body-text)' }}>
+                                    {comment.content}
+                                  </p>
+                                </div>
                               </div>
                               {comment.canDelete ? (
                                 <button
@@ -849,11 +896,8 @@ export default function PlayerReviewSection({
                                 </button>
                               ) : null}
                             </div>
-                            <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--app-body-text)' }}>
-                              {comment.content}
-                            </p>
                           </article>
-                        ))}
+                        )})}
                       </div>
                     ) : null}
 

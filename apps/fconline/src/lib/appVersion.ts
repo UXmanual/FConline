@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.6': '2026-04-29T18:05:00+09:00',
   '23.5': '2026-04-29T17:30:00+09:00',
   '23.4': '2026-04-29T15:30:00+09:00',
   '23.3': '2026-04-29T14:00:00+09:00',
@@ -14,6 +15,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.6': [
+    '커뮤니티와 선수평가 영역에 마이페이지 프로필 이미지를 40x40 크기로 반영했습니다.',
+    '커뮤니티와 선수평가 댓글의 마지막 연결선 표시를 동일한 곡선 커넥터 스타일로 정리했습니다.',
+  ],
   '23.5': [
     '마이페이지 프로필 영역을 개편했습니다. 아바타, 레벨, 닉네임, 다음 레벨까지 XP를 한눈에 확인할 수 있습니다.',
     '닉네임 변경이 하단 시트 팝업으로 변경되었습니다.',

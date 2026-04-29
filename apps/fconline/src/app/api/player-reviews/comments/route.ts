@@ -24,11 +24,53 @@ type PlayerReviewCommentRow = {
   created_at: string
 }
 
+async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
+  const normalizedIds = [...new Set(userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))]
+
+  if (normalizedIds.length === 0) {
+    return new Map<string, string>()
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const avatarUrlMap = new Map<string, string>()
+  let page = 1
+  const perPage = 1000
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
+
+    if (error || !data?.users?.length) {
+      break
+    }
+
+    for (const user of data.users) {
+      if (!normalizedIds.includes(user.id)) {
+        continue
+      }
+
+      const avatarUrl = user.user_metadata?.custom_avatar_url
+
+      if (typeof avatarUrl === 'string' && avatarUrl.trim()) {
+        avatarUrlMap.set(user.id, avatarUrl.trim())
+      }
+    }
+
+    if (data.users.length < perPage || avatarUrlMap.size >= normalizedIds.length) {
+      break
+    }
+
+    page += 1
+  }
+
+  return avatarUrlMap
+}
+
 function mapComment(
   comment: PlayerReviewCommentRow,
   currentUserId?: string | null,
   currentUserEmail?: string | null,
   levelMap?: Map<string, number>,
+  avatarUrlMap?: Map<string, string>,
 ): CommunityCommentItem {
   return {
     id: comment.id,
@@ -37,6 +79,10 @@ function mapComment(
     level:
       typeof comment.author_user_id === 'string' && comment.author_user_id.trim().length > 0
         ? (levelMap?.get(comment.author_user_id) ?? 1)
+        : null,
+    avatarUrl:
+      typeof comment.author_user_id === 'string' && comment.author_user_id.trim().length > 0
+        ? (avatarUrlMap?.get(comment.author_user_id) ?? null)
         : null,
     ipPrefix: comment.ip_prefix ?? null,
     content: comment.content,
@@ -112,10 +158,13 @@ export async function GET(request: NextRequest) {
     }
 
     const typedComments = (data ?? []) as PlayerReviewCommentRow[]
-    const levelMap = await getUserLevelMap(typedComments.map((comment) => comment.author_user_id))
+    const [levelMap, avatarUrlMap] = await Promise.all([
+      getUserLevelMap(typedComments.map((comment) => comment.author_user_id)),
+      getAvatarUrlMap(typedComments.map((comment) => comment.author_user_id)),
+    ])
 
     return Response.json({
-      items: typedComments.map((comment) => mapComment(comment, user?.id, user?.email, levelMap)),
+      items: typedComments.map((comment) => mapComment(comment, user?.id, user?.email, levelMap, avatarUrlMap)),
     })
   } catch (error) {
     if (process.env.NODE_ENV === 'development' && isMissingSupabaseConfigError(error)) {
@@ -222,7 +271,17 @@ export async function POST(request: NextRequest) {
 
     await syncPlayerReviewPostCommentCount(postId)
 
-    const item = mapComment(response.data as PlayerReviewCommentRow, user.id, user.email, new Map([[user.id, 1]]))
+    const item = mapComment(
+      response.data as PlayerReviewCommentRow,
+      user.id,
+      user.email,
+      new Map([[user.id, 1]]),
+      new Map(
+        typeof user.user_metadata?.custom_avatar_url === 'string' && user.user_metadata.custom_avatar_url.trim()
+          ? [[user.id, user.user_metadata.custom_avatar_url.trim()]]
+          : [],
+      ),
+    )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
     }

@@ -31,11 +31,53 @@ type PlayerReviewPostRow = {
   created_at: string
 }
 
+async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
+  const normalizedIds = [...new Set(userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))]
+
+  if (normalizedIds.length === 0) {
+    return new Map<string, string>()
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const avatarUrlMap = new Map<string, string>()
+  let page = 1
+  const perPage = 1000
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
+
+    if (error || !data?.users?.length) {
+      break
+    }
+
+    for (const user of data.users) {
+      if (!normalizedIds.includes(user.id)) {
+        continue
+      }
+
+      const avatarUrl = user.user_metadata?.custom_avatar_url
+
+      if (typeof avatarUrl === 'string' && avatarUrl.trim()) {
+        avatarUrlMap.set(user.id, avatarUrl.trim())
+      }
+    }
+
+    if (data.users.length < perPage || avatarUrlMap.size >= normalizedIds.length) {
+      break
+    }
+
+    page += 1
+  }
+
+  return avatarUrlMap
+}
+
 function mapPostSummary(
   post: PlayerReviewPostRow,
   currentUserId?: string | null,
   currentUserEmail?: string | null,
   levelMap?: Map<string, number>,
+  avatarUrlMap?: Map<string, string>,
 ): CommunityPostSummary {
   return {
     id: post.id,
@@ -44,6 +86,10 @@ function mapPostSummary(
     level:
       typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
         ? (levelMap?.get(post.author_user_id) ?? 1)
+        : null,
+    avatarUrl:
+      typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
+        ? (avatarUrlMap?.get(post.author_user_id) ?? null)
         : null,
     ipPrefix: post.ip_prefix ?? null,
     title: post.title,
@@ -196,8 +242,11 @@ export async function GET(request: NextRequest) {
     }
 
     const typedPosts = (posts ?? []) as unknown as PlayerReviewPostRow[]
-    const levelMap = await getUserLevelMap(typedPosts.map((post) => post.author_user_id))
-    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email, levelMap))
+    const [levelMap, avatarUrlMap] = await Promise.all([
+      getUserLevelMap(typedPosts.map((post) => post.author_user_id)),
+      getAvatarUrlMap(typedPosts.map((post) => post.author_user_id)),
+    ])
+    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email, levelMap, avatarUrlMap))
 
     return Response.json({
       items,
@@ -285,6 +334,11 @@ export async function POST(request: NextRequest) {
       user.id,
       user.email,
       new Map([[user.id, 1]]),
+      new Map(
+        typeof user.user_metadata?.custom_avatar_url === 'string' && user.user_metadata.custom_avatar_url.trim()
+          ? [[user.id, user.user_metadata.custom_avatar_url.trim()]]
+          : [],
+      ),
     )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix

@@ -7,6 +7,7 @@ export type CommunityPostSummary = {
   category: CommunityCategory
   nickname: string
   level?: number | null
+  avatarUrl?: string | null
   ipPrefix?: string | null
   title: string
   content: string
@@ -21,6 +22,7 @@ export type CommunityCommentItem = {
   postId: string
   nickname: string
   level?: number | null
+  avatarUrl?: string | null
   ipPrefix?: string | null
   content: string
   createdAt: string
