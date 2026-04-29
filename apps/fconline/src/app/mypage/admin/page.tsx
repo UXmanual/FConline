@@ -26,6 +26,7 @@ export default function MyPageAdminPushPage() {
   const [broadcastTitle, setBroadcastTitle] = useState('')
   const [broadcastBody, setBroadcastBody] = useState('')
   const [broadcastUrl, setBroadcastUrl] = useState('/home')
+  const [broadcastKind, setBroadcastKind] = useState<'general' | 'app_update'>('general')
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false)
   const [reports, setReports] = useState<ReportItem[]>([])
   const [isLoadingReports, setIsLoadingReports] = useState(false)
@@ -46,7 +47,8 @@ export default function MyPageAdminPushPage() {
   const fillVersionPushTemplate = () => {
     setBroadcastTitle(`FCO Ground ${APP_VERSION} 업데이트`)
     setBroadcastBody(`새 버전 ${APP_VERSION}이 적용되었습니다. 앱에서 변경 내용을 확인해 보세요.`)
-    setBroadcastUrl('/mypage')
+    setBroadcastUrl('/notifications')
+    setBroadcastKind('app_update')
   }
 
   const handleBroadcastPush = async () => {
@@ -74,6 +76,7 @@ export default function MyPageAdminPushPage() {
           title: trimmedTitle,
           body: trimmedBody,
           url: trimmedUrl,
+          kind: broadcastKind,
         }),
       })
 

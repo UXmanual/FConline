@@ -7,7 +7,7 @@ import UserLevelBadge from '@/components/user/UserLevelBadge'
 import { Button } from '@/components/ui/button'
 import LoadingDots from '@/components/ui/LoadingDots'
 import SelectChevron from '@/components/ui/SelectChevron'
-import { APP_VERSION, RELEASE_NOTES_BY_VERSION } from '@/lib/appVersion'
+import { APP_VERSION } from '@/lib/appVersion'
 import { deriveCommunityNickname, normalizeCommunityNickname, validateCommunityNickname } from '@/lib/community'
 import {
   requestAppNotificationsPermission,
@@ -16,7 +16,7 @@ import {
   useAppNotificationsEnabled,
 } from '@/lib/appNotifications'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
-import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 import { MAX_LEVEL, type UserLevelSnapshot } from '@/lib/userLevel'
 
 const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v3'
@@ -281,7 +281,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isSendingContact, setIsSendingContact] = useState(false)
   const [isAppNotificationPending, setIsAppNotificationPending] = useState(false)
   const [isAppNotificationSheetOpen, setIsAppNotificationSheetOpen] = useState(false)
-  const releaseNotes = RELEASE_NOTES_BY_VERSION[APP_VERSION] ?? RELEASE_NOTES_BY_VERSION['11.5']
   const authStatus = searchParams.get('auth')
   const authMessage = authStatus === 'error' ? '로그인 처리 중 문제가 발생했습니다. 다시 시도해 주세요.' : null
   const googleLoginButtonStyle = isDarkModeEnabled
@@ -301,9 +300,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     let isMounted = true
 
     const syncUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { user } = await getSupabaseUserSafely(supabase)
 
       if (!isMounted) {
         return
@@ -1255,19 +1252,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         </section>
 
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
-          <p className="text-sm font-medium" style={mutedStyle}>
-            {`버전 ${APP_VERSION} (Beta)`}
-          </p>
-          <div className="mt-2.5 space-y-0.5">
-            {releaseNotes.map((note) => (
-              <p key={note} className="text-[12px] font-medium leading-[1.35]" style={mutedStyle}>
-                - {note}
-              </p>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsLicenseOpen((current) => !current)}
@@ -1345,6 +1329,12 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
             </div>
           ) : null}
 
+        </section>
+
+        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+          <p className="text-sm font-medium" style={mutedStyle}>
+            {`버전 ${APP_VERSION} (Beta)`}
+          </p>
         </section>
 
         {authUser ? (

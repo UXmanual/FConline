@@ -33,6 +33,8 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
     ? STANDALONE_BOTTOM_COMPENSATION_PX
     : 0
 
+  const isHomeSection = pathname === '/home' || pathname === '/' || pathname.startsWith('/notifications')
+
   const navigateToRoot = (href: string) => {
     if (href === '/players') {
       sessionStorage.setItem(RESET_KEY, '1')
@@ -84,7 +86,10 @@ export default function BottomNav({ isStandaloneDisplayMode = false }: Props) {
       >
         <div className="flex h-[70px] items-center justify-around px-1">
           {navItems.map(({ href, icon: Icon, label }) => {
-            const isActive = pathname.startsWith(href)
+            const isActive =
+              href === '/home'
+                ? isHomeSection
+                : pathname.startsWith(href)
 
             return (
               <motion.div

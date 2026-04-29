@@ -2,7 +2,17 @@ import pkg from '../../package.json'
 
 export const APP_VERSION = pkg.version
 
+export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '22.9': '2026-04-29T11:15:00+09:00',
+  '22.8': '2026-04-29T09:30:00+09:00',
+}
+
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '22.9': [
+    '라이트·다크 모드에 맞춰 홈/앱 스플래시 배경과 표시 흐름을 정리했습니다.',
+    '홈 알림 아이콘과 알림함을 추가하고, 최신 버전 노트와 최근 7일 알림을 함께 확인할 수 있도록 구성했습니다.',
+    '만료된 로그인 refresh token이 남아 있을 때 인증 상태를 자동 복구하도록 보완했습니다.',
+  ],
   '22.8': [
     '업데이트 안내 화면과 알림 이동 동작을 더 안정적으로 다듬었습니다.',
   ],

@@ -12,6 +12,8 @@ export type PushNotificationPayload = {
   body: string
   data?: {
     url?: string
+    kind?: string
+    notificationId?: string
   }
 }
 

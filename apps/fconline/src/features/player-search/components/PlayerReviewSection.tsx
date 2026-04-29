@@ -13,7 +13,7 @@ import UserLevelBadge from '@/components/user/UserLevelBadge'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
 import { useLockedBodyScroll } from '@/lib/mobileOverlay'
-import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const POSTS_PER_PAGE = 5
@@ -275,9 +275,7 @@ export default function PlayerReviewSection({
     let isMounted = true
 
     const syncUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { user } = await getSupabaseUserSafely(supabase)
 
       if (!isMounted) {
         return

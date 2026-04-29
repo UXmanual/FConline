@@ -1,6 +1,9 @@
 const STATIC_CACHE_NAME = 'fco-ground-static-v2'
 const PAGE_CACHE_NAME = 'fco-ground-pages-v2'
 const ASSET_CACHE_NAME = 'fco-ground-assets-v2'
+const NOTIFICATION_FEED_CACHE_NAME = 'fco-ground-notification-feed-v1'
+const NOTIFICATION_FEED_CACHE_URL = '/__notifications_feed__'
+const MAX_STORED_NOTIFICATIONS = 30
 
 const APP_SHELL_ROUTES = [
   '/',
@@ -38,11 +41,109 @@ function normalizeNotificationUrl(url) {
   }
 }
 
+async function readStoredNotifications() {
+  const cache = await caches.open(NOTIFICATION_FEED_CACHE_NAME)
+  const response = await cache.match(NOTIFICATION_FEED_CACHE_URL)
+
+  if (!response) {
+    return []
+  }
+
+  try {
+    const parsed = await response.json()
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+async function writeStoredNotifications(items) {
+  const cache = await caches.open(NOTIFICATION_FEED_CACHE_NAME)
+  await cache.put(
+    NOTIFICATION_FEED_CACHE_URL,
+    new Response(JSON.stringify(items), {
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    }),
+  )
+}
+
+function normalizeStoredNotification(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const rawData = payload.data && typeof payload.data === 'object' ? payload.data : {}
+  const title =
+    typeof payload.title === 'string' && payload.title.trim()
+      ? payload.title.trim()
+      : DEFAULT_NOTIFICATION_TITLE
+  const body =
+    typeof payload.body === 'string' && payload.body.trim()
+      ? payload.body.trim()
+      : DEFAULT_NOTIFICATION_OPTIONS.body
+  const createdAt =
+    typeof payload.createdAt === 'string' && payload.createdAt.trim()
+      ? payload.createdAt.trim()
+      : new Date().toISOString()
+  const metaKind =
+    typeof rawData.kind === 'string' && rawData.kind.trim()
+      ? rawData.kind.trim()
+      : null
+
+  return {
+    id:
+      typeof rawData.notificationId === 'string' && rawData.notificationId.trim()
+        ? rawData.notificationId.trim()
+        : `push-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    kind: 'push',
+    title,
+    body,
+    createdAt,
+    url:
+      typeof rawData.url === 'string' && rawData.url.trim()
+        ? normalizeNotificationUrl(rawData.url.trim())
+        : normalizeNotificationUrl('/home'),
+    metaKind,
+  }
+}
+
+async function persistNotification(payload) {
+  const normalized = normalizeStoredNotification(payload)
+
+  if (!normalized || normalized.metaKind === 'app_update') {
+    return null
+  }
+
+  const existing = await readStoredNotifications()
+  const deduped = existing.filter((item) => item && item.id !== normalized.id)
+  const nextItems = [normalized, ...deduped].slice(0, MAX_STORED_NOTIFICATIONS)
+  await writeStoredNotifications(nextItems)
+
+  return normalized
+}
+
+async function notifyClientsOfNotification(item) {
+  if (!item) {
+    return
+  }
+
+  const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  await Promise.all(
+    clientList.map((client) =>
+      client.postMessage({
+        type: 'fco-push-notification-received',
+        notification: item,
+      }),
+    ),
+  )
+}
+
 function buildNotificationPayload(event) {
   if (!event.data) {
     return {
       title: DEFAULT_NOTIFICATION_TITLE,
       options: DEFAULT_NOTIFICATION_OPTIONS,
+      payload: null,
     }
   }
 
@@ -67,7 +168,7 @@ function buildNotificationPayload(event) {
       },
     }
 
-    return { title, options }
+    return { title, options, payload }
   } catch {
     const text = event.data.text()
 
@@ -76,6 +177,13 @@ function buildNotificationPayload(event) {
       options: {
         ...DEFAULT_NOTIFICATION_OPTIONS,
         body: text || DEFAULT_NOTIFICATION_OPTIONS.body,
+      },
+      payload: {
+        title: DEFAULT_NOTIFICATION_TITLE,
+        body: text || DEFAULT_NOTIFICATION_OPTIONS.body,
+        data: {
+          url: '/home',
+        },
       },
     }
   }
@@ -91,9 +199,14 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('push', (event) => {
-  const { title, options } = buildNotificationPayload(event)
+  const { title, options, payload } = buildNotificationPayload(event)
 
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      persistNotification(payload).then((item) => notifyClientsOfNotification(item)),
+    ]),
+  )
 })
 
 self.addEventListener('notificationclick', (event) => {

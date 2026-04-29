@@ -8,7 +8,8 @@ import PwaBootstrap from '@/components/pwa/PwaBootstrap'
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
 const HOME_SPLASH_VISIBLE_MS = 1000
 const HOME_SPLASH_FADE_MS = 420
-const HOME_SPLASH_BG = '#121318'
+const HOME_SPLASH_BG_LIGHT = '#f0f3f5'
+const HOME_SPLASH_BG_DARK = '#121318'
 
 const pretendard = localFont({
   src: [
@@ -106,7 +107,7 @@ export default function RootLayout({
             display: none;
             align-items: center;
             justify-content: center;
-            background: ${HOME_SPLASH_BG};
+            background: ${HOME_SPLASH_BG_LIGHT};
             opacity: 0;
             pointer-events: none;
             transition: opacity ${HOME_SPLASH_FADE_MS}ms ease-out;
@@ -116,6 +117,15 @@ export default function RootLayout({
             width: 151px;
             max-width: calc(100vw - 80px);
             height: auto;
+            filter: invert(1);
+          }
+
+          html.app-dark-mode #startup-splash {
+            background: ${HOME_SPLASH_BG_DARK};
+          }
+
+          html.app-dark-mode .startup-splash-logo {
+            filter: none;
           }
 
           #app-shell {
@@ -151,7 +161,7 @@ export default function RootLayout({
         `}</style>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var root=document.documentElement;var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&!hasSeenHomeSplash){root.style.backgroundColor='${HOME_SPLASH_BG}';root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.backgroundColor='${HOME_SPLASH_BG}';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
+            __html: `(function(){try{var root=document.documentElement;var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';var splashBackgroundColor=isDarkModeEnabled?'${HOME_SPLASH_BG_DARK}':'${HOME_SPLASH_BG_LIGHT}';root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&!hasSeenHomeSplash){root.style.backgroundColor=splashBackgroundColor;root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.backgroundColor='${HOME_SPLASH_BG_LIGHT}';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
           }}
         />
       </head>

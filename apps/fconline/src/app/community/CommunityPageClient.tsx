@@ -17,7 +17,7 @@ import {
 } from '@/lib/community'
 import { useDarkModeEnabled } from '@/lib/darkMode'
 import { useLockedBodyScroll } from '@/lib/mobileOverlay'
-import { getSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const BOARD_TABS = ['자유게시판'] as const
@@ -187,9 +187,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     let isMounted = true
 
     const syncUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { user } = await getSupabaseUserSafely(supabase)
 
       if (!isMounted) {
         return

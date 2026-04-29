@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     const title = normalizeValue(body.title)
     const bodyText = normalizeValue(body.body)
     const targetUrl = normalizePushTargetUrl(normalizeValue(body.url))
+    const kind = normalizeValue(body.kind) || 'general'
 
     if (!adminToken || adminToken !== getPushAdminToken()) {
       return Response.json({ message: '운영 공지 발송 권한이 없습니다.' }, { status: 401 })
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
       body: bodyText,
       data: {
         url: targetUrl,
+        kind,
       },
     }
 

@@ -4,6 +4,7 @@ import HomeControllerUsageCard from './HomeControllerUsageCard'
 import HomeCommunityCard from './HomeCommunityCard'
 import HomeSettingsCard from './HomeSettingsCard'
 import HomeLogo from './HomeLogo'
+import HomeNotificationsButton from './HomeNotificationsButton'
 import HomePageClient from './HomePageClient'
 import { getHomeControllerUsage, getHomeEvents } from './home-feed'
 
@@ -46,7 +47,10 @@ export default async function HomePage() {
           <div className="flex h-6 items-center gap-3">
             <HomeLogo />
           </div>
-          <span className="text-[13px] font-medium" style={bodyStyle}>{todayLabel}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] font-medium" style={bodyStyle}>{todayLabel}</span>
+            <HomeNotificationsButton />
+          </div>
         </header>
 
         <main className="space-y-3">

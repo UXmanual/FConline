@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       body: '앱 알림 테스트가 정상적으로 도착했습니다.',
       data: {
         url: normalizePushTargetUrl('/mypage'),
+        kind: 'general',
       },
     })
 
