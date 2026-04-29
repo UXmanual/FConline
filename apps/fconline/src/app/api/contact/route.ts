@@ -43,7 +43,7 @@ function buildTelegramMessage({
   createdAt: string
 }) {
   return [
-    '[FCO Ground 문의]',
+    '[FConline Ground 문의]',
     `유형: ${category}`,
     `제목: ${title}`,
     `내용: ${content}`,

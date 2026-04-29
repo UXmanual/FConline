@@ -17,7 +17,7 @@ export default function HomeSplashScreen({ className, logoClassName }: Props) {
       <div className="mx-auto flex min-h-[100dvh] w-full items-center justify-center px-5 sm:max-w-[480px]">
         <Image
           src={darkLogo}
-          alt="FCO Ground"
+          alt="FConline Ground"
           priority
           className={`h-8 w-auto ${logoClassName ?? ''}`.trim()}
         />

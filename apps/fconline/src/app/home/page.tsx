@@ -1,3 +1,4 @@
+import { SITE_NAME, SITE_SHORT_NAME, SITE_URL } from '@/lib/site'
 import HomeStatusPanel from './HomeStatusPanel'
 import HomeEventCarousel from './HomeEventCarousel'
 import HomeControllerUsageCard from './HomeControllerUsageCard'
@@ -42,6 +43,18 @@ export default async function HomePage() {
 
   return (
     <HomePageClient>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: SITE_NAME,
+            alternateName: [SITE_SHORT_NAME, 'FCOnline Ground', 'fconlineground.com'],
+            url: `${SITE_URL}/`,
+          }),
+        }}
+      />
       <div className="space-y-4 pt-5">
         <header className="flex items-center justify-between gap-3">
           <div className="flex h-6 items-center gap-3">

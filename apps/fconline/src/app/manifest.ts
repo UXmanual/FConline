@@ -1,12 +1,12 @@
 import type { MetadataRoute } from 'next'
+import { SITE_DESCRIPTION, SITE_NAME, SITE_SHORT_NAME } from '@/lib/site'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/home',
-    name: 'FCO Ground',
-    short_name: 'FCO Ground',
-    description:
-      'FC Online 선수 검색, 선수 리뷰, 전적 분석, 메타 정보와 커뮤니티를 한곳에서 빠르게 확인할 수 있는 설치형 웹앱입니다.',
+    name: SITE_NAME,
+    short_name: SITE_SHORT_NAME,
+    description: SITE_DESCRIPTION,
     start_url: '/home',
     scope: '/',
     display: 'standalone',

@@ -24,7 +24,7 @@ export default function DataDeletionPage() {
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold" style={{ color: 'var(--app-muted-text)' }}>
-            FCO Ground 데이터 삭제 요청
+            FConline Ground 데이터 삭제 요청
           </p>
           <h1
             className="text-[20px] font-semibold tracking-[-0.02em]"
@@ -33,7 +33,7 @@ export default function DataDeletionPage() {
             사용자 데이터 삭제 안내
           </h1>
           <p className="text-[13px] leading-[1.6]" style={{ color: 'var(--app-body-text)' }}>
-            FCO Ground 또는 개발자 uxdmanual은 사용자의 삭제 요청을 접수하고 처리할 수 있는 방편을 제공합니다.
+            FConline Ground 또는 개발자 uxdmanual은 사용자의 삭제 요청을 접수하고 처리할 수 있는 방편을 제공합니다.
           </p>
           <p className="text-[13px] leading-[1.6]" style={{ color: 'var(--app-body-text)' }}>
             앱 내 마이페이지에서도 연동 계정 삭제를 직접 진행할 수 있습니다.

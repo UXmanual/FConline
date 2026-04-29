@@ -45,7 +45,7 @@ export default function MyPageAdminPushPage() {
   }
 
   const fillVersionPushTemplate = () => {
-    setBroadcastTitle(`FCO Ground ${APP_VERSION} 업데이트`)
+    setBroadcastTitle(`FConline Ground ${APP_VERSION} 업데이트`)
     setBroadcastBody(`새 버전 ${APP_VERSION}이 적용되었습니다. 앱에서 변경 내용을 확인해 보세요.`)
     setBroadcastUrl('/notifications')
     setBroadcastKind('app_update')
@@ -216,7 +216,7 @@ export default function MyPageAdminPushPage() {
                   borderColor: 'var(--app-input-border)',
                   color: 'var(--app-title)',
                 }}
-                placeholder="예: FCO Ground 16.0 업데이트"
+                placeholder="예: FConline Ground 16.0 업데이트"
               />
             </label>
 

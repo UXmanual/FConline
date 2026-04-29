@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     const createdAt = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
     const { preview } = await fetchTargetInfo(supabase, targetType, targetId)
     await sendTelegramAlert(
-      `[FCO Ground 신고]\n유형: ${typeLabel}\n${preview}\n사유: ${reason}\n시간: ${createdAt}`,
+      `[FConline Ground 신고]\n유형: ${typeLabel}\n${preview}\n사유: ${reason}\n시간: ${createdAt}`,
     )
 
     return Response.json({ success: true }, { status: 201 })

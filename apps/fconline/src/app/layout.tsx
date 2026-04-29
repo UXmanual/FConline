@@ -4,6 +4,7 @@ import Image from 'next/image'
 import './globals.css'
 import AppChrome from '@/components/layout/AppChrome'
 import PwaBootstrap from '@/components/pwa/PwaBootstrap'
+import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site'
 
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
 const HOME_SPLASH_VISIBLE_MS = 1000
@@ -36,17 +37,30 @@ const metadataBase = (() => {
   return new URL(normalizedUrl)
 })()
 
-const siteTitle = 'FCO Ground'
-const siteName = 'FCO Ground'
-const siteDescription =
-  'FCO Ground는 FC온라인 정보, 선수검색, 볼타 전적검색, 피드백, 내 닉네임 기록 보기, 커뮤니티를 한곳에서 확인할 수 있는 서비스입니다.'
+const siteTitle = SITE_NAME
+const siteName = SITE_NAME
+const siteDescription = SITE_DESCRIPTION
 
 export const metadata: Metadata = {
   metadataBase,
-  title: siteTitle,
+  title: {
+    default: siteTitle,
+    template: `%s | ${siteTitle}`,
+  },
   applicationName: siteName,
   description: siteDescription,
   manifest: '/manifest.webmanifest',
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
   icons: {
     icon: [
       { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
@@ -60,6 +74,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: siteTitle,
     siteName,
+    url: 'https://fconlineground.com',
     locale: 'ko_KR',
     type: 'website',
     description: siteDescription,

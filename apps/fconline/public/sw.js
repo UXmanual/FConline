@@ -23,7 +23,7 @@ const APP_SHELL_ROUTES = [
   '/icons/icon-512.png',
 ]
 
-const DEFAULT_NOTIFICATION_TITLE = 'FCO Ground'
+const DEFAULT_NOTIFICATION_TITLE = 'FConline Ground'
 const DEFAULT_NOTIFICATION_OPTIONS = {
   body: '새로운 알림이 도착했습니다.',
   icon: '/icons/notification-icon-512.png',

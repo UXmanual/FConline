@@ -52,8 +52,8 @@ def twaManifest = [
     applicationId: 'com.fcoground.app',
     hostName: 'fconlineground.com', // The domain being opened in the TWA.
     launchUrl: '/home', // The start path for the TWA. Must be relative to the domain.
-    name: 'FCO Ground', // The application name.
-    launcherName: 'FCO Ground', // The name shown on the Android Launcher.
+    name: 'FConline Ground', // The application name.
+    launcherName: 'FConline Ground', // The name shown on the Android Launcher.
     themeColor: '#F0F3F5', // The color used for the status bar.
     themeColorDark: '#121318', // The color used for the dark status bar.
     navigationColor: '#F0F3F5', // The color used for the navigation bar.

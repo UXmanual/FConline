@@ -1,8 +1,8 @@
 {
   "packageId": "com.fcoground.app",
   "host": "fconlineground.com",
-  "name": "FCO Ground",
-  "launcherName": "FCO Ground",
+  "name": "FConline Ground",
+  "launcherName": "FConline Ground",
   "display": "standalone",
   "themeColor": "#f0f3f5",
   "themeColorDark": "#121318",
