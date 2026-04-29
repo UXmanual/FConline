@@ -1301,7 +1301,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                       className="h-full rounded-full"
                       style={{
                         width: `${userLevelProfile.progressPercent}%`,
-                        background: 'linear-gradient(to right, #3b6fd4, #5b9cf6)',
+                        background: 'linear-gradient(to right, #1c98ff, #b326ff)',
                       }}
                     />
                   </div>

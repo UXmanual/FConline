@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.8': '2026-04-29T19:05:00+09:00',
   '23.7': '2026-04-29T18:45:00+09:00',
   '23.6': '2026-04-29T18:05:00+09:00',
   '23.5': '2026-04-29T17:30:00+09:00',
@@ -16,6 +17,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.8': [
+    '커뮤니티와 선수평가 프로필 fallback 배경의 다크모드 적용 경로를 정리해 런타임 오류 없이 동일한 톤으로 보이도록 수정했습니다.',
+  ],
   '23.7': [
     '커뮤니티, 선수평가, 마이페이지 프로필 이미지를 next/image 기준으로 정리하고 원격 이미지 허용 설정을 보완했습니다.',
   ],

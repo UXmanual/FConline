@@ -13,6 +13,7 @@ import type { User } from '@supabase/supabase-js'
 import UserLevelBadge from '@/components/user/UserLevelBadge'
 import SelectChevron from '@/components/ui/SelectChevron'
 import { type CommunityCommentItem, deriveCommunityNickname, type CommunityPostSummary } from '@/lib/community'
+import { useDarkModeEnabled } from '@/lib/darkMode'
 import { useLockedBodyScroll } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
@@ -91,6 +92,7 @@ function ReviewPostCard({
   onReport,
   highlight,
   isCommentOpen,
+  isDarkModeEnabled,
 }: {
   post: CommunityPostSummary
   onDelete: (post: CommunityPostSummary) => void
@@ -98,6 +100,7 @@ function ReviewPostCard({
   onReport?: (post: CommunityPostSummary) => void
   highlight?: boolean
   isCommentOpen?: boolean
+  isDarkModeEnabled: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const cardLevelMatch = post.title.match(/^\[(\d+카)\]\s*(.*)$/)
@@ -120,7 +123,7 @@ function ReviewPostCard({
           <div className="flex min-w-0 items-start gap-3">
             <div
               className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
-              style={{ backgroundColor: 'var(--app-surface-soft)' }}
+              style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
             >
               {post.avatarUrl ? (
                 <Image src={post.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
@@ -221,6 +224,7 @@ export default function PlayerReviewSection({
   initialHighlightedPostId = null,
 }: Props) {
   const router = useRouter()
+  const isDarkModeEnabled = useDarkModeEnabled()
   const commentsScrollRef = useRef<HTMLDivElement | null>(null)
   const composerScrollRef = useRef<HTMLElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
@@ -813,6 +817,7 @@ export default function PlayerReviewSection({
                   onReport={authUser ? (p) => setReportTarget({ type: 'player_review_post', id: p.id }) : undefined}
                   highlight={post.id === highlightedPostId}
                   isCommentOpen={isCommentOpen}
+                  isDarkModeEnabled={isDarkModeEnabled}
                 />
                 {isCommentOpen ? (
                   <div
@@ -853,7 +858,7 @@ export default function PlayerReviewSection({
                               <div className="flex min-w-0 items-start gap-3">
                                 <div
                                   className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
-                                  style={{ backgroundColor: 'var(--app-surface-soft)' }}
+                                  style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
                                 >
                                   {comment.avatarUrl ? (
                                     <Image src={comment.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />

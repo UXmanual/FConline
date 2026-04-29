@@ -100,7 +100,7 @@ function CommentSheetSkeleton({ rows = 5 }: { rows?: number }) {
   )
 }
 
-function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isCommentOpen }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; highlight?: boolean; isCommentOpen?: boolean }) {
+function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isCommentOpen, isDarkModeEnabled }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; highlight?: boolean; isCommentOpen?: boolean; isDarkModeEnabled: boolean }) {
   return (
     <article className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`} style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', borderBottom: isCommentOpen ? 'none' : undefined, boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }}>
       <div className="min-w-0">
@@ -108,7 +108,7 @@ function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isComme
           <div className="flex min-w-0 items-start gap-3">
             <div
               className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
-              style={{ backgroundColor: 'var(--app-surface-soft)' }}
+              style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
             >
               {post.avatarUrl ? (
                 <Image src={post.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
@@ -605,7 +605,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         ) : posts.length > 0 ? (
           posts.map((post) => (
             <div key={post.id} data-post-id={post.id}>
-              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} />
+              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} isDarkModeEnabled={isDarkModeEnabled} />
               {activeCommentPost?.id === post.id && (
                 <div ref={commentsScrollRef} className="rounded-b-lg border-x border-b px-5 pt-0 pb-3" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--app-card-border)' }}>
                   {isLoadingComments ? (
@@ -642,7 +642,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                               <div className="flex min-w-0 items-start gap-3">
                                 <div
                                   className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
-                                  style={{ backgroundColor: 'var(--app-surface-soft)' }}
+                                  style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
                                 >
                                   {comment.avatarUrl ? (
                                     <Image src={comment.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
