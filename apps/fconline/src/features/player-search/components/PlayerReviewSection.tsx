@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import {
   FormEvent,
   useCallback,
@@ -122,7 +123,7 @@ function ReviewPostCard({
               style={{ backgroundColor: 'var(--app-surface-soft)' }}
             >
               {post.avatarUrl ? (
-                <img src={post.avatarUrl} alt="" className="h-full w-full object-cover" />
+                <Image src={post.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
               ) : (
                 <span className="text-lg leading-none">😀</span>
               )}
@@ -855,7 +856,7 @@ export default function PlayerReviewSection({
                                   style={{ backgroundColor: 'var(--app-surface-soft)' }}
                                 >
                                   {comment.avatarUrl ? (
-                                    <img src={comment.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                    <Image src={comment.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
                                   ) : (
                                     <span className="text-lg leading-none">😀</span>
                                   )}

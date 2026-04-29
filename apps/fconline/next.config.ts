@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'kjucaqjnqastmljxysxn.supabase.co',
+      },
+      {
+        protocol: 'https',
         hostname: 'storage.nexon.com',
       },
       {

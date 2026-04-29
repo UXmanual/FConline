@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { startTransition, ChangeEvent, FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
@@ -18,7 +19,7 @@ import {
 } from '@/lib/appNotifications'
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
-import { MAX_LEVEL, type UserLevelSnapshot } from '@/lib/userLevel'
+import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const DEFAULT_AVATARS = [
   '😀', '😄', '😎', '🤓', '🥳', '😇', '🤩', '😏', '🥸', '🤗',
@@ -770,7 +771,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
   const resizeImageToJpeg = (file: File, targetSize = 200): Promise<Blob> =>
     new Promise((resolve, reject) => {
-      const img = new Image()
+      const img = new window.Image()
       const objectUrl = URL.createObjectURL(file)
 
       img.onload = () => {
@@ -1213,9 +1214,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                         {isUploadingAvatar ? (
                           <LoadingDots size="sm" showLabel={false} />
                         ) : avatarUrl ? (
-                          <img
+                          <Image
                             src={avatarUrl}
                             alt="프로필 사진"
+                            width={60}
+                            height={60}
                             className="h-full w-full object-cover"
                           />
                         ) : (

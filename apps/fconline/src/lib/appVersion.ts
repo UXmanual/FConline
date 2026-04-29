@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.7': '2026-04-29T18:45:00+09:00',
   '23.6': '2026-04-29T18:05:00+09:00',
   '23.5': '2026-04-29T17:30:00+09:00',
   '23.4': '2026-04-29T15:30:00+09:00',
@@ -15,6 +16,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.7': [
+    '커뮤니티, 선수평가, 마이페이지 프로필 이미지를 next/image 기준으로 정리하고 원격 이미지 허용 설정을 보완했습니다.',
+  ],
   '23.6': [
     '커뮤니티와 선수평가 영역에 마이페이지 프로필 이미지를 40x40 크기로 반영했습니다.',
     '커뮤니티와 선수평가 댓글의 마지막 연결선 표시를 동일한 곡선 커넥터 스타일로 정리했습니다.',
