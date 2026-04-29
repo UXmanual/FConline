@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '23.11': '2026-04-29T21:00:00+09:00',
   '23.10': '2026-04-29T20:30:00+09:00',
   '23.9': '2026-04-29T20:00:00+09:00',
   '23.8': '2026-04-29T19:05:00+09:00',
@@ -19,6 +20,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '23.11': [
+    'Google Search Console 소유권 인증 메타태그를 추가했습니다.',
+  ],
   '23.10': [
     '네이버 서치어드바이저 소유권 인증 메타태그를 추가했습니다.',
   ],
