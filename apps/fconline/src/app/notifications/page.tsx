@@ -15,6 +15,7 @@ import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationFeedItem[]>([])
+  const [expandedIds, setExpandedIds] = useState<string[]>([])
   const titleStyle = { color: 'var(--app-title)' }
   const bodyStyle = { color: 'var(--app-body-text)' }
   const mutedStyle = { color: 'var(--app-muted-text)' }
@@ -71,6 +72,12 @@ export default function NotificationsPage() {
     }
   }, [])
 
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((current) =>
+      current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id],
+    )
+  }
+
   return (
     <div className="pt-5">
       <div className="flex h-6 items-center">
@@ -80,6 +87,7 @@ export default function NotificationsPage() {
           className="app-player-title inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em]"
         >
           <ArrowLeft size={18} weight="bold" />
+          <span>홈</span>
         </Link>
       </div>
 
@@ -91,19 +99,31 @@ export default function NotificationsPage() {
               className={`py-4 ${index === notifications.length - 1 ? '' : 'border-b'}`}
               style={index === notifications.length - 1 ? undefined : dividerStyle}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold leading-[1.4]" style={titleStyle}>
-                    {item.title}
-                  </p>
-                  <p className="mt-1.5 break-words text-sm leading-[1.55]" style={bodyStyle}>
-                    {item.body}
-                  </p>
+              <button
+                type="button"
+                onClick={() => toggleExpanded(item.id)}
+                aria-expanded={expandedIds.includes(item.id)}
+                className="block w-full text-left"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-semibold leading-[1.4]" style={titleStyle}>
+                      {item.title}
+                    </p>
+                    <p
+                      className={`mt-1.5 break-words text-sm leading-[1.55] ${
+                        expandedIds.includes(item.id) ? 'whitespace-pre-wrap' : 'line-clamp-2'
+                      }`}
+                      style={bodyStyle}
+                    >
+                      {item.body}
+                    </p>
+                  </div>
+                  <span className="shrink-0 pt-0.5 text-[12px] font-medium leading-none" style={mutedStyle}>
+                    {formatRelativeTime(item.createdAt)}
+                  </span>
                 </div>
-                <span className="shrink-0 pt-0.5 text-[12px] font-medium leading-none" style={mutedStyle}>
-                  {formatRelativeTime(item.createdAt)}
-                </span>
-              </div>
+              </button>
             </li>
           ))}
         </ul>
