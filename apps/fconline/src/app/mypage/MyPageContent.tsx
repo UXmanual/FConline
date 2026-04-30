@@ -445,22 +445,33 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
     async function syncProfile() {
       try {
-        const response = await fetch('/api/mypage/nickname', { cache: 'no-store' })
-        const result = await response.json().catch(() => null)
+        const [nicknameRes, gameClubRes] = await Promise.all([
+          fetch('/api/mypage/nickname', { cache: 'no-store' }),
+          fetch('/api/mypage/game-club-name', { cache: 'no-store' }),
+        ])
+        const nicknameResult = await nicknameRes.json().catch(() => null)
+        const gameClubResult = await gameClubRes.json().catch(() => null)
 
         if (isCancelled) return
 
-        if (!response.ok) {
+        if (!nicknameRes.ok) {
           setCommunityNickname(fallbackNickname)
           writeCachedCommunityNickname(userId, fallbackNickname)
           setIsProfileLoading(false)
           return
         }
 
-        const resolvedNickname = String(result?.nickname ?? fallbackNickname)
+        const resolvedNickname = String(nicknameResult?.nickname ?? fallbackNickname)
         setCommunityNickname(resolvedNickname)
         writeCachedCommunityNickname(userId, resolvedNickname)
-        setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? null)
+        setUserLevelProfile((nicknameResult?.levelProfile as MyPageLevelProfile | undefined) ?? null)
+
+        if (gameClubRes.ok && gameClubResult?.gameClubName) {
+          const resolvedClubName = String(gameClubResult.gameClubName).trim()
+          setGameClubName(resolvedClubName)
+          writeCachedGameClubName(userId, resolvedClubName)
+        }
+
         setIsProfileLoading(false)
       } catch {
         if (!isCancelled) {
@@ -1076,8 +1087,21 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     try {
       setIsSavingGameClubName(true)
       setGameClubNameError(null)
-      writeCachedGameClubName(authUser.id, trimmedClubName)
-      setGameClubName(trimmedClubName)
+
+      const response = await fetch('/api/mypage/game-club-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameClubName: trimmedClubName }),
+      })
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.message ?? '게임 구단주명을 저장하지 못했습니다.')
+      }
+
+      const saved = String(result?.gameClubName ?? trimmedClubName).trim()
+      writeCachedGameClubName(authUser.id, saved)
+      setGameClubName(saved)
       setIsEditingGameClubName(false)
     } catch (error) {
       setGameClubNameError(error instanceof Error ? error.message : '게임 구단주명을 저장하지 못했습니다.')
