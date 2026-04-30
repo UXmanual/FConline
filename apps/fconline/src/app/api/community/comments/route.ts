@@ -13,6 +13,10 @@ import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import { getUserLevelMap, getUserLevelProfile, rewardCommunityCommentXp } from '@/lib/userLevel.server'
 
+const DEFAULT_COMMENT_PAGE = 1
+const DEFAULT_COMMENT_PAGE_SIZE = 20
+const MAX_COMMENT_PAGE_SIZE = 50
+
 type CommentRow = {
   id: string
   post_id: string
@@ -96,7 +100,7 @@ function isMissingSupabaseConfigError(error: unknown) {
   return error instanceof Error && error.message.includes('Missing Supabase environment variable')
 }
 
-async function fetchCommunityComments(postId: string) {
+async function fetchCommunityCommentsPage(postId: string, from: number, to: number) {
   const supabase = createSupabaseAdminClient()
 
   const attempts = [
@@ -113,6 +117,7 @@ async function fetchCommunityComments(postId: string) {
       .select(selectFields)
       .eq('post_id', postId)
       .order('created_at', { ascending: false })
+      .range(from, to)
 
     if (!response.error) {
       return response
@@ -124,6 +129,7 @@ async function fetchCommunityComments(postId: string) {
     .select('id')
     .eq('post_id', postId)
     .order('created_at', { ascending: false })
+    .range(from, to)
 }
 
 async function syncCommunityPostCommentCount(postId: string) {
@@ -142,6 +148,15 @@ async function syncCommunityPostCommentCount(postId: string) {
 export async function GET(request: NextRequest) {
   try {
     const postId = request.nextUrl.searchParams.get('postId')?.trim() ?? ''
+    const pageParam = Number(request.nextUrl.searchParams.get('page') ?? DEFAULT_COMMENT_PAGE)
+    const pageSizeParam = Number(request.nextUrl.searchParams.get('pageSize') ?? DEFAULT_COMMENT_PAGE_SIZE)
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : DEFAULT_COMMENT_PAGE
+    const pageSize =
+      Number.isFinite(pageSizeParam) && pageSizeParam > 0
+        ? Math.min(MAX_COMMENT_PAGE_SIZE, Math.floor(pageSizeParam))
+        : DEFAULT_COMMENT_PAGE_SIZE
+    const from = (page - 1) * pageSize
+    const to = page * pageSize - 1
 
     if (!postId) {
       return Response.json({ message: 'postId가 필요합니다.' }, { status: 400 })
@@ -150,7 +165,7 @@ export async function GET(request: NextRequest) {
     const userPromise = hasSupabaseAuthCookie(request)
       ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
       : Promise.resolve({ data: { user: null } })
-    const commentsPromise = fetchCommunityComments(postId)
+    const commentsPromise = fetchCommunityCommentsPage(postId, from, to)
     const [{ data: { user } }, { data, error }] = await Promise.all([userPromise, commentsPromise])
 
     if (error) {
@@ -165,6 +180,9 @@ export async function GET(request: NextRequest) {
 
     return Response.json({
       items: typedComments.map((comment) => mapComment(comment, user?.id, user?.email, levelMap, avatarUrlMap)),
+      hasMore: typedComments.length === pageSize,
+      page,
+      pageSize,
     })
   } catch (error) {
     if (process.env.NODE_ENV === 'development' && isMissingSupabaseConfigError(error)) {

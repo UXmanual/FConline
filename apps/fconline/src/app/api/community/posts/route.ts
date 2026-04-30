@@ -117,10 +117,15 @@ function getPaginationParams(request: NextRequest) {
   return { page, pageSize, from: (page - 1) * pageSize, to: page * pageSize - 1 }
 }
 
+function shouldIncludeTotalCount(request: NextRequest) {
+  return request.nextUrl.searchParams.get('includeTotalCount') === '1'
+}
+
 async function fetchPostsPage(
   supabase: SupabaseClient,
   from: number,
   to: number,
+  includeTotalCount = false,
   includeIpPrefix = true,
   includeAuthorUserId = true,
 ) {
@@ -133,7 +138,7 @@ async function fetchPostsPage(
 
   const response = await supabase
     .from('community_posts')
-    .select(selectFields, { count: 'exact' })
+    .select(selectFields, includeTotalCount ? { count: 'exact' } : undefined)
     .order('created_at', { ascending: false })
     .range(from, to)
 
@@ -142,20 +147,21 @@ async function fetchPostsPage(
   }
 
   if (includeAuthorUserId) {
-    return fetchPostsPage(supabase, from, to, includeIpPrefix, false)
+    return fetchPostsPage(supabase, from, to, includeTotalCount, includeIpPrefix, false)
   }
 
-  return fetchPostsPage(supabase, from, to, false, includeAuthorUserId)
+  return fetchPostsPage(supabase, from, to, includeTotalCount, false, includeAuthorUserId)
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { page, pageSize, from, to } = getPaginationParams(request)
+    const includeTotalCount = shouldIncludeTotalCount(request)
     const supabase = createSupabaseAdminClient()
     const userPromise = hasSupabaseAuthCookie(request)
       ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
       : Promise.resolve({ data: { user: null } })
-    const postsPromise = fetchPostsPage(supabase, from, to)
+    const postsPromise = fetchPostsPage(supabase, from, to, includeTotalCount)
     const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
       userPromise,
       postsPromise,
@@ -174,7 +180,8 @@ export async function GET(request: NextRequest) {
 
     return Response.json({
       items,
-      totalCount: count ?? 0,
+      totalCount: includeTotalCount ? (count ?? 0) : null,
+      hasMore: typedPosts.length === pageSize,
       page,
       pageSize,
     })

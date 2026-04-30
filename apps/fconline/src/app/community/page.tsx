@@ -1,4 +1,6 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
+import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { canDeleteCommunityPost } from '@/lib/communityAuth'
 import { formatRelativeTime, type CommunityPostSummary } from '@/lib/community'
 import { getUserLevelMap } from '@/lib/userLevel.server'
 import CommunityPageClient from './CommunityPageClient'
@@ -65,6 +67,7 @@ async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
 type InitialCommunityData = {
   items: CommunityPostSummary[]
   totalCount: number
+  hasMore: boolean
   page: number
   pageSize: number
 }
@@ -72,6 +75,10 @@ type InitialCommunityData = {
 async function fetchInitialPosts(): Promise<InitialCommunityData> {
   try {
     const supabase = createSupabaseAdminClient()
+    const authSupabase = await createSupabaseSsrClient()
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser()
     const primaryResponsePromise = supabase
       .from('community_posts')
       .select('id, category, nickname, comment_count, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
@@ -92,7 +99,7 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
     const { data: posts, error: postsError, count } = response
 
     if (postsError || !posts) {
-      return { items: [], totalCount: 0, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
+      return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
     }
 
     const typedPosts = posts as unknown as PostRow[]
@@ -118,17 +125,18 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       createdAt: post.created_at,
       createdAtLabel: formatRelativeTime(post.created_at),
       commentCount: Math.max(0, Number(post.comment_count ?? 0) || 0),
-      canDelete: false,
+      canDelete: canDeleteCommunityPost(post, user?.id, user?.email),
     }))
 
     return {
       items,
       totalCount: count ?? 0,
+      hasMore: typedPosts.length === POSTS_PER_PAGE,
       page: INITIAL_PAGE,
       pageSize: POSTS_PER_PAGE,
     }
   } catch {
-    return { items: [], totalCount: 0, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
+    return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
   }
 }
 

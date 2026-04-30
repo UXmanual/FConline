@@ -23,12 +23,26 @@ import type { UserLevelSnapshot } from '@/lib/userLevel'
 
 const BOARD_TABS = ['자유게시판'] as const
 const POSTS_PER_PAGE = 5
+const COMMENTS_PER_PAGE = 20
 const MAX_VISIBLE_PAGES = 5
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
 const URL_PART_PATTERN = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/
 
 type BoardTab = (typeof BOARD_TABS)[number]
-type CommunityPageData = { items: CommunityPostSummary[]; totalCount: number; page: number; pageSize: number }
+type CommunityPageData = {
+  items: CommunityPostSummary[]
+  totalCount: number
+  hasMore: boolean
+  page: number
+  pageSize: number
+}
+
+type CommentsPageData = {
+  items: CommunityCommentItem[]
+  hasMore: boolean
+  page: number
+  pageSize: number
+}
 
 function LinkifiedText({ text, className }: { text: string; className?: string }) {
   const parts = text.split(URL_PATTERN)
@@ -156,6 +170,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const commentInputRef = useRef<HTMLInputElement | null>(null)
   const composerScrollRef = useRef<HTMLElement | null>(null)
   const listTopRef = useRef<HTMLElement | null>(null)
+  const totalCountRef = useRef(initialData.totalCount)
   const cacheRef = useRef<Map<number, CommunityPageData>>(new Map([[initialData.page, initialData]]))
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
@@ -173,7 +188,10 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [isSubmittingPost, setIsSubmittingPost] = useState(false)
   const [activeCommentPost, setActiveCommentPost] = useState<CommunityPostSummary | null>(null)
   const [comments, setComments] = useState<CommunityCommentItem[]>([])
+  const [commentPage, setCommentPage] = useState(1)
+  const [commentsHasMore, setCommentsHasMore] = useState(false)
   const [isLoadingComments, setIsLoadingComments] = useState(false)
+  const [isLoadingMoreComments, setIsLoadingMoreComments] = useState(false)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null)
@@ -194,6 +212,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const closeCommentSection = useCallback(() => {
     setActiveCommentPost(null)
     setComments([])
+    setCommentPage(1)
+    setCommentsHasMore(false)
     setCommentDraft('')
   }, [])
 
@@ -281,7 +301,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       if (!response.ok) throw new Error(result.message ?? '게시글을 불러오지 못했습니다.')
       const data: CommunityPageData = {
         items: result.items ?? [],
-        totalCount: result.totalCount ?? 0,
+        totalCount: typeof result.totalCount === 'number' ? result.totalCount : totalCountRef.current,
+        hasMore: Boolean(result.hasMore),
         page: result.page ?? page,
         pageSize: result.pageSize ?? POSTS_PER_PAGE,
       }
@@ -296,13 +317,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   }, [])
 
   useEffect(() => {
-    if (isAuthLoading || !authUser) {
-      return
-    }
-
-    cacheRef.current.delete(currentPage)
-    void fetchPostsPage(currentPage, false)
-  }, [authUser, currentPage, fetchPostsPage, isAuthLoading])
+    totalCountRef.current = totalCount
+  }, [totalCount])
 
   useEffect(() => {
     if (!highlightedPostId) return
@@ -312,57 +328,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     })
     return () => window.cancelAnimationFrame(frameId)
   }, [highlightedPostId, posts])
-
-
-  useEffect(() => {
-    if (isLoadingPosts) return
-
-    const nextPage = currentPage + 1
-    if (nextPage > totalPages || cacheRef.current.has(nextPage)) {
-      return
-    }
-
-    let isCancelled = false
-    const schedulePrefetch =
-      typeof window !== 'undefined' && 'requestIdleCallback' in window
-        ? window.requestIdleCallback.bind(window)
-        : (callback: () => void) => window.setTimeout(callback, 500)
-    const cancelScheduledPrefetch =
-      typeof window !== 'undefined' && 'cancelIdleCallback' in window
-        ? window.cancelIdleCallback.bind(window)
-        : (handle: number) => window.clearTimeout(handle)
-
-    async function prefetchNextPage() {
-      try {
-        const response = await fetch(`/api/community/posts?page=${nextPage}&pageSize=${POSTS_PER_PAGE}`, {
-          cache: 'no-store',
-        })
-        const result = await response.json()
-
-        if (!response.ok || isCancelled) {
-          return
-        }
-
-        cacheRef.current.set(nextPage, {
-          items: result.items ?? [],
-          totalCount: result.totalCount ?? totalCount,
-          page: result.page ?? nextPage,
-          pageSize: result.pageSize ?? POSTS_PER_PAGE,
-        })
-      } catch {
-        // Prefetch failures should not affect the current page experience.
-      }
-    }
-
-    const timeoutId = schedulePrefetch(() => {
-      void prefetchNextPage()
-    })
-
-    return () => {
-      isCancelled = true
-      cancelScheduledPrefetch(timeoutId)
-    }
-  }, [currentPage, isLoadingPosts, totalCount, totalPages])
 
   function scrollToListTop() {
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -388,6 +353,20 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     scrollToListTop()
   }
 
+  async function fetchCommentsPage(postId: string, page: number): Promise<CommentsPageData> {
+    const response = await fetch(`/api/community/comments?postId=${postId}&page=${page}&pageSize=${COMMENTS_PER_PAGE}`, {
+      cache: 'no-store',
+    })
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.message ?? '댓글을 불러오지 못했습니다.')
+    return {
+      items: result.items ?? [],
+      hasMore: Boolean(result.hasMore),
+      page: result.page ?? page,
+      pageSize: result.pageSize ?? COMMENTS_PER_PAGE,
+    }
+  }
+
   async function loadComments(post: CommunityPostSummary) {
     if (activeCommentPost?.id === post.id) {
       closeCommentSection()
@@ -395,13 +374,15 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     }
     setActiveCommentPost(post)
     setComments([])
+    setCommentPage(1)
+    setCommentsHasMore(false)
     setCommentDraft('')
     setIsLoadingComments(true)
     try {
-      const response = await fetch(`/api/community/comments?postId=${post.id}`, { cache: 'no-store' })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.message ?? '댓글을 불러오지 못했습니다.')
-      setComments(result.items ?? [])
+      const result = await fetchCommentsPage(post.id, 1)
+      setComments(result.items)
+      setCommentPage(result.page)
+      setCommentsHasMore(result.hasMore)
       setTimeout(() => commentsScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '댓글을 불러오지 못했습니다.')
@@ -414,6 +395,25 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   async function refreshCurrentPage(targetPage = currentPage) {
     cacheRef.current.delete(targetPage)
     await fetchPostsPage(targetPage, false)
+  }
+
+  async function handleLoadMoreComments() {
+    if (!activeCommentPost || isLoadingComments || isLoadingMoreComments || !commentsHasMore) {
+      return
+    }
+
+    try {
+      setIsLoadingMoreComments(true)
+      const nextPage = commentPage + 1
+      const result = await fetchCommentsPage(activeCommentPost.id, nextPage)
+      setComments((current) => [...current, ...result.items])
+      setCommentPage(result.page)
+      setCommentsHasMore(result.hasMore)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '댓글을 더 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingMoreComments(false)
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -516,6 +516,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       const nextComment = result.item as CommunityCommentItem
       setCurrentUserLevel(Number.isFinite(nextComment?.level) ? Number(nextComment.level) : currentUserLevel)
       setComments((current) => [nextComment, ...current])
+      setCommentsHasMore(activeCommentPost.commentCount + 1 > comments.length + 1)
       setCommentDraft('')
       setPosts((current) => current.map((post) => post.id === activeCommentPost.id ? { ...post, commentCount: post.commentCount + 1 } : post))
       setActiveCommentPost((current) => (current ? { ...current, commentCount: current.commentCount + 1 } : current))
@@ -547,6 +548,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       if (!response.ok) throw new Error(result.message ?? '댓글을 삭제하지 못했습니다.')
 
       setComments((current) => current.filter((comment) => comment.id !== targetComment.id))
+      setCommentsHasMore((current) => current && comments.length - 1 < Math.max((activeCommentPost?.commentCount ?? 1) - 1, 0))
       setPosts((current) =>
         current.map((post) =>
           activeCommentPost && post.id === activeCommentPost.id
@@ -613,7 +615,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                       <CommentSheetSkeleton rows={Math.min(Math.max(activeCommentPost.commentCount, 1), 5)} />
                     </div>
                   ) : sortedComments.length > 0 ? (
-                    <div className="relative space-y-4 pl-7">
+                    <div className="space-y-4">
+                      <div className="relative space-y-4 pl-7">
                       <div
                         aria-hidden="true"
                         className="absolute top-0 bottom-0 w-px"
@@ -669,6 +672,20 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                           </article>
                         )
                       })}
+                      </div>
+                      {commentsHasMore ? (
+                        <div className="pl-7">
+                          <button
+                            type="button"
+                            onClick={() => void handleLoadMoreComments()}
+                            disabled={isLoadingMoreComments}
+                            className="text-[12px] font-medium"
+                            style={{ color: 'var(--app-muted-text)' }}
+                          >
+                            {isLoadingMoreComments ? '댓글 불러오는 중...' : '댓글 더보기'}
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                   <form onSubmit={handleCommentSubmit} className={`${sortedComments.length > 0 || isLoadingComments ? 'mt-4' : ''} flex items-center gap-2`}>
