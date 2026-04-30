@@ -24,6 +24,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '24.2': [
+    '커뮤니티·선수평가 전반에서 Lv 배지 폰트 크기를 닉네임과 동일하게 맞췄습니다.',
+  ],
   '24.1': [
     '커뮤니티와 선수평가 게시글에 좋아요 기능을 추가했습니다.',
     '비로그인 포함 누구나 좋아요를 누를 수 있으며, IP 기반으로 중복이 방지됩니다.',
