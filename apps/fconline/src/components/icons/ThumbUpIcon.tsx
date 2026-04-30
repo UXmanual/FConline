@@ -1,0 +1,26 @@
+export default function ThumbUpIcon({
+  size = 16,
+  color = 'currentColor',
+}: {
+  size?: number
+  color?: string
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 22 22"
+      width={size}
+      height={size}
+      aria-hidden="true"
+    >
+      <path
+        fill={color}
+        d="M.4,20.8h3.1c.2,0,.4-.2.4-.5v-12c0-.3-.2-.5-.4-.5H.4c-.2,0-.4.2-.4.5v12c0,.3.2.5.4.5Z"
+      />
+      <path
+        fill={color}
+        d="M22,10.3c0-1.3-1.1-2.4-2.4-2.4h-5.3c-.3,0-.5-.3-.4-.5l.8-4v-.3c0-.4-.1-.8-.4-1.1l-.4-.4c-.4-.4-1-.4-1.3,0l-5.9,5.9c-.4.4-.6.9-.6,1.4v9.6c0,1.3,1.1,2.4,2.4,2.4h8.6c.8,0,1.5-.5,1.8-1.2l3-7.1c0-.2.1-.5.1-.7v-1.6Z"
+      />
+    </svg>
+  )
+}

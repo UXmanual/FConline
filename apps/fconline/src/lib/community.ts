@@ -14,6 +14,8 @@ export type CommunityPostSummary = {
   createdAt: string
   createdAtLabel: string
   commentCount: number
+  likeCount: number
+  isLiked?: boolean
   canDelete?: boolean
 }
 

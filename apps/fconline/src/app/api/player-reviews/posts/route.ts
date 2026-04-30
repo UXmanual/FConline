@@ -78,6 +78,8 @@ function mapPostSummary(
   currentUserEmail?: string | null,
   levelMap?: Map<string, number>,
   avatarUrlMap?: Map<string, string>,
+  likeCountMap?: Map<string, number>,
+  likedPostIds?: Set<string>,
 ): CommunityPostSummary {
   return {
     id: post.id,
@@ -97,6 +99,8 @@ function mapPostSummary(
     createdAt: post.created_at,
     createdAtLabel: formatRelativeTime(post.created_at),
     commentCount: Math.max(0, Number(post.comment_count ?? 0) || 0),
+    likeCount: likeCountMap?.get(post.id) ?? 0,
+    isLiked: likedPostIds?.has(post.id) ?? false,
     canDelete: canDeleteCommunityPost(post, currentUserId, currentUserEmail),
   }
 }
@@ -242,11 +246,21 @@ export async function GET(request: NextRequest) {
     }
 
     const typedPosts = (posts ?? []) as unknown as PlayerReviewPostRow[]
-    const [levelMap, avatarUrlMap] = await Promise.all([
+    const postIds = typedPosts.map((post) => post.id)
+    const [levelMap, avatarUrlMap, likeResult] = await Promise.all([
       getUserLevelMap(typedPosts.map((post) => post.author_user_id)),
       getAvatarUrlMap(typedPosts.map((post) => post.author_user_id)),
+      postIds.length > 0
+        ? supabase.from('post_likes').select('post_id, user_id').eq('post_type', 'player_review').in('post_id', postIds)
+        : Promise.resolve({ data: [] as Array<{ post_id: string; user_id: string }> }),
     ])
-    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email, levelMap, avatarUrlMap))
+    const likeCountMap = new Map<string, number>()
+    const likedPostIds = new Set<string>()
+    for (const row of (likeResult.data ?? []) as Array<{ post_id: string; user_id: string }>) {
+      likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1)
+      if (row.user_id === user?.id) likedPostIds.add(row.post_id)
+    }
+    const items = typedPosts.map((post) => mapPostSummary(post, user?.id, user?.email, levelMap, avatarUrlMap, likeCountMap, likedPostIds))
 
     return Response.json({
       items,
@@ -339,6 +353,8 @@ export async function POST(request: NextRequest) {
           ? [[user.id, user.user_metadata.custom_avatar_url.trim()]]
           : [],
       ),
+      new Map(),
+      new Set(),
     )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix

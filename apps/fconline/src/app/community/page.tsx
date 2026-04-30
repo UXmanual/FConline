@@ -103,10 +103,20 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
     }
 
     const typedPosts = posts as unknown as PostRow[]
-    const [levelMap, avatarUrlMap] = await Promise.all([
+    const postIds = typedPosts.map((post) => post.id)
+    const [levelMap, avatarUrlMap, likeResult] = await Promise.all([
       getUserLevelMap(typedPosts.map((post) => post.author_user_id)),
       getAvatarUrlMap(typedPosts.map((post) => post.author_user_id)),
+      postIds.length > 0
+        ? supabase.from('post_likes').select('post_id, user_id').eq('post_type', 'community').in('post_id', postIds)
+        : Promise.resolve({ data: [] as Array<{ post_id: string; user_id: string }> }),
     ])
+    const likeCountMap = new Map<string, number>()
+    const likedPostIds = new Set<string>()
+    for (const row of (likeResult.data ?? []) as Array<{ post_id: string; user_id: string }>) {
+      likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1)
+      if (row.user_id === user?.id) likedPostIds.add(row.post_id)
+    }
     const items = typedPosts.map((post) => ({
       id: post.id,
       category: post.category as CommunityPostSummary['category'],
@@ -125,6 +135,8 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       createdAt: post.created_at,
       createdAtLabel: formatRelativeTime(post.created_at),
       commentCount: Math.max(0, Number(post.comment_count ?? 0) || 0),
+      likeCount: likeCountMap.get(post.id) ?? 0,
+      isLiked: likedPostIds.has(post.id),
       canDelete: canDeleteCommunityPost(post, user?.id, user?.email),
     }))
 

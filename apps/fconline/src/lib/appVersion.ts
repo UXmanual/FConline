@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '24.1': '2026-04-30T18:00:00+09:00',
   '24.0': '2026-04-30T10:30:00+09:00',
   '23.13': '2026-04-30T10:00:00+09:00',
   '23.12': '2026-04-29T21:30:00+09:00',
@@ -23,6 +24,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '24.1': [
+    '커뮤니티와 선수평가 게시글에 좋아요 기능을 추가했습니다.',
+    '비로그인 포함 누구나 좋아요를 누를 수 있으며, IP 기반으로 중복이 방지됩니다.',
+  ],
   '24.0': [
     '버전 넘버링 규칙을 소수점 한 자리로 정정했습니다.',
   ],

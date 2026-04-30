@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import HeartIcon from '@/components/icons/HeartIcon'
 import {
   FormEvent,
   useCallback,
@@ -90,6 +91,7 @@ function ReviewPostCard({
   onDelete,
   onOpenComments,
   onReport,
+  onLike,
   highlight,
   isCommentOpen,
   isDarkModeEnabled,
@@ -98,6 +100,7 @@ function ReviewPostCard({
   onDelete: (post: CommunityPostSummary) => void
   onOpenComments: (post: CommunityPostSummary) => void
   onReport?: (post: CommunityPostSummary) => void
+  onLike: (post: CommunityPostSummary) => void
   highlight?: boolean
   isCommentOpen?: boolean
   isDarkModeEnabled: boolean
@@ -210,6 +213,17 @@ function ReviewPostCard({
             <div className="absolute w-px" style={{ left: '10px', top: 'calc(100% + 4px)', height: '20px', backgroundColor: 'var(--app-thread-line)' }} />
           )}
         </div>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onLike(post)
+          }}
+          className="inline-flex items-center gap-1 text-[12px] font-medium"
+        >
+          <HeartIcon size={14} filled={post.isLiked} color={post.isLiked ? '#e03131' : 'var(--app-muted-text)'} />
+          <span style={{ color: post.isLiked ? '#e03131' : 'var(--app-muted-text)' }}>{post.likeCount}</span>
+        </button>
       </div>
     </article>
   )
@@ -596,6 +610,38 @@ export default function PlayerReviewSection({
     }
   }
 
+  async function handleLike(targetPost: CommunityPostSummary) {
+    const newIsLiked = !targetPost.isLiked
+    const delta = newIsLiked ? 1 : -1
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === targetPost.id
+          ? { ...post, isLiked: newIsLiked, likeCount: Math.max(0, post.likeCount + delta) }
+          : post,
+      ),
+    )
+    try {
+      const response = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: targetPost.id, postType: 'player_review' }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error()
+      setPosts((current) =>
+        current.map((post) => (post.id === targetPost.id ? { ...post, isLiked: result.liked } : post)),
+      )
+    } catch {
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === targetPost.id
+            ? { ...post, isLiked: targetPost.isLiked, likeCount: targetPost.likeCount }
+            : post,
+        ),
+      )
+    }
+  }
+
   async function handleDeletePost(targetPost: CommunityPostSummary) {
     if (!window.confirm('이 선수평가를 삭제할까요?')) {
       return
@@ -815,6 +861,7 @@ export default function PlayerReviewSection({
                   onDelete={handleDeletePost}
                   onOpenComments={loadComments}
                   onReport={authUser ? (p) => setReportTarget({ type: 'player_review_post', id: p.id }) : undefined}
+                  onLike={handleLike}
                   highlight={post.id === highlightedPostId}
                   isCommentOpen={isCommentOpen}
                   isDarkModeEnabled={isDarkModeEnabled}

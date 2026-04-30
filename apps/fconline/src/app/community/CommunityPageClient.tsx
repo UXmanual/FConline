@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import HeartIcon from '@/components/icons/HeartIcon'
 import {
   FormEvent,
   useCallback,
@@ -114,7 +115,7 @@ function CommentSheetSkeleton({ rows = 5 }: { rows?: number }) {
   )
 }
 
-function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isCommentOpen, isDarkModeEnabled }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; highlight?: boolean; isCommentOpen?: boolean; isDarkModeEnabled: boolean }) {
+function PostCard({ post, onDelete, onOpenComments, onReport, onLike, highlight, isCommentOpen, isDarkModeEnabled }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; onLike: (post: CommunityPostSummary) => void; highlight?: boolean; isCommentOpen?: boolean; isDarkModeEnabled: boolean }) {
   return (
     <article className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`} style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', borderBottom: isCommentOpen ? 'none' : undefined, boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }}>
       <div className="min-w-0">
@@ -158,6 +159,10 @@ function PostCard({ post, onDelete, onOpenComments, onReport, highlight, isComme
             <div className="absolute w-px" style={{ left: '10px', top: 'calc(100% + 4px)', height: '20px', backgroundColor: 'var(--app-thread-line)' }} />
           )}
         </div>
+        <button type="button" onClick={() => onLike(post)} className="inline-flex items-center gap-1 text-[12px] font-medium">
+          <HeartIcon size={14} filled={post.isLiked} color={post.isLiked ? '#e03131' : 'var(--app-muted-text)'} />
+          <span style={{ color: post.isLiked ? '#e03131' : 'var(--app-muted-text)' }}>{post.likeCount}</span>
+        </button>
       </div>
     </article>
   )
@@ -470,6 +475,38 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     }
   }
 
+  async function handleLike(targetPost: CommunityPostSummary) {
+    const newIsLiked = !targetPost.isLiked
+    const delta = newIsLiked ? 1 : -1
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === targetPost.id
+          ? { ...post, isLiked: newIsLiked, likeCount: Math.max(0, post.likeCount + delta) }
+          : post,
+      ),
+    )
+    try {
+      const response = await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: targetPost.id, postType: 'community' }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error()
+      setPosts((current) =>
+        current.map((post) => (post.id === targetPost.id ? { ...post, isLiked: result.liked } : post)),
+      )
+    } catch {
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === targetPost.id
+            ? { ...post, isLiked: targetPost.isLiked, likeCount: targetPost.likeCount }
+            : post,
+        ),
+      )
+    }
+  }
+
   async function handleDeletePost(targetPost: CommunityPostSummary) {
     if (!window.confirm('이 게시글을 삭제할까요?')) return
     try {
@@ -607,7 +644,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         ) : posts.length > 0 ? (
           posts.map((post) => (
             <div key={post.id} data-post-id={post.id}>
-              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} isDarkModeEnabled={isDarkModeEnabled} />
+              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} onLike={handleLike} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} isDarkModeEnabled={isDarkModeEnabled} />
               {activeCommentPost?.id === post.id && (
                 <div ref={commentsScrollRef} className="rounded-b-lg border-x border-b px-5 pt-0 pb-3" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--app-card-border)' }}>
                   {isLoadingComments ? (
