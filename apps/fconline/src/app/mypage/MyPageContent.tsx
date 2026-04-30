@@ -40,6 +40,7 @@ const LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS = [
   'app-notifications-bottom-sheet-seen-v2',
 ]
 const COMMUNITY_NICKNAME_CACHE_KEY_PREFIX = 'mypage-community-nickname'
+const GAME_CLUB_NAME_CACHE_KEY_PREFIX = 'mypage-game-club-name'
 
 type MyPageLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate?: string | null
@@ -273,6 +274,10 @@ function getCommunityNicknameCacheKey(userId: string) {
   return `${COMMUNITY_NICKNAME_CACHE_KEY_PREFIX}:${userId}`
 }
 
+function getGameClubNameCacheKey(userId: string) {
+  return `${GAME_CLUB_NAME_CACHE_KEY_PREFIX}:${userId}`
+}
+
 function readCachedCommunityNickname(userId: string) {
   if (typeof window === 'undefined' || !userId) {
     return ''
@@ -296,6 +301,29 @@ function writeCachedCommunityNickname(userId: string, nickname: string) {
   window.localStorage.setItem(getCommunityNicknameCacheKey(userId), normalized)
 }
 
+function readCachedGameClubName(userId: string) {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  return window.localStorage.getItem(getGameClubNameCacheKey(userId)) ?? ''
+}
+
+function writeCachedGameClubName(userId: string, clubName: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const normalized = clubName.trim()
+
+  if (!normalized) {
+    window.localStorage.removeItem(getGameClubNameCacheKey(userId))
+    return
+  }
+
+  window.localStorage.setItem(getGameClubNameCacheKey(userId), normalized)
+}
+
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -311,12 +339,18 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [communityNickname, setCommunityNickname] = useState('')
+  const [gameClubName, setGameClubName] = useState('')
   const [userLevelProfile, setUserLevelProfile] = useState<MyPageLevelProfile | null>(null)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
+  const [isEditingGameClubName, setIsEditingGameClubName] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
+  const [isSavingGameClubName, setIsSavingGameClubName] = useState(false)
   const [nicknameError, setNicknameError] = useState<string | null>(null)
+  const [gameClubNameError, setGameClubNameError] = useState<string | null>(null)
   const [nicknameSheetKeyboardOffset, setNicknameSheetKeyboardOffset] = useState(0)
+  const [isGameClubLoginRequiredOpen, setIsGameClubLoginRequiredOpen] = useState(false)
+  const [isFavoritesLoginRequiredOpen, setIsFavoritesLoginRequiredOpen] = useState(false)
   const [isLicenseOpen, setIsLicenseOpen] = useState(false)
   const [isLevelGuideOpen, setIsLevelGuideOpen] = useState(false)
   const [isTermsOpen, setIsTermsOpen] = useState(false)
@@ -337,6 +371,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     nicknameSheetKeyboardOffset > 0
       ? `${nicknameSheetVisualBottomOffset}px`
       : 'calc(env(safe-area-inset-bottom) + 20px)'
+  const isGameClubNameRegistered = gameClubName.trim().length > 0
   const googleLoginButtonStyle = isDarkModeEnabled
     ? {
         backgroundColor: '#131314',
@@ -364,7 +399,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       setAvatarUrl((user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (user) setIsProfileLoading(true)
       setCommunityNickname(user ? readCachedCommunityNickname(user.id) || deriveCommunityNickname(user) : '')
+      setGameClubName(user ? readCachedGameClubName(user.id) : '')
       setIsEditingNickname(false)
+      setIsEditingGameClubName(false)
       setIsAuthLoading(false)
     }
 
@@ -383,7 +420,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
       )
+      setGameClubName(session?.user ? readCachedGameClubName(session.user.id) : '')
       setIsEditingNickname(false)
+      setIsEditingGameClubName(false)
       setIsAuthLoading(false)
     })
 
@@ -549,7 +588,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }, [isAppNotificationSheetOpen, isDarkModeEnabled])
 
   useEffect(() => {
-    const isOverlayOpen = isAppNotificationSheetOpen || isContactModalOpen || isEditingNickname
+    const isOverlayOpen =
+      isAppNotificationSheetOpen ||
+      isContactModalOpen ||
+      isEditingNickname ||
+      isEditingGameClubName ||
+      isGameClubLoginRequiredOpen ||
+      isFavoritesLoginRequiredOpen
 
     if (!isOverlayOpen) return
 
@@ -574,10 +619,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       document.documentElement.style.overscrollBehavior = prevHtmlOverscroll
       window.scrollTo(0, scrollY)
     }
-  }, [isAppNotificationSheetOpen, isContactModalOpen, isEditingNickname])
+  }, [isAppNotificationSheetOpen, isContactModalOpen, isEditingNickname, isEditingGameClubName, isGameClubLoginRequiredOpen, isFavoritesLoginRequiredOpen])
 
   useEffect(() => {
-    if (!isEditingNickname || typeof window === 'undefined') {
+    if ((!isEditingNickname && !isEditingGameClubName) || typeof window === 'undefined') {
       setNicknameSheetKeyboardOffset(0)
       return
     }
@@ -613,7 +658,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       window.removeEventListener('resize', update)
       setNicknameSheetKeyboardOffset(0)
     }
-  }, [isEditingNickname])
+  }, [isEditingNickname, isEditingGameClubName])
 
   const handleGoogleLogin = async () => {
     try {
@@ -1015,6 +1060,41 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const surfaceTransitionStyle = {
     transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
   }
+
+  const handleSaveGameClubName = async () => {
+    if (!authUser || isSavingGameClubName) {
+      return
+    }
+
+    const trimmedClubName = gameClubName.trim()
+
+    if (!trimmedClubName) {
+      setGameClubNameError('게임 구단주명을 입력해주세요.')
+      return
+    }
+
+    try {
+      setIsSavingGameClubName(true)
+      setGameClubNameError(null)
+      writeCachedGameClubName(authUser.id, trimmedClubName)
+      setGameClubName(trimmedClubName)
+      setIsEditingGameClubName(false)
+    } catch (error) {
+      setGameClubNameError(error instanceof Error ? error.message : '게임 구단주명을 저장하지 못했습니다.')
+    } finally {
+      setIsSavingGameClubName(false)
+    }
+  }
+
+  const handleOpenGameClubAnalysis = (mode: 'official1on1' | 'voltaLive') => {
+    const trimmedClubName = gameClubName.trim()
+
+    if (!trimmedClubName) {
+      return
+    }
+
+    router.push(`/matches?nickname=${encodeURIComponent(trimmedClubName)}&mode=${mode}`)
+  }
   const darkModeLabelStyle = {
     color: isDarkModeEnabled ? '#457ae5' : 'var(--app-muted-text)',
     transition: 'color 180ms ease',
@@ -1343,6 +1423,100 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </>
         )}
 
+        <section
+          className={`rounded-lg px-5 pt-3 ${authUser && isGameClubNameRegistered ? 'pb-6' : 'pb-3'}`}
+          style={{ ...cardStyle, ...surfaceTransitionStyle, minHeight: '62px' }}
+        >
+          <div className="flex min-h-[36px] items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="flex min-w-0 items-center gap-1 whitespace-nowrap text-sm font-semibold leading-[1.35]">
+                <span className="shrink-0" style={{ color: isDarkModeEnabled ? '#ffffff' : 'var(--app-title)' }}>게임 구단주명</span>
+                <span
+                  className="min-w-0 truncate"
+                  title={isGameClubNameRegistered ? gameClubName.trim() : '등록 전'}
+                  style={{
+                    color: isGameClubNameRegistered ? '#457ae5' : 'var(--app-muted-text)',
+                  }}
+                >
+                  {isGameClubNameRegistered ? gameClubName.trim() : '등록 전'}
+                </span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!authUser) {
+                  setIsGameClubLoginRequiredOpen(true)
+                  return
+                }
+
+                setGameClubName((current) => current.trim())
+                setGameClubNameError(null)
+                setIsEditingGameClubName(true)
+              }}
+              aria-label={isGameClubNameRegistered ? '게임 구단주명 변경하기' : '게임 구단주명 등록하기'}
+              className="shrink-0 text-sm font-medium"
+              style={mutedStyle}
+            >
+              {isGameClubNameRegistered ? '변경하기' : '등록하기'}
+            </button>
+          </div>
+          {authUser && isGameClubNameRegistered ? (
+            <div className="mt-2 flex items-center gap-3 text-[12px] font-medium leading-none">
+              <button
+                type="button"
+                onClick={() => handleOpenGameClubAnalysis('official1on1')}
+                className="inline-flex shrink-0 items-center"
+                style={titleStyle}
+              >
+                <span>{'1:1 공식경기↗'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenGameClubAnalysis('voltaLive')}
+                className="inline-flex shrink-0 items-center"
+                style={titleStyle}
+              >
+                <span>{'볼타 라이브↗'}</span>
+              </button>
+              <span
+                className="inline-flex shrink-0 items-center"
+                style={{ color: 'var(--app-muted-text)', opacity: 0.6 }}
+                aria-disabled="true"
+              >
+                <span>{'감독모드↗'}</span>
+              </span>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-lg px-5 py-3" style={{ ...cardStyle, ...surfaceTransitionStyle, minHeight: '62px' }}>
+          <div className="flex min-h-[36px] items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold leading-[1.35]" style={{ color: isDarkModeEnabled ? '#ffffff' : 'var(--app-title)' }}>
+                내 즐겨찾기
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!authUser) {
+                  setIsFavoritesLoginRequiredOpen(true)
+                  return
+                }
+
+                router.push('/mypage/favorites')
+              }}
+              className="shrink-0 text-sm font-medium"
+              style={mutedStyle}
+            >
+              자세히보기
+            </button>
+          </div>
+        </section>
+
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-1">
@@ -1537,14 +1711,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               aria-expanded={isAccountDeleteOpen}
             >
               <p className="text-sm font-medium" style={mutedStyle}>
-                계정 삭제
+                탈퇴하기
               </p>
             </button>
 
             {isAccountDeleteOpen ? (
               <div className="mt-3 space-y-3">
                 <p className="text-[12px] font-medium leading-[1.5]" style={bodyStyle}>
-                  연동 계정을 삭제하면 계정 정보는 삭제되지만 기존에 작성한 글과 댓글은 남아 있을 수 있습니다.
+                  연동 계정을 탈퇴하면 계정 정보는 삭제되지만 기존에 작성한 글과 댓글은 남아 있을 수 있습니다.
                 </p>
                 <div className="flex justify-end">
                   <button
@@ -1554,7 +1728,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                     className="text-sm font-medium underline underline-offset-2 disabled:opacity-50"
                     style={mutedStyle}
                   >
-                    연동 계정 삭제
+                    연동 계정 탈퇴
                   </button>
                 </div>
               </div>
@@ -1686,6 +1860,189 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                   }}
                   disabled={isSavingNickname}
                   className="block w-full text-center text-sm font-medium disabled:opacity-60"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {isEditingGameClubName ? (
+        <div className="fixed inset-0 z-[60]">
+          <button
+            type="button"
+            aria-label="게임 구단주명 등록 닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => {
+              setGameClubName(authUser ? readCachedGameClubName(authUser.id) : '')
+              setGameClubNameError(null)
+              setIsEditingGameClubName(false)
+            }}
+          />
+          <div
+            className="absolute left-1/2 z-20 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: nicknameSheetBottomOffset }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <p className="text-[18px] font-semibold tracking-[-0.02em]" style={titleStyle}>
+                게임 구단주명 등록
+              </p>
+              <div className="mt-5 space-y-2">
+                <input
+                  autoFocus
+                  value={gameClubName}
+                  onChange={(event) => {
+                    setGameClubName(event.target.value)
+                    setGameClubNameError(null)
+                  }}
+                  placeholder="게임 구단주명을 입력해주세요"
+                  className="h-12 w-full rounded-[22px] border-0 px-4 text-sm outline-none transition"
+                  style={{
+                    backgroundColor: 'var(--app-surface-soft)',
+                    color: 'var(--app-title)',
+                  }}
+                />
+                {gameClubNameError ? (
+                  <p
+                    className="px-1 text-[12px] font-medium leading-[1.5]"
+                    style={{ color: '#cf3f5b' }}
+                  >
+                    {gameClubNameError}
+                  </p>
+                ) : null}
+              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={handleSaveGameClubName}
+                  disabled={isSavingGameClubName || isAuthPending}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  {isSavingGameClubName ? '저장 중...' : isGameClubNameRegistered ? '변경하기' : '등록하기'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGameClubName(authUser ? readCachedGameClubName(authUser.id) : '')
+                    setGameClubNameError(null)
+                    setIsEditingGameClubName(false)
+                  }}
+                  disabled={isSavingGameClubName}
+                  className="block w-full text-center text-sm font-medium disabled:opacity-60"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {isGameClubLoginRequiredOpen ? (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => setIsGameClubLoginRequiredOpen(false)}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
+                  로그인이 필요해요
+                </p>
+                <p className="text-sm leading-[1.55]" style={{ color: 'var(--app-body-text)' }}>
+                  게임 구단주명 등록은 Google 로그인 후 이용할 수 있어요
+                </p>
+              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsGameClubLoginRequiredOpen(false)
+                    await handleGoogleLogin()
+                  }}
+                  disabled={isAuthPending}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  로그인하러 가기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsGameClubLoginRequiredOpen(false)}
+                  className="block w-full text-center text-sm font-medium"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {isFavoritesLoginRequiredOpen ? (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => setIsFavoritesLoginRequiredOpen(false)}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
+                  로그인이 필요해요
+                </p>
+                <p className="text-sm leading-[1.55]" style={{ color: 'var(--app-body-text)' }}>
+                  내 즐겨찾기는 Google 로그인 후 이용할 수 있어요
+                </p>
+              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsFavoritesLoginRequiredOpen(false)
+                    await handleGoogleLogin()
+                  }}
+                  disabled={isAuthPending}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  로그인하러 가기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFavoritesLoginRequiredOpen(false)}
+                  className="block w-full text-center text-sm font-medium"
                   style={{ color: 'var(--app-muted-text)' }}
                 >
                   취소

@@ -36,6 +36,7 @@ type CommunityPageData = {
   hasMore: boolean
   page: number
   pageSize: number
+  highlightedPostId?: string | null
 }
 
 type CommentsPageData = {
@@ -213,6 +214,12 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 
   useLockedBodyScroll(isComposerOpen, isComposerOpen ? composerScrollRef : null)
+
+  useEffect(() => {
+    if (initialData.highlightedPostId) {
+      setHighlightedPostId(initialData.highlightedPostId)
+    }
+  }, [initialData.highlightedPostId])
 
   const closeCommentSection = useCallback(() => {
     setActiveCommentPost(null)
@@ -783,7 +790,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                   </p>
                 </div>
                 <div className="flex items-center gap-2 px-0.5 text-sm">
-                  <UserLevelBadge level={currentUserLevel} className="!text-sm" />
+                  <UserLevelBadge level={currentUserLevel} className="!text-sm !font-normal" />
                   <p style={{ color: 'var(--app-body-text)' }}>{communityNickname}</p>
                 </div>
                 <label className="block">

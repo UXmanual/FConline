@@ -1,9 +1,12 @@
 'use client'
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import PlayerReviewSection from './PlayerReviewSection'
 import { calculateSkillMoveStars, formatPriceWithKoreanUnits, getStrongPoint } from '../player-detail'
 import { getPlayerImageCandidates } from '../player-image'
 import { AbilityStat, PlayerDetail, Trait } from '../types'
+import FilledFavoriteIcon from '@/components/icons/star.svg'
+import EmptyFavoriteIcon from '@/components/icons/star_border.svg'
 
 const ABILITY_GROUPS = [
   ['속력', '반응 속도'],
@@ -29,6 +32,7 @@ const PLAYER_THUMBNAIL_SIZE = 96
 const FORWARD_POSITIONS = new Set(['ST', 'CF', 'LF', 'RF', 'LW', 'RW'])
 const MIDFIELDER_POSITIONS = new Set(['CAM', 'CM', 'CDM', 'LAM', 'RAM', 'LM', 'RM'])
 const DEFENDER_POSITIONS = new Set(['CB', 'LB', 'RB', 'LWB', 'RWB', 'SW'])
+
 
 interface Props {
   playerName: string
@@ -56,6 +60,8 @@ export default function PlayerDetailPanel({
   const [teamColorBoost, setTeamColorBoost] = useState(0)
   const [activeTab, setActiveTab] = useState<'detail' | 'review'>(initialTab)
   const [reviewCount, setReviewCount] = useState(0)
+  const [favorited, setFavorited] = useState(false)
+  const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
   const [imageSrcIndex, setImageSrcIndex] = useState(0)
   const [showLeftFade, setShowLeftFade] = useState(false)
   const [showRightFade, setShowRightFade] = useState(false)
@@ -188,6 +194,34 @@ export default function PlayerDetailPanel({
 
     return () => {
       isCancelled = true
+    }
+  }, [spid])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const syncFavorite = async () => {
+      try {
+        const response = await fetch('/api/mypage/favorite-players', { cache: 'no-store' })
+        const result = await response.json().catch(() => null)
+
+        if (!isMounted || !response.ok) {
+          return
+        }
+
+        const items = (Array.isArray(result?.items) ? result.items : []) as Array<{ player_id: number }>
+        setFavorited(items.some((item) => Number(item.player_id) === Number(spid)))
+      } catch {
+        if (isMounted) {
+          setFavorited(false)
+        }
+      }
+    }
+
+    void syncFavorite()
+
+    return () => {
+      isMounted = false
     }
   }, [spid])
 
@@ -360,6 +394,36 @@ export default function PlayerDetailPanel({
     setStrongLevel(level)
   }
 
+  const handleFavorite = () => {
+    void (async () => {
+      const response = await fetch('/api/mypage/favorite-players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: Number(spid),
+          playerName,
+          seasonName,
+          position: detail.position ?? null,
+          level: strongLevel,
+        }),
+      })
+
+      if (response.status === 401) {
+        setIsLoginRequiredOpen(true)
+        return
+      }
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        window.alert(result?.message ?? '선수 즐겨찾기를 처리하지 못했습니다.')
+        return
+      }
+
+      const result = await response.json().catch(() => null)
+      setFavorited(Boolean(result?.favorited))
+    })()
+  }
+
   return (
     <div className="space-y-4">
       <section className="app-player-card rounded-lg px-5 py-5">
@@ -401,7 +465,8 @@ export default function PlayerDetailPanel({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
               {seasonImageUrl && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -410,9 +475,27 @@ export default function PlayerDetailPanel({
                   className="block h-5 w-auto shrink-0 object-contain object-left"
                 />
               )}
-              <h1 className="app-player-title truncate text-[22px] font-bold tracking-[-0.03em]">
-                {playerName}
-              </h1>
+                <h1 className="app-player-title truncate text-[22px] font-bold tracking-[-0.03em]">
+                  {playerName}
+                </h1>
+              </div>
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  event.stopPropagation()
+                }}
+                onClick={handleFavorite}
+                className="shrink-0 rounded-full p-2 -m-2 touch-manipulation"
+                aria-label="선수 즐겨찾기"
+              >
+                <Image
+                  src={favorited ? FilledFavoriteIcon : EmptyFavoriteIcon}
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="shrink-0"
+                />
+              </button>
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -758,6 +841,58 @@ export default function PlayerDetailPanel({
           initialHighlightedPostId={initialHighlightedPostId}
         />
       )}
+
+      {isLoginRequiredOpen ? (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => setIsLoginRequiredOpen(false)}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
+                  로그인이 필요해요
+                </p>
+                <p className="text-sm leading-[1.55]" style={{ color: 'var(--app-body-text)' }}>
+                  선수 즐겨찾기는 Google 로그인 후 이용할 수 있어요
+                </p>
+              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoginRequiredOpen(false)
+                    window.location.assign('/mypage')
+                  }}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  로그인하러 가기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginRequiredOpen(false)}
+                  className="block w-full text-center text-sm font-medium"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

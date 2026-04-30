@@ -125,6 +125,35 @@ function shouldIncludeTotalCount(request: NextRequest) {
   return request.nextUrl.searchParams.get('includeTotalCount') === '1'
 }
 
+async function resolvePageForPostId(supabase: SupabaseClient, postId: string, pageSize: number) {
+  const primaryResponse = await supabase
+    .from('community_posts')
+    .select('id, created_at')
+    .eq('id', postId)
+    .single()
+
+  if (primaryResponse.error || !primaryResponse.data) {
+    return null
+  }
+
+  const { count, error } = await supabase
+    .from('community_posts')
+    .select('id', { count: 'exact', head: true })
+    .gt('created_at', primaryResponse.data.created_at)
+
+  if (error) {
+    return null
+  }
+
+  const page = Math.floor((Number(count ?? 0) || 0) / pageSize) + 1
+
+  return {
+    page,
+    from: (page - 1) * pageSize,
+    to: page * pageSize - 1,
+  }
+}
+
 async function fetchPostsPage(
   supabase: SupabaseClient,
   from: number,
@@ -159,9 +188,16 @@ async function fetchPostsPage(
 
 export async function GET(request: NextRequest) {
   try {
-    const { page, pageSize, from, to } = getPaginationParams(request)
+    const { page: rawPage, pageSize, from: rawFrom, to: rawTo } = getPaginationParams(request)
     const includeTotalCount = shouldIncludeTotalCount(request)
+    const highlightPostId = request.nextUrl.searchParams.get('postId')?.trim() ?? ''
     const supabase = createSupabaseAdminClient()
+    const resolvedPage = highlightPostId
+      ? await resolvePageForPostId(supabase, highlightPostId, pageSize)
+      : null
+    const page = resolvedPage?.page ?? rawPage
+    const from = resolvedPage?.from ?? rawFrom
+    const to = resolvedPage?.to ?? rawTo
     const userPromise = hasSupabaseAuthCookie(request)
       ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
       : Promise.resolve({ data: { user: null } })

@@ -3,6 +3,8 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '24.3': '2026-04-30T20:30:00+09:00',
+  '24.2': '2026-04-30T19:30:00+09:00',
   '24.1': '2026-04-30T18:00:00+09:00',
   '24.0': '2026-04-30T10:30:00+09:00',
   '23.13': '2026-04-30T10:00:00+09:00',
@@ -24,6 +26,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '24.3': [
+    '마이페이지 즐겨찾기 선수 탭에 선수 이미지·시즌 뱃지를 추가하고, 삭제 버튼으로 즐겨찾기를 바로 해제할 수 있습니다.',
+    '글쓰기 팝업의 Lv 배지 굵기를 닉네임과 동일하게 맞추고, 즐겨찾기 별 아이콘 컬러를 노란색으로 변경했습니다.',
+  ],
   '24.2': [
     '커뮤니티·선수평가 전반에서 Lv 배지 폰트 크기를 닉네임과 동일하게 맞췄습니다.',
   ],

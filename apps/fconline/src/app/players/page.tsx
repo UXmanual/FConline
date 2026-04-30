@@ -96,6 +96,7 @@ export default function PlayersPage() {
   const [popularPlayersLoading, setPopularPlayersLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
   const isInitialRestoreRef = useRef(true)
   const skipNextSearchEffectRef = useRef(false)
 
@@ -516,6 +517,7 @@ export default function PlayersPage() {
                       seasons={seasons}
                       strongLevel={strongLevel}
                       isLast={index === sortedPlayers.length - 1}
+                      onRequireLogin={() => setIsLoginRequiredOpen(true)}
                     />
                   ))}
                 </div>
@@ -524,6 +526,58 @@ export default function PlayersPage() {
           </div>
         )}
       </div>
+
+      {isLoginRequiredOpen ? (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            aria-label="닫기"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.58)' }}
+            onClick={() => setIsLoginRequiredOpen(false)}
+          />
+          <div
+            className="absolute left-1/2 z-10 w-[calc(100%-2rem)] max-w-[440px] -translate-x-1/2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}
+          >
+            <section
+              className="rounded-[28px] px-5 pb-6 pt-6 shadow-[0_20px_48px_rgba(15,23,42,0.22)]"
+              style={{ backgroundColor: 'var(--app-modal-bg, #ffffff)' }}
+            >
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full" style={{ backgroundColor: 'rgba(133, 148, 170, 0.32)' }} />
+              <div className="space-y-2">
+                <p className="text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--app-title)' }}>
+                  로그인이 필요해요
+                </p>
+                <p className="text-sm leading-[1.55]" style={{ color: 'var(--app-body-text)' }}>
+                  선수 즐겨찾기는 Google 로그인 후 이용할 수 있어요
+                </p>
+              </div>
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoginRequiredOpen(false)
+                    window.location.assign('/mypage')
+                  }}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-semibold text-white"
+                  style={{ backgroundColor: '#457ae5' }}
+                >
+                  로그인하러 가기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginRequiredOpen(false)}
+                  className="block w-full text-center text-sm font-medium"
+                  style={{ color: 'var(--app-muted-text)' }}
+                >
+                  취소
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

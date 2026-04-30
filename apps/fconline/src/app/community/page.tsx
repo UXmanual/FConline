@@ -70,20 +70,44 @@ type InitialCommunityData = {
   hasMore: boolean
   page: number
   pageSize: number
+  highlightedPostId?: string | null
 }
 
-async function fetchInitialPosts(): Promise<InitialCommunityData> {
+async function fetchInitialPosts(highlightPostId?: string | null): Promise<InitialCommunityData> {
   try {
     const supabase = createSupabaseAdminClient()
     const authSupabase = await createSupabaseSsrClient()
     const {
       data: { user },
     } = await authSupabase.auth.getUser()
+    let page = INITIAL_PAGE
+    let from = 0
+    let to = POSTS_PER_PAGE - 1
+
+    if (highlightPostId) {
+      const postResponse = await supabase
+        .from('community_posts')
+        .select('id, created_at')
+        .eq('id', highlightPostId)
+        .single()
+
+      if (!postResponse.error && postResponse.data) {
+        const { count } = await supabase
+          .from('community_posts')
+          .select('id', { count: 'exact', head: true })
+          .gt('created_at', postResponse.data.created_at)
+
+        page = Math.floor((Number(count ?? 0) || 0) / POSTS_PER_PAGE) + 1
+        from = (page - 1) * POSTS_PER_PAGE
+        to = page * POSTS_PER_PAGE - 1
+      }
+    }
+
     const primaryResponsePromise = supabase
       .from('community_posts')
       .select('id, category, nickname, comment_count, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(0, POSTS_PER_PAGE - 1)
+      .range(from, to)
 
     const primaryResponse = await primaryResponsePromise
 
@@ -92,14 +116,14 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
           .from('community_posts')
           .select('id, category, nickname, comment_count, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
           .order('created_at', { ascending: false })
-          .range(0, POSTS_PER_PAGE - 1)
+          .range(from, to)
       : null
 
     const response = fallbackResponse ?? primaryResponse
     const { data: posts, error: postsError, count } = response
 
     if (postsError || !posts) {
-      return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
+      return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE, highlightedPostId: highlightPostId ?? null }
     }
 
     const typedPosts = posts as unknown as PostRow[]
@@ -144,15 +168,21 @@ async function fetchInitialPosts(): Promise<InitialCommunityData> {
       items,
       totalCount: count ?? 0,
       hasMore: typedPosts.length === POSTS_PER_PAGE,
-      page: INITIAL_PAGE,
+      page,
       pageSize: POSTS_PER_PAGE,
+      highlightedPostId: highlightPostId ?? null,
     }
   } catch {
-    return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE }
+    return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE, highlightedPostId: highlightPostId ?? null }
   }
 }
 
-export default async function CommunityPage() {
-  const initialData = await fetchInitialPosts()
+export default async function CommunityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ postId?: string }>
+}) {
+  const { postId } = await searchParams
+  const initialData = await fetchInitialPosts(postId?.trim() || null)
   return <CommunityPageClient initialData={initialData} />
 }

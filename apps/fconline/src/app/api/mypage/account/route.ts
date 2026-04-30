@@ -8,6 +8,7 @@ async function detachRowsForUser(userId: string) {
   await supabase.from('community_comments').update({ author_user_id: null }).eq('author_user_id', userId)
   await supabase.from('player_review_posts').update({ author_user_id: null }).eq('author_user_id', userId)
   await supabase.from('player_review_comments').update({ author_user_id: null }).eq('author_user_id', userId)
+  await supabase.from('player_favorites').delete().eq('user_id', userId)
 }
 
 export async function DELETE() {

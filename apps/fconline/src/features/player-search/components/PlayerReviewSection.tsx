@@ -1125,7 +1125,7 @@ export default function PlayerReviewSection({
                 </div>
 
                 <div className="flex items-center gap-2 px-0.5 text-sm">
-                  <UserLevelBadge level={currentUserLevel} className="!text-sm" />
+                  <UserLevelBadge level={currentUserLevel} className="!text-sm !font-normal" />
                   <p style={{ color: 'var(--app-body-text)' }}>{reviewNickname}</p>
                 </div>
 
