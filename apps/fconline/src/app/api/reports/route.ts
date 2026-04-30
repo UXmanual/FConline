@@ -13,11 +13,19 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
 
 const VALID_TARGET_TYPES = Object.keys(TARGET_TYPE_LABELS)
 
+const DEFAULT_LINK_BY_TYPE: Record<string, string> = {
+  community_post: '/community',
+  community_comment: '/community',
+  player_review_post: '/players',
+  player_review_comment: '/players',
+}
+
 async function fetchTargetInfo(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   targetType: string,
   targetId: string,
-): Promise<{ preview: string; link: string | null }> {
+): Promise<{ title: string | null; preview: string; link: string }> {
+  const fallbackLink = DEFAULT_LINK_BY_TYPE[targetType] ?? '/community'
   try {
     if (targetType === 'community_post') {
       const { data, error } = await supabase
@@ -26,7 +34,7 @@ async function fetchTargetInfo(
         .eq('id', targetId)
         .maybeSingle()
       if (error) console.error('[reports] community_post fetch error:', error)
-      if (data) return { preview: `작성자: ${data.nickname}\n제목: ${data.title}`, link: '/community' }
+      if (data) return { title: data.title, preview: `작성자: ${data.nickname}\n제목: ${data.title}`, link: '/community' }
     } else if (targetType === 'community_comment') {
       const { data, error } = await supabase
         .from('community_comments')
@@ -41,7 +49,8 @@ async function fetchTargetInfo(
           .eq('id', data.post_id)
           .maybeSingle()
         return {
-          preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: ${post.title}` : ''}`,
+          title: post?.title ?? null,
+          preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n원글 제목: ${post.title}` : ''}`,
           link: '/community',
         }
       }
@@ -54,8 +63,9 @@ async function fetchTargetInfo(
       if (error) console.error('[reports] player_review_post fetch error:', error)
       if (data) {
         return {
+          title: `[${data.player_name}] ${data.title}`,
           preview: `작성자: ${data.nickname}\n선수: ${data.player_name}\n제목: ${data.title}`,
-          link: data.player_id ? `/players/${data.player_id}` : null,
+          link: data.player_id ? `/players/${data.player_id}` : '/players',
         }
       }
     } else if (targetType === 'player_review_comment') {
@@ -72,15 +82,16 @@ async function fetchTargetInfo(
           .eq('id', data.review_post_id)
           .maybeSingle()
         return {
-          preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n글 제목: [${post.player_name}] ${post.title}` : ''}`,
-          link: post?.player_id ? `/players/${post.player_id}` : null,
+          title: post ? `[${post.player_name}] ${post.title}` : null,
+          preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n원글 제목: [${post.player_name}] ${post.title}` : ''}`,
+          link: post?.player_id ? `/players/${post.player_id}` : '/players',
         }
       }
     }
   } catch (error) {
     console.error('[reports] fetchTargetInfo unexpected error:', error)
   }
-  return { preview: `ID: ${targetId}`, link: null }
+  return { title: null, preview: `ID: ${targetId}`, link: fallbackLink }
 }
 
 function getPushAdminToken() {

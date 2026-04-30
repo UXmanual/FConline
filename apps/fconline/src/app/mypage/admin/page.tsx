@@ -11,7 +11,8 @@ type ReportItem = {
   status: string
   created_at: string
   preview?: string
-  link?: string | null
+  title?: string | null
+  link: string
 }
 
 const TARGET_TYPE_LABELS: Record<string, string> = {
@@ -304,21 +305,24 @@ export default function MyPageAdminPushPage() {
                         <p className="text-[12px] font-semibold" style={titleStyle}>
                           {TARGET_TYPE_LABELS[report.target_type] ?? report.target_type}
                         </p>
-                        {report.link && (
-                          <a
-                            href={report.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="shrink-0 text-[11px] font-semibold underline"
-                            style={{ color: '#457ae5' }}
-                          >
-                            새 창으로 보기
-                          </a>
-                        )}
+                        <a
+                          href={report.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 text-[11px] font-semibold underline"
+                          style={{ color: '#457ae5' }}
+                        >
+                          새 창으로 보기
+                        </a>
                       </div>
+                      {report.title && (
+                        <p className="text-[13px] font-semibold break-words" style={titleStyle}>
+                          {report.title}
+                        </p>
+                      )}
                       {report.preview && !report.preview.startsWith('ID:')
                         ? report.preview.split('\n').map((line, i) => (
-                            <p key={i} className="text-[12px] break-words" style={i === 0 ? mutedStyle : titleStyle}>
+                            <p key={i} className="text-[12px] break-words" style={mutedStyle}>
                               {line}
                             </p>
                           ))

@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '24.5': '2026-04-30T21:30:00+09:00',
   '24.4': '2026-04-30T21:00:00+09:00',
   '24.3': '2026-04-30T20:30:00+09:00',
   '24.2': '2026-04-30T19:30:00+09:00',
@@ -27,6 +28,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '24.5': [
+    '어드민 신고 목록에 원글 제목을 표시하고, 신고된 게시글·댓글을 새 창으로 바로 열어볼 수 있는 링크를 항상 노출합니다.',
+    '선수탭 검색창 포커스 시 파란색 테두리가 표시되도록 수정했습니다.',
+  ],
   '24.4': [
     '마이페이지 구글 로그인 연결 상태 표시를 정비했습니다. 연결 전은 회색, 연결 중은 파란색으로 구분됩니다.',
   ],
