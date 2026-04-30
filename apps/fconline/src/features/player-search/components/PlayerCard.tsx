@@ -42,6 +42,7 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
   const season = seasons.find((item) => item.seasonId === seasonId)
   const detail = player.detail
   const [favorited, setFavorited] = useState(false)
+  const [favoritePending, setFavoritePending] = useState(false)
   const currentOverall =
     detail?.overall != null
       ? detail.overall - getStrongPoint(1) + getStrongPoint(strongLevel)
@@ -104,32 +105,44 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
 
   const handleFavorite = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
+    if (favoritePending) return
+
+    const optimistic = !favorited
+    setFavorited(optimistic)
+    setFavoritePending(true)
+
     void (async () => {
-      const response = await fetch('/api/mypage/favorite-players', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: player.id,
-          playerName: player.name,
-          seasonName: season?.className ?? null,
-          position: detail?.position ?? null,
-          level: strongLevel,
-        }),
-      })
+      try {
+        const response = await fetch('/api/mypage/favorite-players', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId: player.id,
+            playerName: player.name,
+            seasonName: season?.className ?? null,
+            position: detail?.position ?? null,
+            level: strongLevel,
+          }),
+        })
 
-      if (response.status === 401) {
-        onRequireLogin?.()
-        return
-      }
+        if (response.status === 401) {
+          setFavorited(!optimistic)
+          onRequireLogin?.()
+          return
+        }
 
-      if (!response.ok) {
+        if (!response.ok) {
+          setFavorited(!optimistic)
+          const result = await response.json().catch(() => null)
+          window.alert(result?.message ?? '선수 즐겨찾기를 처리하지 못했습니다.')
+          return
+        }
+
         const result = await response.json().catch(() => null)
-        window.alert(result?.message ?? '선수 즐겨찾기를 처리하지 못했습니다.')
-        return
+        setFavorited(Boolean(result?.favorited))
+      } finally {
+        setFavoritePending(false)
       }
-
-      const result = await response.json().catch(() => null)
-      setFavorited(Boolean(result?.favorited))
     })()
   }
 
@@ -183,7 +196,8 @@ export default function PlayerCard({ player, seasons, strongLevel, isLast = fals
                 event.stopPropagation()
               }}
               onClick={handleFavorite}
-              className="shrink-0 rounded-full p-2 -m-2 touch-manipulation"
+              disabled={favoritePending}
+              className="shrink-0 rounded-full p-2 -m-2 touch-manipulation disabled:opacity-60"
               aria-label="선수 즐겨찾기"
             >
               <Image

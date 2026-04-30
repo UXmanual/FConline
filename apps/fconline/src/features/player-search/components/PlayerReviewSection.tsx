@@ -93,7 +93,6 @@ function ReviewPostCard({
   onOpenComments,
   onReport,
   onLike,
-  highlight,
   isCommentOpen,
   isDarkModeEnabled,
 }: {
@@ -102,7 +101,6 @@ function ReviewPostCard({
   onOpenComments: (post: CommunityPostSummary) => void
   onReport?: (post: CommunityPostSummary) => void
   onLike: (post: CommunityPostSummary) => void
-  highlight?: boolean
   isCommentOpen?: boolean
   isDarkModeEnabled: boolean
 }) {
@@ -118,7 +116,6 @@ function ReviewPostCard({
         backgroundColor: 'var(--app-card-bg)',
         border: '1px solid var(--app-card-border)',
         borderBottom: isCommentOpen ? 'none' : undefined,
-        boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined,
       }}
       onClick={() => setExpanded((current) => !current)}
     >
@@ -867,14 +864,20 @@ export default function PlayerReviewSection({
           posts.map((post) => {
             const isCommentOpen = activeCommentPost?.id === post.id
             return (
-              <div key={post.id} data-post-id={post.id}>
+              <div
+                key={post.id}
+                data-post-id={post.id}
+                style={{
+                  borderRadius: '1rem',
+                  boxShadow: post.id === highlightedPostId ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined,
+                }}
+              >
                 <ReviewPostCard
                   post={post}
                   onDelete={handleDeletePost}
                   onOpenComments={loadComments}
                   onReport={authUser ? (p) => setReportTarget({ type: 'player_review_post', id: p.id }) : undefined}
                   onLike={handleLike}
-                  highlight={post.id === highlightedPostId}
                   isCommentOpen={isCommentOpen}
                   isDarkModeEnabled={isDarkModeEnabled}
                 />
@@ -916,11 +919,11 @@ export default function PlayerReviewSection({
                               ) : null}
                               <div className="flex min-w-0 items-start gap-3">
                                 <div
-                                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                   style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
                                 >
                                   {comment.avatarUrl ? (
-                                    <Image src={comment.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                                    <Image src={comment.avatarUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
                                   ) : (
                                     <span className="text-lg leading-none">😀</span>
                                   )}

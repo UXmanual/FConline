@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import HeartIcon from '@/components/icons/HeartIcon'
+import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 import {
   FormEvent,
   useCallback,
@@ -117,9 +118,9 @@ function CommentSheetSkeleton({ rows = 5 }: { rows?: number }) {
   )
 }
 
-function PostCard({ post, onDelete, onOpenComments, onReport, onLike, highlight, isCommentOpen, isDarkModeEnabled }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; onLike: (post: CommunityPostSummary) => void; highlight?: boolean; isCommentOpen?: boolean; isDarkModeEnabled: boolean }) {
+function PostCard({ post, onDelete, onOpenComments, onReport, onLike, isCommentOpen, isDarkModeEnabled }: { post: CommunityPostSummary; onDelete: (post: CommunityPostSummary) => void; onOpenComments: (post: CommunityPostSummary) => void; onReport?: (post: CommunityPostSummary) => void; onLike: (post: CommunityPostSummary) => void; isCommentOpen?: boolean; isDarkModeEnabled: boolean }) {
   return (
-    <article className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`} style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', borderBottom: isCommentOpen ? 'none' : undefined, boxShadow: highlight ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }}>
+    <article className={`px-5 pb-4 pt-5 ${isCommentOpen ? 'rounded-t-lg' : 'rounded-lg'}`} style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)', borderBottom: isCommentOpen ? 'none' : undefined }}>
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
@@ -353,7 +354,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   }, [posts])
 
   function scrollToListTop() {
-    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function openComposer() {
@@ -661,8 +662,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
           <CommunityPostSkeletonList />
         ) : posts.length > 0 ? (
           posts.map((post) => (
-            <div key={post.id} data-post-id={post.id}>
-              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} onLike={handleLike} highlight={post.id === highlightedPostId} isCommentOpen={activeCommentPost?.id === post.id} isDarkModeEnabled={isDarkModeEnabled} />
+            <div key={post.id} data-post-id={post.id} style={{ borderRadius: '1rem', boxShadow: post.id === highlightedPostId ? '0 0 0 2px rgba(69, 122, 229, 0.22)' : undefined }}>
+              <PostCard post={post} onDelete={handleDeletePost} onOpenComments={loadComments} onReport={authUser ? (p) => setReportTarget({ type: 'community_post', id: p.id }) : undefined} onLike={handleLike} isCommentOpen={activeCommentPost?.id === post.id} isDarkModeEnabled={isDarkModeEnabled} />
               {activeCommentPost?.id === post.id && (
                 <div ref={commentsScrollRef} className="rounded-b-lg border-x border-b px-5 pt-0 pb-3" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--app-card-border)' }}>
                   {isLoadingComments ? (
@@ -699,11 +700,11 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                               ) : null}
                               <div className="flex min-w-0 items-start gap-3">
                                 <div
-                                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                   style={{ backgroundColor: isDarkModeEnabled ? '#3a3f52' : 'var(--app-surface-soft)' }}
                                 >
                                   {comment.avatarUrl ? (
-                                    <Image src={comment.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                                    <Image src={comment.avatarUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
                                   ) : (
                                     <span className="text-lg leading-none">😀</span>
                                   )}
@@ -777,13 +778,13 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         )}
 
         <div className="flex items-center justify-center gap-2 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)' }}>
-          <button type="button" onClick={() => { const nextPage = Math.max(1, currentPage - 1); setPageWindowStart(Math.max(1, safePageWindowStart - 1)); void goToPage(nextPage) }} disabled={currentPage === 1} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}>이전</button>
+          <button type="button" onClick={() => { const nextPage = Math.max(1, currentPage - 1); setPageWindowStart(Math.max(1, safePageWindowStart - 1)); void goToPage(nextPage) }} disabled={currentPage === 1} className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}><CaretLeft size={16} weight="bold" /></button>
           <div className="flex items-center gap-1.5">
             {visiblePages.map((page) => (
               <button key={page} type="button" onClick={() => { if (page < safePageWindowStart) setPageWindowStart(page); else if (page > pageGroupEnd) setPageWindowStart(Math.min(page, maxPageWindowStart)); void goToPage(page) }} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition" style={{ backgroundColor: page === currentPage ? '#457ae5' : 'var(--app-surface-soft)', color: page === currentPage ? '#fff' : 'var(--app-body-text)' }}>{page}</button>
             ))}
           </div>
-          <button type="button" onClick={() => { const nextPage = Math.min(totalPages, currentPage + 1); setPageWindowStart(Math.min(maxPageWindowStart, safePageWindowStart + 1)); void goToPage(nextPage) }} disabled={currentPage === totalPages} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}>다음</button>
+          <button type="button" onClick={() => { const nextPage = Math.min(totalPages, currentPage + 1); setPageWindowStart(Math.min(maxPageWindowStart, safePageWindowStart + 1)); void goToPage(nextPage) }} disabled={currentPage === totalPages} className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}><CaretRight size={16} weight="bold" /></button>
         </div>
 
         <button type="button" onClick={openComposer} disabled={isAuthLoading} className="mx-auto mt-1 mb-2 flex items-center justify-center text-sm font-semibold text-white transition disabled:opacity-60" style={{ width: '100%', height: '54px', borderRadius: '16px', backgroundColor: '#457ae5' }}>글쓰기</button>

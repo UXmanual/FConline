@@ -13,9 +13,13 @@ import {
 } from '@/lib/notifications'
 import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 
+const INITIAL_VISIBLE = 5
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationFeedItem[]>([])
   const [expandedIds, setExpandedIds] = useState<string[]>([])
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
+  const [loading, setLoading] = useState(true)
   const titleStyle = { color: 'var(--app-title)' }
   const bodyStyle = { color: 'var(--app-body-text)' }
   const mutedStyle = { color: 'var(--app-muted-text)' }
@@ -35,6 +39,7 @@ export default function NotificationsPage() {
 
       const nextNotifications = buildNotificationFeed(storedPushNotifications)
       setNotifications(nextNotifications)
+      setLoading(false)
 
       if (user?.id) {
         markNotificationsSeen(user.id, nextNotifications)
@@ -78,6 +83,9 @@ export default function NotificationsPage() {
     )
   }
 
+  const visibleNotifications = notifications.slice(0, visibleCount)
+  const hasMore = notifications.length > visibleCount
+
   return (
     <div className="pt-5">
       <div className="flex h-6 items-center">
@@ -91,47 +99,86 @@ export default function NotificationsPage() {
         </Link>
       </div>
 
-      <section className="mt-6 rounded-lg px-5 py-1 app-theme-card">
-        <ul>
-          {notifications.map((item, index) => (
-            <li
-              key={item.id}
-              className={`py-4 ${index === notifications.length - 1 ? '' : 'border-b'}`}
-              style={index === notifications.length - 1 ? undefined : dividerStyle}
-            >
-              <button
-                type="button"
-                onClick={() => toggleExpanded(item.id)}
-                aria-expanded={expandedIds.includes(item.id)}
-                className="block w-full text-left"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-semibold leading-[1.4]" style={titleStyle}>
-                      {item.title}
-                    </p>
-                    <p
-                      className={`mt-1.5 break-words text-sm leading-[1.55] ${
-                        expandedIds.includes(item.id) ? 'whitespace-pre-wrap' : 'line-clamp-2'
-                      }`}
-                      style={bodyStyle}
-                    >
-                      {item.body}
-                    </p>
+      {loading ? (
+        <>
+          <section className="mt-6 rounded-lg px-5 py-1 app-theme-card">
+            <ul>
+              {Array.from({ length: INITIAL_VISIBLE }).map((_, index) => (
+                <li key={index} className={`py-4 ${index === INITIAL_VISIBLE - 1 ? '' : 'border-b'}`} style={index === INITIAL_VISIBLE - 1 ? undefined : dividerStyle}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-2/3 animate-pulse rounded" style={{ backgroundColor: 'var(--app-surface-soft)' }} />
+                      <div className="h-3 w-full animate-pulse rounded" style={{ backgroundColor: 'var(--app-surface-soft)' }} />
+                      <div className="h-3 w-4/5 animate-pulse rounded" style={{ backgroundColor: 'var(--app-surface-soft)' }} />
+                    </div>
+                    <div className="h-3 w-10 shrink-0 animate-pulse rounded" style={{ backgroundColor: 'var(--app-surface-soft)' }} />
                   </div>
-                  <span className="shrink-0 pt-0.5 text-[12px] font-medium leading-none" style={mutedStyle}>
-                    {formatRelativeTime(item.createdAt)}
-                  </span>
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <div className="mt-3 flex justify-center py-2">
+            <div className="h-4 w-12 animate-pulse rounded" style={{ backgroundColor: 'var(--app-surface-soft)' }} />
+          </div>
+        </>
+      ) : (
+        <>
+          <section className="mt-6 rounded-lg px-5 py-1 app-theme-card">
+            <ul>
+              {visibleNotifications.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={`py-4 ${index === visibleNotifications.length - 1 ? '' : 'border-b'}`}
+                  style={index === visibleNotifications.length - 1 ? undefined : dividerStyle}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(item.id)}
+                    aria-expanded={expandedIds.includes(item.id)}
+                    className="block w-full text-left"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-semibold leading-[1.4]" style={titleStyle}>
+                          {item.title}
+                        </p>
+                        <p
+                          className={`mt-1.5 break-words text-sm leading-[1.55] ${
+                            expandedIds.includes(item.id) ? 'whitespace-pre-wrap' : 'line-clamp-2'
+                          }`}
+                          style={bodyStyle}
+                        >
+                          {item.body}
+                        </p>
+                      </div>
+                      <span className="shrink-0 pt-0.5 text-[12px] font-medium leading-none" style={mutedStyle}>
+                        {formatRelativeTime(item.createdAt)}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-      <p className="mt-4 px-5 text-center text-[12px] font-medium" style={{ color: 'color-mix(in srgb, var(--app-muted-text) 78%, transparent)' }}>
-        7일 전 알림까지 확인할 수 있어요
-      </p>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount(notifications.length)}
+              className="mt-3 w-full py-2 text-center text-sm font-semibold"
+              style={{ color: 'var(--app-muted-text)' }}
+            >
+              더보기
+            </button>
+          )}
+
+          {!hasMore && (
+            <p className="mt-4 px-5 text-center text-[12px] font-medium" style={{ color: 'color-mix(in srgb, var(--app-muted-text) 78%, transparent)' }}>
+              7일 전 알림까지 확인할 수 있어요
+            </p>
+          )}
+        </>
+      )}
     </div>
   )
 }
