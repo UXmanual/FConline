@@ -63,6 +63,7 @@ export default function PlayerDetailPanel({
   const [activeTab, setActiveTab] = useState<'detail' | 'review'>(initialTab)
   const [reviewCount, setReviewCount] = useState(0)
   const [favorited, setFavorited] = useState(false)
+  const [favoritePending, setFavoritePending] = useState(false)
   const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false)
   const [imageSrcIndex, setImageSrcIndex] = useState(0)
   const [showLeftFade, setShowLeftFade] = useState(false)
@@ -397,32 +398,44 @@ export default function PlayerDetailPanel({
   }
 
   const handleFavorite = () => {
+    if (favoritePending) return
+
+    const optimistic = !favorited
+    setFavorited(optimistic)
+    setFavoritePending(true)
+
     void (async () => {
-      const response = await fetch('/api/mypage/favorite-players', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: Number(spid),
-          playerName,
-          seasonName,
-          position: detail.position ?? null,
-          level: strongLevel,
-        }),
-      })
+      try {
+        const response = await fetch('/api/mypage/favorite-players', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId: Number(spid),
+            playerName,
+            seasonName,
+            position: detail.position ?? null,
+            level: strongLevel,
+          }),
+        })
 
-      if (response.status === 401) {
-        setIsLoginRequiredOpen(true)
-        return
-      }
+        if (response.status === 401) {
+          setFavorited(!optimistic)
+          setIsLoginRequiredOpen(true)
+          return
+        }
 
-      if (!response.ok) {
+        if (!response.ok) {
+          setFavorited(!optimistic)
+          const result = await response.json().catch(() => null)
+          window.alert(result?.message ?? '선수 즐겨찾기를 처리하지 못했습니다.')
+          return
+        }
+
         const result = await response.json().catch(() => null)
-        window.alert(result?.message ?? '선수 즐겨찾기를 처리하지 못했습니다.')
-        return
+        setFavorited(Boolean(result?.favorited))
+      } finally {
+        setFavoritePending(false)
       }
-
-      const result = await response.json().catch(() => null)
-      setFavorited(Boolean(result?.favorited))
     })()
   }
 
@@ -487,7 +500,8 @@ export default function PlayerDetailPanel({
                   event.stopPropagation()
                 }}
                 onClick={handleFavorite}
-                className="shrink-0 rounded-full p-2 -m-2 touch-manipulation"
+                disabled={favoritePending}
+                className="shrink-0 rounded-full p-2 -m-2 touch-manipulation disabled:opacity-60"
                 aria-label="선수 즐겨찾기"
               >
                 <Image
