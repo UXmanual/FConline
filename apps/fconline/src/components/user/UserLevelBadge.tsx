@@ -12,7 +12,7 @@ export default function UserLevelBadge({ level, className = '' }: Props) {
 
   return (
     <span
-      className={`inline-flex items-center text-[11px] font-semibold leading-none ${className}`.trim()}
+      className={`inline-flex items-center text-[12px] font-semibold leading-none ${className}`.trim()}
       style={{ color: getLevelTextColor(level) }}
     >
       {formatLevelLabel(level)}

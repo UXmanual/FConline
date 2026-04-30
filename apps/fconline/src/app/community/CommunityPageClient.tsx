@@ -783,7 +783,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                   </p>
                 </div>
                 <div className="flex items-center gap-2 px-0.5 text-sm">
-                  <UserLevelBadge level={currentUserLevel} />
+                  <UserLevelBadge level={currentUserLevel} className="!text-sm" />
                   <p style={{ color: 'var(--app-body-text)' }}>{communityNickname}</p>
                 </div>
                 <label className="block">
