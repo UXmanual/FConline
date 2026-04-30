@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '24.0': '2026-04-30T10:30:00+09:00',
   '23.13': '2026-04-30T10:00:00+09:00',
   '23.12': '2026-04-29T21:30:00+09:00',
   '23.11': '2026-04-29T21:00:00+09:00',
@@ -22,6 +23,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '24.0': [
+    '버전 넘버링 규칙을 소수점 한 자리로 정정했습니다.',
+  ],
   '23.13': [
     '커뮤니티 댓글 및 게시글 목록에 페이지네이션을 적용했습니다.',
   ],
