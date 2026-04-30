@@ -38,6 +38,7 @@ type Props = {
   aiReviewSummariesByLevel?: Record<number, string>
   onTotalCountChange?: (count: number) => void
   initialHighlightedPostId?: string | null
+  initialAutoOpenComments?: boolean
 }
 
 function ReviewSkeletonList({ rows = 5 }: { rows?: number }) {
@@ -236,6 +237,7 @@ export default function PlayerReviewSection({
   aiReviewSummariesByLevel,
   onTotalCountChange,
   initialHighlightedPostId = null,
+  initialAutoOpenComments = false,
 }: Props) {
   const router = useRouter()
   const isDarkModeEnabled = useDarkModeEnabled()
@@ -391,6 +393,16 @@ export default function PlayerReviewSection({
 
     return () => window.cancelAnimationFrame(frameId)
   }, [highlightedPostId, posts])
+
+  const autoOpenCommentsDoneRef = useRef(false)
+  useEffect(() => {
+    if (!initialAutoOpenComments || !initialHighlightedPostId || autoOpenCommentsDoneRef.current || posts.length === 0) return
+    const post = posts.find((p) => p.id === initialHighlightedPostId)
+    if (!post) return
+    autoOpenCommentsDoneRef.current = true
+    void loadComments(post)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts])
 
   const aiReviewSummary = aiReviewSummariesByLevel?.[aiSelectedCardLevel] ?? null
 

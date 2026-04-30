@@ -71,6 +71,7 @@ type InitialCommunityData = {
   page: number
   pageSize: number
   highlightedPostId?: string | null
+  autoOpenComments?: boolean
 }
 
 async function fetchInitialPosts(highlightPostId?: string | null): Promise<InitialCommunityData> {
@@ -171,18 +172,20 @@ async function fetchInitialPosts(highlightPostId?: string | null): Promise<Initi
       page,
       pageSize: POSTS_PER_PAGE,
       highlightedPostId: highlightPostId ?? null,
+      autoOpenComments: false,
     }
   } catch {
-    return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE, highlightedPostId: highlightPostId ?? null }
+    return { items: [], totalCount: 0, hasMore: false, page: INITIAL_PAGE, pageSize: POSTS_PER_PAGE, highlightedPostId: highlightPostId ?? null, autoOpenComments: false }
   }
 }
 
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ postId?: string }>
+  searchParams: Promise<{ postId?: string; openComments?: string }>
 }) {
-  const { postId } = await searchParams
-  const initialData = await fetchInitialPosts(postId?.trim() || null)
-  return <CommunityPageClient initialData={initialData} />
+  const { postId, openComments } = await searchParams
+  const trimmedPostId = postId?.trim() || null
+  const initialData = await fetchInitialPosts(trimmedPostId)
+  return <CommunityPageClient initialData={{ ...initialData, autoOpenComments: !!openComments && !!trimmedPostId }} />
 }

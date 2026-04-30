@@ -43,6 +43,7 @@ interface Props {
   initialStrongLevel?: number
   initialTab?: 'detail' | 'review'
   initialHighlightedPostId?: string | null
+  initialAutoOpenComments?: boolean
 }
 
 export default function PlayerDetailPanel({
@@ -54,6 +55,7 @@ export default function PlayerDetailPanel({
   initialStrongLevel = 1,
   initialTab = 'detail',
   initialHighlightedPostId = null,
+  initialAutoOpenComments = false,
 }: Props) {
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
   const [isChemistryApplied, setIsChemistryApplied] = useState(false)
@@ -839,6 +841,7 @@ export default function PlayerDetailPanel({
           aiReviewSummariesByLevel={aiReviewSummariesByLevel}
           onTotalCountChange={setReviewCount}
           initialHighlightedPostId={initialHighlightedPostId}
+          initialAutoOpenComments={initialAutoOpenComments}
         />
       )}
 

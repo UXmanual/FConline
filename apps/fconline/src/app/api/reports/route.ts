@@ -34,7 +34,7 @@ async function fetchTargetInfo(
         .eq('id', targetId)
         .maybeSingle()
       if (error) console.error('[reports] community_post fetch error:', error)
-      if (data) return { title: data.title, preview: `작성자: ${data.nickname}\n제목: ${data.title}`, link: '/community' }
+      if (data) return { title: data.title, preview: `작성자: ${data.nickname}\n제목: ${data.title}`, link: `/community?postId=${targetId}` }
     } else if (targetType === 'community_comment') {
       const { data, error } = await supabase
         .from('community_comments')
@@ -51,7 +51,7 @@ async function fetchTargetInfo(
         return {
           title: post?.title ?? null,
           preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n원글 제목: ${post.title}` : ''}`,
-          link: '/community',
+          link: `/community?postId=${data.post_id}&openComments=1`,
         }
       }
     } else if (targetType === 'player_review_post') {
@@ -65,7 +65,7 @@ async function fetchTargetInfo(
         return {
           title: `[${data.player_name}] ${data.title}`,
           preview: `작성자: ${data.nickname}\n선수: ${data.player_name}\n제목: ${data.title}`,
-          link: data.player_id ? `/players/${data.player_id}` : '/players',
+          link: data.player_id ? `/players/${data.player_id}?tab=review&postId=${targetId}` : '/players',
         }
       }
     } else if (targetType === 'player_review_comment') {
@@ -84,7 +84,7 @@ async function fetchTargetInfo(
         return {
           title: post ? `[${post.player_name}] ${post.title}` : null,
           preview: `작성자: ${data.nickname}\n댓글: ${data.content}${post ? `\n원글 제목: [${post.player_name}] ${post.title}` : ''}`,
-          link: post?.player_id ? `/players/${post.player_id}` : '/players',
+          link: post?.player_id ? `/players/${post.player_id}?tab=review&postId=${data.review_post_id}&openComments=1` : '/players',
         }
       }
     }

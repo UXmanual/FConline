@@ -6,7 +6,7 @@ import { getSeasonMetaItem, getSpidMetaItem } from '@/lib/nexon'
 
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ level?: string; tab?: string; postId?: string }>
+  searchParams: Promise<{ level?: string; tab?: string; postId?: string; openComments?: string }>
 }
 
 async function getPlayerData(spid: string) {
@@ -23,7 +23,7 @@ async function getPlayerData(spid: string) {
 
 export default async function PlayerDetailPage({ params, searchParams }: Props) {
   const { id } = await params
-  const { level, tab, postId } = await searchParams
+  const { level, tab, postId, openComments } = await searchParams
   const initialStrongLevel = Math.min(13, Math.max(1, Number(level) || 1))
   const initialTab = tab === 'review' ? 'review' : 'detail'
   const { player, season, detail } = await getPlayerData(id)
@@ -61,6 +61,7 @@ export default async function PlayerDetailPage({ params, searchParams }: Props) 
           initialStrongLevel={initialStrongLevel}
           initialTab={initialTab}
           initialHighlightedPostId={postId?.trim() || null}
+          initialAutoOpenComments={!!openComments && !!postId?.trim()}
         />
       )}
     </div>

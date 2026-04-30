@@ -37,6 +37,7 @@ type CommunityPageData = {
   page: number
   pageSize: number
   highlightedPostId?: string | null
+  autoOpenComments?: boolean
 }
 
 type CommentsPageData = {
@@ -340,6 +341,16 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
     })
     return () => window.cancelAnimationFrame(frameId)
   }, [highlightedPostId, posts])
+
+  const autoOpenCommentsDoneRef = useRef(false)
+  useEffect(() => {
+    if (!initialData.autoOpenComments || !initialData.highlightedPostId || autoOpenCommentsDoneRef.current) return
+    const post = posts.find((p) => p.id === initialData.highlightedPostId)
+    if (!post) return
+    autoOpenCommentsDoneRef.current = true
+    void loadComments(post)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts])
 
   function scrollToListTop() {
     listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
