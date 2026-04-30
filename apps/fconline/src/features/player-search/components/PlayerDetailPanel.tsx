@@ -501,7 +501,7 @@ export default function PlayerDetailPanel({
                 }}
                 onClick={handleFavorite}
                 disabled={favoritePending}
-                className="shrink-0 rounded-full p-2 -m-2 touch-manipulation disabled:opacity-60"
+                className="shrink-0 rounded-full p-4 -m-4 touch-manipulation disabled:opacity-60"
                 aria-label="선수 즐겨찾기"
               >
                 <Image
