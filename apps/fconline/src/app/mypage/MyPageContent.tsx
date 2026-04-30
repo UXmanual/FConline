@@ -1214,8 +1214,8 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               {authUser && !authMessage ? (
                 <div className="flex min-h-[36px] items-center justify-between gap-3">
                   <p className="text-sm font-semibold" style={titleStyle}>
-                    <span style={{ color: '#457ae5' }}>구글 로그인</span>
-                    <span> 연결됨</span>
+                    <span>구글 로그인</span>
+                    <span style={{ color: '#457ae5' }}> 연결 중</span>
                   </p>
 
                   <div className="flex min-w-0 items-center justify-end gap-1.5 text-[12px] font-medium" style={mutedStyle}>
@@ -1240,8 +1240,8 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 <div className="space-y-2.5 py-1">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold" style={titleStyle}>
-                      <span style={{ color: '#457ae5' }}>구글 로그인</span>
-                      <span>{authUser ? ' 연결됨' : ' 연결 전'}</span>
+                      <span>구글 로그인</span>
+                      <span style={{ color: 'var(--app-muted-text)' }}>{authUser ? ' 연결 중' : ' 연결 전'}</span>
                     </p>
                   </div>
 
