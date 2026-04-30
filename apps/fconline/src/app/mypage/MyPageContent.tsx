@@ -646,10 +646,17 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     document.addEventListener('touchmove', prevent, { passive: false })
 
     const viewport = window.visualViewport
+    let resetTimer: ReturnType<typeof setTimeout> | null = null
     const update = () => {
       if (viewport) {
         const offset = Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height)
-        setNicknameSheetKeyboardOffset(offset)
+        if (offset === 0) {
+          if (resetTimer) clearTimeout(resetTimer)
+          resetTimer = setTimeout(() => setNicknameSheetKeyboardOffset(0), 350)
+        } else {
+          if (resetTimer) { clearTimeout(resetTimer); resetTimer = null }
+          setNicknameSheetKeyboardOffset(offset)
+        }
       }
     }
 
@@ -661,6 +668,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     window.addEventListener('resize', update)
 
     return () => {
+      if (resetTimer) clearTimeout(resetTimer)
       document.removeEventListener('touchmove', prevent)
       if (viewport) {
         viewport.removeEventListener('resize', update)
