@@ -1,7 +1,7 @@
 'use client'
 
 import { MagnifyingGlass } from '@phosphor-icons/react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 interface Props {
   value: string
@@ -11,6 +11,7 @@ interface Props {
 
 export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const [isFocused, setIsFocused] = useState(false)
 
   const runSearch = () => {
     onSearch()
@@ -37,10 +38,10 @@ export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
 
   return (
     <div
-      className="flex h-14 items-center gap-2 rounded-lg border px-4 focus-within:border-2 focus-within:border-[#457ae5]"
+      className="flex h-14 items-center gap-2 rounded-lg px-4"
       style={{
         backgroundColor: 'var(--app-player-card-bg)',
-        borderColor: 'var(--app-player-input-border)',
+        border: isFocused ? '2px solid #457ae5' : '1px solid var(--app-player-input-border)',
       }}
       onClick={handleContainerClick}
     >
@@ -50,6 +51,8 @@ export default function PlayerSearchBar({ value, onChange, onSearch }: Props) {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         placeholder="선수 이름을 입력해주세요"
         className="min-w-0 flex-1 bg-transparent text-[15px] outline-none"
         style={{ color: 'var(--app-player-title)' }}
