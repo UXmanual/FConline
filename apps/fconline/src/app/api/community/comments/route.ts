@@ -88,6 +88,7 @@ function mapComment(
       typeof comment.author_user_id === 'string' && comment.author_user_id.trim().length > 0
         ? (avatarUrlMap?.get(comment.author_user_id) ?? null)
         : null,
+    authorId: comment.author_user_id ?? null,
     ipPrefix: comment.ip_prefix ?? null,
     content: comment.content,
     createdAt: comment.created_at,

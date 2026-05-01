@@ -93,6 +93,7 @@ function mapPostSummary(
       typeof post.author_user_id === 'string' && post.author_user_id.trim().length > 0
         ? (avatarUrlMap?.get(post.author_user_id) ?? null)
         : null,
+    authorId: post.author_user_id ?? null,
     ipPrefix: post.ip_prefix ?? null,
     title: post.title,
     content: post.content,

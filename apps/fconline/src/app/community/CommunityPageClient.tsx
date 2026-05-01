@@ -18,6 +18,7 @@ import {
   type CommunityCommentItem,
   type CommunityPostSummary,
 } from '@/lib/community'
+import { pickDefaultAvatar } from '@/lib/avatar'
 import { useDarkModeEnabled } from '@/lib/darkMode'
 import { useLockedBodyScroll } from '@/lib/mobileOverlay'
 import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
@@ -131,7 +132,7 @@ function PostCard({ post, onDelete, onOpenComments, onReport, onLike, isCommentO
               {post.avatarUrl ? (
                 <Image src={post.avatarUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-lg leading-none">😀</span>
+                <span className="text-lg leading-none">{post.authorId ? pickDefaultAvatar(post.authorId) : '😀'}</span>
               )}
             </div>
             <div className="min-w-0">
@@ -706,7 +707,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
                                   {comment.avatarUrl ? (
                                     <Image src={comment.avatarUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
                                   ) : (
-                                    <span className="text-lg leading-none">😀</span>
+                                    <span className="text-lg leading-none">{comment.authorId ? pickDefaultAvatar(comment.authorId) : '😀'}</span>
                                   )}
                                 </div>
                                 <div className="min-w-0">

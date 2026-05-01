@@ -20,20 +20,7 @@ import {
 import { setDarkModeEnabled, useDarkModeEnabled } from '@/lib/darkMode'
 import { getSupabaseBrowserClient, getSupabaseUserSafely } from '@/lib/supabase/browser'
 import type { UserLevelSnapshot } from '@/lib/userLevel'
-
-const DEFAULT_AVATARS = [
-  '😀', '😄', '😎', '🤓', '🥳', '😇', '🤩', '😏', '🥸', '🤗',
-  '😈', '👻', '🐶', '🐱', '🦊', '🐼', '🦁', '🐯', '🐸', '🦄',
-  '🐙', '🦋', '🐧', '🦉', '🐺', '🐻', '🐨', '🐹', '🦝', '🐲',
-]
-
-function pickDefaultAvatar(userId: string) {
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0
-  }
-  return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length]
-}
+import { pickDefaultAvatar } from '@/lib/avatar'
 
 const APP_NOTIFICATION_BOTTOM_SHEET_KEY = 'app-notifications-bottom-sheet-seen-v3'
 const LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS = [

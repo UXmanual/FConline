@@ -651,6 +651,73 @@ function summarizeOfficialScoringStyles(matches: MatchData[], ouid: string | nul
   }
 }
 
+function derivePlayStyle(
+  summary: ReturnType<typeof summarizeOfficialMatches>,
+  scoring: OfficialRecentScoringSummary | null,
+): string | null {
+  if (!summary) return null
+
+  const {
+    wins, draws, losses, cleanSheets, goalsFor, goalsAgainst,
+    averagePossession, averageShots, averageEffectiveShots,
+  } = summary
+  const total = wins + draws + losses
+  if (total === 0) return null
+
+  const totalGoals       = scoring?.totalGoals ?? goalsFor
+  const headerGoals      = scoring?.headerGoals ?? 0
+  const outPenGoals      = scoring?.outPenaltyGoals ?? 0
+  const freekickGoals    = scoring?.freekickGoals ?? 0
+  const penaltyGoals     = scoring?.penaltyGoals ?? 0
+  const multiGoalMatches = scoring?.multiGoalMatches ?? 0
+
+  const goalsPerGame    = totalGoals / total
+  const concededPerGame = goalsAgainst / total
+  const winRate         = wins / total
+  const cleanSheetRate  = cleanSheets / total
+  const multiGoalRate   = multiGoalMatches / total
+  const headerRatio     = totalGoals > 0 ? headerGoals / totalGoals : 0
+  const outPenRatio     = totalGoals > 0 ? outPenGoals / totalGoals : 0
+  const convRate        = averageEffectiveShots > 0 ? goalsPerGame / averageEffectiveShots : 0
+
+  // norm(v, lo, hi): lo~hi 범위에서 0~1로 선형 변환
+  // lo = "이 수치부터 눈에 띄기 시작", hi = "이 수치면 극단적"
+  // 모든 스타일이 동일한 0~1 스케일에서 경쟁 — 가장 높은 값이 해당 선수의 스타일
+  // 패스 성공률은 상위권에서 개인차가 작아 의미 있는 변별이 불가능 → 완전 제외
+  const norm = (v: number, lo: number, hi: number) =>
+    Math.max(0, Math.min(1, (v - lo) / (hi - lo)))
+
+  const counterScore =
+    averagePossession < 48
+      ? Math.sqrt(norm(48 - averagePossession, 0, 13) * norm(winRate, 0.55, 0.95))
+      : 0
+
+  // 득점 스타일 × 1.5: 구단주 고유 무기, 우선 반영
+  // 득점 패턴 × 1.2: 공격 지표는 명확한 개인차
+  // 수비/승률 × 0.8: 상위권은 모두 수비력이 높아 하향 조정
+  const candidates: Array<[string, number]> = [
+    ['헤딩슛의 달인',      totalGoals >= 5 ? norm(headerRatio, 0.13, 0.45) * 1.5 : 0],
+    ['중거리골 전문가',    totalGoals >= 5 ? norm(outPenRatio,  0.08, 0.38) * 1.5 : 0],
+    ['세트피스의 예술가',  norm(freekickGoals, 0.8, 5.0) * 1.5],
+    ['페널티 저승사자',    norm(penaltyGoals,  0.5, 6.0) * 1.5],
+    ['골 폭격기',          norm(goalsPerGame,   2.0, 5.0) * 1.2],
+    ['냉혈한 마무리꾼',    norm(convRate,       0.35, 0.80) * 1.2],
+    ['멀티골 스나이퍼',    norm(multiGoalRate,  0.55, 0.95) * 1.2],
+    ['슈팅 폭격기',        norm(averageShots,   10.0, 20.0) * 1.2],
+    ['볼 지배자',          norm(averagePossession, 54, 70)],
+    ['역습 카운터 전문가', counterScore],
+    ['클린시트 장인',      norm(cleanSheetRate,        0.35, 0.80) * 0.8],
+    ['수비 봉쇄자',        norm(1.8 - concededPerGame, 1.0,  1.6)  * 0.8],
+    ['승리의 화신',        norm(winRate,               0.80, 0.97) * 0.8],
+  ]
+
+  candidates.sort((a, b) => b[1] - a[1])
+  const top = candidates[0]
+
+  if (!top || top[1] < 0.30) return '균형잡힌 플레이어'
+  return top[0]
+}
+
 function buildOfficialRecentPlayerLeaders(matches: MatchData[], ouid: string | null | undefined) {
   if (!ouid) return []
 
@@ -1058,11 +1125,11 @@ function DetailValueContent({
   }
 }
 
-function InfoCard({ label, value }: { label: string; value: string | number }) {
+function InfoCard({ label, value, valueColor }: { label: string; value: string | number; valueColor?: string }) {
   return (
     <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}>
       <div className="app-theme-muted text-[11px]">{label}</div>
-      <div className="app-theme-title mt-1 text-sm font-semibold">{value}</div>
+      <div className="mt-1 text-sm font-semibold" style={{ color: valueColor ?? 'var(--app-title)' }}>{value}</div>
     </div>
   )
 }
@@ -3176,6 +3243,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   const voltaSummary = isVoltaMode ? summarizeMatches(matches, exactCandidate?.ouid) : null
   const officialSummary = isOfficialMode ? summarizeOfficialMatches(matches, exactCandidate?.ouid) : null
   const officialScoringSummary = isOfficialMode ? summarizeOfficialScoringStyles(matches, exactCandidate?.ouid) : null
+  const officialPlayStyle = isOfficialMode ? derivePlayStyle(officialSummary, officialScoringSummary) : null
   const officialTopPlayers = isOfficialMode ? buildOfficialRecentPlayerLeaders(matches, exactCandidate?.ouid) : []
   const recentMatchesLabel = '최근 10경기'
   const recentGoalsForLabel = '최근 10경기 총 득점'
@@ -3346,11 +3414,25 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                             <MutedDivider />
                             <span>{officialDisplay.rankLabel ?? '공식 랭킹 검색 결과'}</span>
                           </div>
+                          {officialPlayStyle && (
+                            <div className="mt-2">
+                              <span
+                                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                                style={{ backgroundColor: 'var(--app-action-badge-bg)', color: 'var(--app-action-badge-fg)' }}
+                              >
+                                {officialPlayStyle}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-3">
-                        <InfoCard label="현재 순위" value={officialDisplay.rank != null ? `#${officialDisplay.rank}` : '-'} />
+                        <InfoCard
+                          label="현재 순위"
+                          value={officialDisplay.rank != null ? `${officialDisplay.rank}위` : '-'}
+                          valueColor={officialDisplay.rank != null ? 'var(--app-accent-blue)' : undefined}
+                        />
                         <InfoCard label="랭킹 포인트" value={statValue(officialDisplay.rankPoint)} />
                         <InfoCard label="구단주 취임일" value={statValue(exactCandidate.ownerSince)} />
                         <InfoCard label="대표팀" value={statValue(exactCandidate.representativeTeam)} />
@@ -3401,7 +3483,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           label="랭크 / 포인트"
                           value={
                             hasOfficialRank
-                              ? `${officialDisplay.rank != null ? `#${officialDisplay.rank}` : '-'} · ${statValue(officialDisplay.rankPoint)}`
+                              ? `${officialDisplay.rank != null ? `${officialDisplay.rank}위` : '-'} · ${statValue(officialDisplay.rankPoint)}`
                               : '-'
                           }
                         />
