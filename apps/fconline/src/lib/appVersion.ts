@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '24.9': '2026-05-02T21:30:00+09:00',
   '24.8': '2026-05-01T17:02:42+09:00',
   '24.7': '2026-04-30T23:00:00+09:00',
   '24.6': '2026-04-30T22:30:00+09:00',
@@ -31,6 +32,12 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '24.9': [
+    '분석 탭에 감독모드 탭을 추가했습니다.',
+    '감독모드 랭킹 TOP 5 구단주 카드를 통해 랭커를 바로 검색할 수 있습니다.',
+    '감독모드 포메이션 상위권 사용 비율과 팀컬러 상위권 메타 카드를 추가했습니다.',
+    '구단주명 검색 시 감독모드 최근 경기 기록과 상세 분석을 확인할 수 있습니다.',
+  ],
   '24.8': [
     '공식경기 분석에 최근 경기 지표를 바탕으로 한 플레이 스타일 배지를 추가했습니다.',
     '커뮤니티와 선수평 게시글·댓글의 기본 프로필을 사용자별 랜덤 아바타로 표시하도록 정리했습니다.',
