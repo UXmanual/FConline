@@ -3,7 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
-  '24.10': '2026-05-02T22:00:00+09:00',
+  '25.0': '2026-05-02T22:00:00+09:00',
   '24.9': '2026-05-02T21:30:00+09:00',
   '24.8': '2026-05-01T17:02:42+09:00',
   '24.7': '2026-04-30T23:00:00+09:00',
@@ -33,7 +33,7 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
-  '24.10': [
+  '25.0': [
     '감독모드 팀컬러 상위권 메타 집계 기준을 상위 4000명으로 확대했습니다.',
   ],
   '24.9': [
