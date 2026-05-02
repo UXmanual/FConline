@@ -1105,7 +1105,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     }
   }
 
-  const handleOpenGameClubAnalysis = (mode: 'official1on1' | 'voltaLive') => {
+  const handleOpenGameClubAnalysis = (mode: 'official1on1' | 'voltaLive' | 'manager') => {
     const trimmedClubName = gameClubName.trim()
 
     if (!trimmedClubName) {
@@ -1499,13 +1499,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               >
                 <span>{'볼타 라이브↗'}</span>
               </button>
-              <span
+              <button
+                type="button"
+                onClick={() => handleOpenGameClubAnalysis('manager')}
                 className="inline-flex shrink-0 items-center"
-                style={{ color: 'var(--app-muted-text)', opacity: 0.6 }}
-                aria-disabled="true"
+                style={titleStyle}
               >
                 <span>{'감독모드↗'}</span>
-              </span>
+              </button>
             </div>
           ) : null}
         </section>
