@@ -12,7 +12,8 @@ const MANAGER_RANK_URL_TEMPLATE =
   'https://fconline.nexon.com/datacenter/rank_inner?rt=manager&n4seasonno=0&n4pageno='
 const DAILY_SQUAD_URL = 'https://fconline.nexon.com/datacenter/dailysquad'
 const MANAGER_FORMATION_META_PAGE_COUNT = 5
-const MANAGER_TEAM_COLOR_META_PAGE_COUNT = 5
+const MANAGER_TEAM_COLOR_META_PAGE_COUNT = 200
+const MANAGER_TEAM_COLOR_META_SAMPLE_SIZE = 4000
 
 let lastSuccessfulManagerTeamColorMeta: OfficialTeamColorMetaItem[] = []
 
@@ -306,7 +307,7 @@ export const getManagerTeamColorMeta = unstable_cache(
       )
 
       const allItems = htmlList.flatMap((html) => (html ? parseManagerRankRows(html) : []))
-      const sampleItems = allItems.filter((item) => item.rank <= 100)
+      const sampleItems = allItems.filter((item) => item.rank <= MANAGER_TEAM_COLOR_META_SAMPLE_SIZE)
 
       if (sampleItems.length === 0) {
         return { items: lastSuccessfulManagerTeamColorMeta, sampleSize: 0 }
@@ -333,6 +334,6 @@ export const getManagerTeamColorMeta = unstable_cache(
       return { items: lastSuccessfulManagerTeamColorMeta, sampleSize: 0 }
     }
   },
-  ['manager-team-color-meta-v1'],
+  ['manager-team-color-meta-v2'],
   { revalidate: 60 * 30 },
 )
