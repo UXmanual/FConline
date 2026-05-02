@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowLeft, LinkSimple, MagnifyingGlass, XLogo } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
+import ManagerTopRankCard from '@/features/match-analysis/components/ManagerTopRankCard'
 import OfficialFormationMetaCard from '@/features/match-analysis/components/OfficialFormationMetaCard'
 import OfficialTeamColorMetaCard from '@/features/match-analysis/components/OfficialTeamColorMetaCard'
 import OfficialTopRankCard from '@/features/match-analysis/components/OfficialTopRankCard'
@@ -12,6 +13,7 @@ import VoltaTopRankCard from '@/features/match-analysis/components/VoltaTopRankC
 import PlayerImage from '@/features/player-search/components/PlayerImage'
 import {
   calcPassTotal,
+  ManagerTopRankItem,
   MatchData,
   MatchPlayerInfo,
   MatchSearchCandidate,
@@ -28,6 +30,9 @@ const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-met
 const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v8'
 const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v3'
 const VOLTA_TOP_CACHE_KEY = 'fconline.match.volta-top-cache.v3'
+const MANAGER_TOP_CACHE_KEY = 'fconline.match.manager-top-cache.v1'
+const MANAGER_FORMATION_META_CACHE_KEY = 'fconline.match.manager-formation-meta-cache.v1'
+const MANAGER_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.manager-team-color-meta-cache.v1'
 const LEGACY_MATCH_CACHE_KEYS = ['fconline.match.official-top-cache.v2', 'fconline.match.volta-top-cache.v2'] as const
 const MATCH_LIST_LIMIT = 10
 const MATCH_LIST_TIMEOUT_MS = 10000
@@ -80,7 +85,11 @@ type OfficialTeamColorMetaCacheEntry = {
   sampleSize: number
 }
 type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
-type TopRankSeedItem = OfficialTopRankItem | VoltaTopRankItem
+type TopRankSeedItem = OfficialTopRankItem | VoltaTopRankItem | ManagerTopRankItem
+type ManagerTopRankCacheEntry = {
+  cachedAt: number
+  items: ManagerTopRankItem[]
+}
 
 const SEARCH_MODE_OPTIONS: Array<{
   value: SearchMode
@@ -98,7 +107,6 @@ const SEARCH_MODE_OPTIONS: Array<{
   {
     value: 'manager',
     label: '감독모드',
-    disabled: true,
   },
 ]
 
@@ -150,6 +158,15 @@ function createEmptySearchCandidate(nickname: string): MatchSearchCandidate {
     officialLosses: null,
     officialTeamColors: [],
     officialFormation: null,
+    managerRank: null,
+    managerRankPoint: null,
+    managerRankIconUrl: null,
+    managerWinRate: null,
+    managerWins: null,
+    managerDraws: null,
+    managerLosses: null,
+    managerTeamColors: [],
+    managerFormation: null,
     voltaRank: null,
     voltaRankPoint: null,
     voltaRankIconUrl: null,
@@ -200,6 +217,33 @@ function buildTopRankSeedCandidate(mode: SearchMode, item: TopRankSeedItem): Mat
       officialLosses: officialItem.losses,
       officialTeamColors: officialItem.teamColors,
       officialFormation: officialItem.formation,
+    }
+  }
+
+  if (mode === 'manager') {
+    const managerItem = item as ManagerTopRankItem
+    return {
+      ...base,
+      rank: managerItem.rank,
+      elo: managerItem.rankPoint,
+      rankIconUrl: managerItem.rankIconUrl,
+      winRate: managerItem.winRate,
+      wins: managerItem.wins,
+      draws: managerItem.draws,
+      losses: managerItem.losses,
+      teamColors: managerItem.teamColors,
+      formation: managerItem.formation,
+      price: managerItem.price,
+      modes: ['manager'],
+      managerRank: managerItem.rank,
+      managerRankPoint: managerItem.rankPoint,
+      managerRankIconUrl: managerItem.rankIconUrl,
+      managerWinRate: managerItem.winRate,
+      managerWins: managerItem.wins,
+      managerDraws: managerItem.draws,
+      managerLosses: managerItem.losses,
+      managerTeamColors: managerItem.teamColors,
+      managerFormation: managerItem.formation,
     }
   }
 
@@ -262,6 +306,16 @@ function mergeSeedCandidate(
     officialTeamColors:
       candidate.officialTeamColors.length > 0 ? candidate.officialTeamColors : seed.officialTeamColors,
     officialFormation: candidate.officialFormation ?? seed.officialFormation,
+    managerRank: candidate.managerRank ?? seed.managerRank,
+    managerRankPoint: candidate.managerRankPoint ?? seed.managerRankPoint,
+    managerRankIconUrl: candidate.managerRankIconUrl ?? seed.managerRankIconUrl,
+    managerWinRate: candidate.managerWinRate ?? seed.managerWinRate,
+    managerWins: candidate.managerWins ?? seed.managerWins,
+    managerDraws: candidate.managerDraws ?? seed.managerDraws,
+    managerLosses: candidate.managerLosses ?? seed.managerLosses,
+    managerTeamColors:
+      candidate.managerTeamColors.length > 0 ? candidate.managerTeamColors : seed.managerTeamColors,
+    managerFormation: candidate.managerFormation ?? seed.managerFormation,
     voltaRank: candidate.voltaRank ?? seed.voltaRank,
     voltaRankPoint: candidate.voltaRankPoint ?? seed.voltaRankPoint,
     voltaRankIconUrl: candidate.voltaRankIconUrl ?? seed.voltaRankIconUrl,
@@ -1164,14 +1218,18 @@ function SearchModeTabs({
           option.value === 'voltaLive'
             ? {
                 color: '#ffffff',
-                background:
-                  'linear-gradient(135deg, #5f36d9 0%, #4a2ab7 100%)',
+                background: 'linear-gradient(135deg, #5f36d9 0%, #4a2ab7 100%)',
                 boxShadow: '0 10px 24px rgba(95, 54, 217, 0.22)',
+              }
+            : option.value === 'manager'
+            ? {
+                color: '#ffffff',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 10px 24px rgba(16, 185, 129, 0.22)',
               }
             : {
                 color: '#ffffff',
-                background:
-                  'linear-gradient(135deg, #457ae5 0%, #256ef4 100%)',
+                background: 'linear-gradient(135deg, #457ae5 0%, #256ef4 100%)',
                 boxShadow: '0 10px 24px rgba(37, 110, 244, 0.2)',
               }
 
@@ -1222,6 +1280,14 @@ function SearchModePreviewCard({
   officialTopLoading,
   voltaTopItems,
   voltaTopLoading,
+  managerTopItems,
+  managerTopLoading,
+  managerFormationMetaItems,
+  managerFormationMetaLoading,
+  managerFormationMetaSampleSize,
+  managerTeamColorMetaItems,
+  managerTeamColorMetaLoading,
+  managerTeamColorMetaSampleSize,
 }: {
   selectedMode: SearchMode
   onSelectTopRankItem: (mode: SearchMode, item: TopRankSeedItem) => void
@@ -1235,6 +1301,14 @@ function SearchModePreviewCard({
   officialTopLoading: boolean
   voltaTopItems: VoltaTopRankItem[]
   voltaTopLoading: boolean
+  managerTopItems: ManagerTopRankItem[]
+  managerTopLoading: boolean
+  managerFormationMetaItems: OfficialFormationMetaItem[]
+  managerFormationMetaLoading: boolean
+  managerFormationMetaSampleSize: number
+  managerTeamColorMetaItems: OfficialTeamColorMetaItem[]
+  managerTeamColorMetaLoading: boolean
+  managerTeamColorMetaSampleSize: number
 }) {
   if (selectedMode === 'official1on1') {
     return (
@@ -1272,32 +1346,40 @@ function SearchModePreviewCard({
 
   if (selectedMode === 'manager') {
     return (
-      <section className="app-theme-card rounded-lg border px-5 py-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="app-theme-title text-base font-semibold">감독모드 준비 중</p>
-            <p className="app-theme-body mt-1 text-sm leading-5">
-              감독모드는 다음 단계에서 전적, 티어, 최근 경기 흐름에 맞춰 연결할 예정이에요.
-            </p>
-          </div>
-          <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-            style={{
-              backgroundColor: 'var(--app-analysis-soft-bg)',
-              color: 'var(--app-title)',
-            }}
-          >
-            Preview
-          </span>
-        </div>
+      <>
+        <section className="mt-4 space-y-3">
+          <p className="app-theme-muted text-[11px] font-medium leading-4">
+            • 현재 시즌 감독모드 랭킹 기준
+          </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <InfoCard label="예정 정보" value="감독 티어" />
-          <InfoCard label="예정 정보" value="승무패" />
-          <InfoCard label="예정 정보" value="승률" />
-          <InfoCard label="예정 정보" value="최근 경기" />
-        </div>
-      </section>
+          {managerTopLoading || managerTopItems.length > 0 ? (
+            <ManagerTopRankCard
+              items={managerTopItems}
+              isLoading={managerTopLoading}
+              onSelectItem={(item) => onSelectTopRankItem('manager', item)}
+            />
+          ) : null}
+        </section>
+
+        <section className="mt-4">
+          <OfficialFormationMetaCard
+            items={managerFormationMetaItems}
+            sampleSize={managerFormationMetaSampleSize}
+            isLoading={managerFormationMetaLoading}
+            accentColor="#10b981"
+            badgeLabel="FORMATION"
+          />
+        </section>
+
+        <section className="mt-4">
+          <OfficialTeamColorMetaCard
+            items={managerTeamColorMetaItems}
+            sampleSize={managerTeamColorMetaSampleSize}
+            isLoading={managerTeamColorMetaLoading}
+            accentColor="#10b981"
+          />
+        </section>
+      </>
     )
   }
 
@@ -2007,6 +2089,24 @@ function getOfficialDisplayFields(candidate: MatchSearchCandidate | null) {
   }
 }
 
+function getManagerDisplayFields(candidate: MatchSearchCandidate | null) {
+  return {
+    rank: candidate?.managerRank ?? candidate?.rank ?? null,
+    rankPoint: candidate?.managerRankPoint ?? candidate?.elo ?? null,
+    rankLabel: candidate?.rankLabel ?? null,
+    rankIconUrl: candidate?.managerRankIconUrl ?? candidate?.rankIconUrl ?? null,
+    winRate: candidate?.managerWinRate ?? candidate?.winRate ?? null,
+    wins: candidate?.managerWins ?? candidate?.wins ?? null,
+    draws: candidate?.managerDraws ?? candidate?.draws ?? null,
+    losses: candidate?.managerLosses ?? candidate?.losses ?? null,
+    formation: candidate?.managerFormation ?? candidate?.formation ?? null,
+    teamColors:
+      candidate?.managerTeamColors && candidate.managerTeamColors.length > 0
+        ? candidate.managerTeamColors
+        : candidate?.teamColors ?? [],
+  }
+}
+
 function formatMatchRecordLine(wins: number | null, draws: number | null, losses: number | null) {
   if (wins == null || draws == null || losses == null) {
     return '-'
@@ -2411,7 +2511,7 @@ function OfficialMatchRecordCard({
             <div className="flex flex-wrap items-center gap-2">
               <MatchResultLabel result={result} />
               <MutedDivider />
-              <span className="app-theme-body text-sm font-semibold">1:1 공식경기</span>
+              <span className="app-theme-body text-sm font-semibold">{getModeLabel(searchMode)}</span>
             </div>
             <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
               <span className="app-theme-title font-semibold">{scorelineLabel}</span>
@@ -2765,16 +2865,24 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   const [matches, setMatches] = useState<MatchData[]>([])
   const [officialFormationMetaItems, setOfficialFormationMetaItems] = useState<OfficialFormationMetaItem[]>([])
   const [officialFormationMetaSampleSize, setOfficialFormationMetaSampleSize] = useState(100)
+  const [managerFormationMetaItems, setManagerFormationMetaItems] = useState<OfficialFormationMetaItem[]>([])
+  const [managerFormationMetaSampleSize, setManagerFormationMetaSampleSize] = useState(100)
+  const [managerTeamColorMetaItems, setManagerTeamColorMetaItems] = useState<OfficialTeamColorMetaItem[]>([])
+  const [managerTeamColorMetaSampleSize, setManagerTeamColorMetaSampleSize] = useState(100)
   const [officialTeamColorMetaItems, setOfficialTeamColorMetaItems] = useState<OfficialTeamColorMetaItem[]>([])
   const [officialTeamColorMetaSampleSize, setOfficialTeamColorMetaSampleSize] = useState(4000)
   const [officialTopItems, setOfficialTopItems] = useState<OfficialTopRankItem[]>([])
   const [voltaTopItems, setVoltaTopItems] = useState<VoltaTopRankItem[]>([])
+  const [managerTopItems, setManagerTopItems] = useState<ManagerTopRankItem[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [matchLoading, setMatchLoading] = useState(false)
   const [officialFormationMetaLoading, setOfficialFormationMetaLoading] = useState(true)
   const [officialTeamColorMetaLoading, setOfficialTeamColorMetaLoading] = useState(true)
+  const [managerFormationMetaLoading, setManagerFormationMetaLoading] = useState(true)
+  const [managerTeamColorMetaLoading, setManagerTeamColorMetaLoading] = useState(true)
   const [officialTopLoading, setOfficialTopLoading] = useState(true)
   const [voltaTopLoading, setVoltaTopLoading] = useState(true)
+  const [managerTopLoading, setManagerTopLoading] = useState(true)
   const [matchesError, setMatchesError] = useState('')
   const [visibleMatchCount, setVisibleMatchCount] = useState(INITIAL_VISIBLE_MATCHES)
   const [activeMatchId, setActiveMatchId] = useState(initialMatchId)
@@ -2892,6 +3000,81 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
       }
     }
 
+    const loadManagerTopRanks = async () => {
+      const cached = readJsonStorage<ManagerTopRankCacheEntry>(MANAGER_TOP_CACHE_KEY)
+      const isCacheFresh =
+        typeof cached?.cachedAt === 'number' && Date.now() - cached.cachedAt < TOP_RANK_CACHE_TTL_MS
+
+      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 3) {
+        setManagerTopItems(cached.items)
+        setManagerTopLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/nexon/matches/manager-top')
+        if (!res.ok) {
+          return
+        }
+
+        const data = await res.json().catch(() => null)
+        const items = Array.isArray(data?.items) ? (data.items as ManagerTopRankItem[]) : []
+
+        if (cancelled) {
+          return
+        }
+
+        setManagerTopItems(items)
+
+        if (items.length > 0) {
+          writeJsonStorage(MANAGER_TOP_CACHE_KEY, {
+            cachedAt: Date.now(),
+            items,
+          } satisfies ManagerTopRankCacheEntry)
+        }
+      } finally {
+        if (!cancelled) {
+          setManagerTopLoading(false)
+        }
+      }
+    }
+
+    const loadManagerFormationMeta = async () => {
+      const todayKey = getKstDateKey()
+      const cached = readJsonStorage<OfficialFormationMetaCacheEntry>(MANAGER_FORMATION_META_CACHE_KEY)
+
+      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 3) {
+        setManagerFormationMetaItems(cached.items)
+        setManagerFormationMetaSampleSize(cached.sampleSize || 100)
+        setManagerFormationMetaLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/nexon/matches/manager-formation-meta')
+        if (!res.ok) return
+
+        const data = await res.json().catch(() => null)
+        const items = Array.isArray(data?.items) ? (data.items as OfficialFormationMetaItem[]) : []
+        const sampleSize = typeof data?.sampleSize === 'number' ? data.sampleSize : 100
+
+        if (cancelled) return
+
+        setManagerFormationMetaItems(items)
+        setManagerFormationMetaSampleSize(sampleSize)
+
+        if (items.length > 0) {
+          writeJsonStorage(MANAGER_FORMATION_META_CACHE_KEY, {
+            dateKey: todayKey,
+            items,
+            sampleSize,
+          } satisfies OfficialFormationMetaCacheEntry)
+        }
+      } finally {
+        if (!cancelled) setManagerFormationMetaLoading(false)
+      }
+    }
+
     const loadOfficialFormationMeta = async () => {
       const todayKey = getKstDateKey()
       const cached = readJsonStorage<OfficialFormationMetaCacheEntry>(OFFICIAL_FORMATION_META_CACHE_KEY)
@@ -2976,10 +3159,49 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
       }
     }
 
+    const loadManagerTeamColorMeta = async () => {
+      const todayKey = getKstDateKey()
+      const cached = readJsonStorage<OfficialTeamColorMetaCacheEntry>(MANAGER_TEAM_COLOR_META_CACHE_KEY)
+
+      if (cached?.dateKey === todayKey && Array.isArray(cached.items) && cached.items.length >= 5) {
+        setManagerTeamColorMetaItems(cached.items)
+        setManagerTeamColorMetaSampleSize(cached.sampleSize || 100)
+        setManagerTeamColorMetaLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/nexon/matches/manager-team-color-meta')
+        if (!res.ok) return
+
+        const data = await res.json().catch(() => null)
+        const items = Array.isArray(data?.items) ? (data.items as OfficialTeamColorMetaItem[]) : []
+        const sampleSize = typeof data?.sampleSize === 'number' ? data.sampleSize : 100
+
+        if (cancelled) return
+
+        setManagerTeamColorMetaItems(items)
+        setManagerTeamColorMetaSampleSize(sampleSize)
+
+        if (items.length > 0) {
+          writeJsonStorage(MANAGER_TEAM_COLOR_META_CACHE_KEY, {
+            dateKey: todayKey,
+            items,
+            sampleSize,
+          } satisfies OfficialTeamColorMetaCacheEntry)
+        }
+      } finally {
+        if (!cancelled) setManagerTeamColorMetaLoading(false)
+      }
+    }
+
     void loadOfficialTeamColorMeta()
     void loadOfficialFormationMeta()
     void loadOfficialTopRanks()
     void loadVoltaTopRanks()
+    void loadManagerTopRanks()
+    void loadManagerFormationMeta()
+    void loadManagerTeamColorMeta()
 
     return () => {
       cancelled = true
@@ -3153,7 +3375,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   }
 
   const handleSearch = async () => {
-    if (isPreviewOnlyMode) {
+    if (isSearchDisabled) {
       return
     }
 
@@ -3239,12 +3461,14 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   }, [activeMatchId, matches])
 
   const isOfficialMode = selectedSearchMode === 'official1on1'
+  const isManagerMode = selectedSearchMode === 'manager'
   const isVoltaMode = selectedSearchMode === 'voltaLive'
+  const isOfficialLike = isOfficialMode || isManagerMode
   const voltaSummary = isVoltaMode ? summarizeMatches(matches, exactCandidate?.ouid) : null
-  const officialSummary = isOfficialMode ? summarizeOfficialMatches(matches, exactCandidate?.ouid) : null
-  const officialScoringSummary = isOfficialMode ? summarizeOfficialScoringStyles(matches, exactCandidate?.ouid) : null
-  const officialPlayStyle = isOfficialMode ? derivePlayStyle(officialSummary, officialScoringSummary) : null
-  const officialTopPlayers = isOfficialMode ? buildOfficialRecentPlayerLeaders(matches, exactCandidate?.ouid) : []
+  const officialSummary = isOfficialLike ? summarizeOfficialMatches(matches, exactCandidate?.ouid) : null
+  const officialScoringSummary = isOfficialLike ? summarizeOfficialScoringStyles(matches, exactCandidate?.ouid) : null
+  const officialPlayStyle = isOfficialLike ? derivePlayStyle(officialSummary, officialScoringSummary) : null
+  const officialTopPlayers = isOfficialLike ? buildOfficialRecentPlayerLeaders(matches, exactCandidate?.ouid) : []
   const recentMatchesLabel = '최근 10경기'
   const recentGoalsForLabel = '최근 10경기 총 득점'
   const recentGoalsAgainstLabel = '최근 10경기 총 실점'
@@ -3255,13 +3479,17 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
       : selectedSearchMode === 'manager'
         ? '감독모드 구단주명을 입력해 주세요'
         : '볼타 라이브 구단주명을 입력해 주세요'
-  const isPreviewOnlyMode = selectedSearchMode === 'manager'
-  const isSearchDisabled = searchLoading || isPreviewOnlyMode
-  const officialDisplay = getOfficialDisplayFields(exactCandidate)
+  const isSearchDisabled = searchLoading
+  const officialDisplay = isManagerMode
+    ? getManagerDisplayFields(exactCandidate)
+    : getOfficialDisplayFields(exactCandidate)
   const fallbackOwnerEmblemUrl = exactCandidate?.representativeTeamEmblemUrl ?? null
   const officialBadgeImageUrl = officialDisplay.rankIconUrl ?? fallbackOwnerEmblemUrl
   const hasOfficialRank =
     officialDisplay.rank !== null || officialDisplay.rankPoint !== null || !!officialDisplay.rankIconUrl
+  const modeAccentColor = isManagerMode ? '#10b981' : 'var(--app-accent-blue)'
+  const modeRecentMatchLabel = isManagerMode ? '감독모드 최근 10경기' : '1:1 공식경기 최근 10경기'
+  const modeNoMatchText = isManagerMode ? '감독모드 경기 기록이 없어요.' : '1:1 공식경기 기록이 없어요.'
   const hasVoltaRank =
     exactCandidate?.voltaRank !== null ||
     exactCandidate?.voltaRankPoint !== null ||
@@ -3364,14 +3592,14 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
 
             {exactCandidate && (
               <div className="space-y-4">
-                {isOfficialMode ? (
+                {isOfficialLike ? (
                   <>
                     <section className="app-theme-card rounded-lg border px-5 py-5">
                       <div className="flex items-start gap-4">
                         {officialBadgeImageUrl ? (
                           <Image
                             src={officialBadgeImageUrl}
-                            alt={officialDisplay.rankIconUrl ? '공식경기 등급' : '대표팀 엠블럼'}
+                            alt={officialDisplay.rankIconUrl ? '경기 등급' : '대표팀 엠블럼'}
                             width={40}
                             height={40}
                             className="mt-0.5 h-10 w-10 shrink-0 object-contain"
@@ -3379,7 +3607,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           />
                         ) : (
                           <div className="app-theme-soft app-theme-body mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold">
-                            1vs1
+                            {isManagerMode ? 'GM' : '1vs1'}
                           </div>
                         )}
 
@@ -3409,10 +3637,10 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           </div>
                           <div className="app-theme-body mt-1 flex flex-wrap items-center gap-1.5 text-sm">
                             <span>
-                              공식 승률 {officialDisplay.winRate != null ? `${formatDecimal(officialDisplay.winRate, 2)}%` : '-'}
+                              승률 {officialDisplay.winRate != null ? `${formatDecimal(officialDisplay.winRate, 2)}%` : '-'}
                             </span>
                             <MutedDivider />
-                            <span>{officialDisplay.rankLabel ?? '공식 랭킹 검색 결과'}</span>
+                            <span>{officialDisplay.rankLabel ?? (isManagerMode ? '감독모드 검색 결과' : '공식 랭킹 검색 결과')}</span>
                           </div>
                           {officialPlayStyle && (
                             <div className="mt-2">
@@ -3431,7 +3659,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                         <InfoCard
                           label="현재 순위"
                           value={officialDisplay.rank != null ? `${officialDisplay.rank}위` : '-'}
-                          valueColor={officialDisplay.rank != null ? 'var(--app-accent-blue)' : undefined}
+                          valueColor={officialDisplay.rank != null ? modeAccentColor : undefined}
                         />
                         <InfoCard label="랭킹 포인트" value={statValue(officialDisplay.rankPoint)} />
                         <InfoCard label="구단주 취임일" value={statValue(exactCandidate.ownerSince)} />
@@ -3441,7 +3669,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           label="승률"
                           value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'}
                         />
-                        <InfoCard label="주요 포메이션" value={statValue(officialDisplay.formation)} />
+                        <InfoCard label="주요 포메이션" value={statValue(officialDisplay.formation ?? null)} />
                         <InfoCard label="대표 팀컬러" value={officialTeamColorValue} />
                         <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
                         <InfoCard
@@ -3487,7 +3715,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                               : '-'
                           }
                         />
-                        <DetailStatCard label="공식 승률" value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'} />
+                        <DetailStatCard label="승률" value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'} />
                         <DetailStatCard
                           label="최근 평균 슈팅"
                           value={officialSummary ? formatMetricNumber(officialSummary.averageShots, 1) : '-'}
@@ -3505,7 +3733,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                     </section>
 
                     <section className="app-theme-card rounded-lg border px-5 py-5">
-                      <h2 className="app-theme-title mb-3 text-base font-semibold">1:1 공식경기 최근 10경기</h2>
+                      <h2 className="app-theme-title mb-3 text-base font-semibold">{modeRecentMatchLabel}</h2>
 
                       {matchLoading && <MatchRecordSkeletonList />}
 
@@ -3514,7 +3742,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                       )}
 
                       {!matchLoading && !matchesError && matches.length === 0 && (
-                        <p className="app-theme-muted py-4 text-sm">1:1 공식경기 기록이 없어요.</p>
+                        <p className="app-theme-muted py-4 text-sm">{modeNoMatchText}</p>
                       )}
 
                       {!matchLoading && !matchesError && (
@@ -3562,7 +3790,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                     {(officialScoringSummary || officialTopPlayers.length > 0) && (
                       <section className="app-theme-card rounded-lg border px-5 py-5">
                         <h2 className="app-theme-title text-base font-semibold">
-                          최근 10경기 <span style={{ color: '#457ae5' }}>공격 패턴</span>
+                          최근 10경기 <span style={{ color: modeAccentColor }}>공격 패턴</span>
                         </h2>
 
                         {officialScoringSummary ? (
@@ -3590,7 +3818,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                         {officialTopPlayers.length > 0 && (
                           <>
                             <h3 className="app-theme-title mt-6 text-sm font-semibold">
-                              최근 10경기 주요 선수 <span style={{ color: '#457ae5' }}>TOP 5</span>
+                              최근 10경기 주요 선수 <span style={{ color: modeAccentColor }}>TOP 5</span>
                             </h3>
                             <div className="mt-3 space-y-3">
                               {officialTopPlayers.map((player) => (
@@ -3822,7 +4050,9 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
               <div className="space-y-2">
                 <p className="app-theme-muted pb-1 text-xs font-semibold">랭킹 후보</p>
                 {candidates.map((candidate) => {
-                  const officialCandidateDisplay = getOfficialDisplayFields(candidate)
+                  const officialCandidateDisplay = isManagerMode
+                    ? getManagerDisplayFields(candidate)
+                    : getOfficialDisplayFields(candidate)
 
                   return (
                     <button
@@ -3839,9 +4069,9 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           <div className="truncate text-sm font-bold">{candidate.nickname}</div>
                           <div className="app-theme-muted mt-1 text-xs">{candidate.modes.join(' · ')}</div>
                         </div>
-                        {isOfficialMode && officialCandidateDisplay.rank !== null ? (
+                        {isOfficialLike && officialCandidateDisplay.rank !== null ? (
                           <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                            공식 #{officialCandidateDisplay.rank}
+                            {isManagerMode ? '감독' : '공식'} #{officialCandidateDisplay.rank}
                           </span>
                         ) : candidate.voltaRank !== null ? (
                           <span className="app-theme-soft app-theme-body rounded-full px-2.5 py-1 text-[11px] font-semibold">
@@ -3855,7 +4085,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                       </div>
 
                       <div className="app-theme-body mt-3 grid grid-cols-2 gap-2 text-xs">
-                        {isOfficialMode ? (
+                        {isOfficialLike ? (
                           <>
                             <span>랭킹 포인트 {statValue(officialCandidateDisplay.rankPoint)}</span>
                             <span>
@@ -3868,7 +4098,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                                 officialCandidateDisplay.losses,
                               )}
                             </span>
-                            <span>포메이션 {statValue(officialCandidateDisplay.formation)}</span>
+                            <span>포메이션 {statValue(officialCandidateDisplay.formation ?? null)}</span>
                           </>
                         ) : (
                           <>
@@ -3902,6 +4132,14 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                 officialTopLoading={officialTopLoading}
                 voltaTopItems={voltaTopItems}
                 voltaTopLoading={voltaTopLoading}
+                managerTopItems={managerTopItems}
+                managerTopLoading={managerTopLoading}
+                managerFormationMetaItems={managerFormationMetaItems}
+                managerFormationMetaLoading={managerFormationMetaLoading}
+                managerFormationMetaSampleSize={managerFormationMetaSampleSize}
+                managerTeamColorMetaItems={managerTeamColorMetaItems}
+                managerTeamColorMetaLoading={managerTeamColorMetaLoading}
+                managerTeamColorMetaSampleSize={managerTeamColorMetaSampleSize}
               />
             )}
           </>

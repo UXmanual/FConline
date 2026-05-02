@@ -6,6 +6,7 @@ type Props = {
   items: OfficialTeamColorMetaItem[]
   sampleSize: number
   isLoading?: boolean
+  accentColor?: string
 }
 
 function formatUsageRate(value: number) {
@@ -21,21 +22,22 @@ export default function OfficialTeamColorMetaCard({
   items,
   sampleSize,
   isLoading = false,
+  accentColor = 'var(--app-accent-blue)',
 }: Props) {
   return (
     <section className="app-theme-card rounded-lg border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="app-theme-title text-sm font-semibold">
-            <span style={{ color: 'var(--app-accent-blue)' }}>{'\uD300\uCEEC\uB7EC'}</span>
+            <span style={{ color: accentColor }}>{'\uD300\uCEEC\uB7EC'}</span>
             <span>{' \uC0C1\uC704\uAD8C \uBA54\uD0C0'}</span>
           </h2>
         </div>
         <span
           className="inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none"
           style={{
-            backgroundColor: 'rgba(37, 110, 244, 0.1)',
-            color: 'var(--app-accent-blue)',
+            backgroundColor: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+            color: accentColor,
           }}
         >
           TEAM COLOR
@@ -67,7 +69,7 @@ export default function OfficialTeamColorMetaCard({
                       draggable={false}
                     />
                   ) : (
-                    <span className="text-[14px] font-bold" style={{ color: 'var(--app-accent-blue)' }}>
+                    <span className="text-[14px] font-bold" style={{ color: accentColor }}>
                       {getFallbackInitial(item.teamColor)}
                     </span>
                   )}
@@ -84,7 +86,7 @@ export default function OfficialTeamColorMetaCard({
               </div>
 
               <div className="shrink-0 text-right">
-                <div className="text-[13px] font-semibold" style={{ color: 'var(--app-accent-blue)' }}>
+                <div className="text-[13px] font-semibold" style={{ color: accentColor }}>
                   {formatUsageRate(item.usageRate)}
                 </div>
               </div>

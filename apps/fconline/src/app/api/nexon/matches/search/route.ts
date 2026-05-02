@@ -172,6 +172,15 @@ function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact'
     officialLosses: null,
     officialTeamColors: [],
     officialFormation: null,
+    managerRank: null,
+    managerRankPoint: null,
+    managerRankIconUrl: null,
+    managerWinRate: null,
+    managerWins: null,
+    managerDraws: null,
+    managerLosses: null,
+    managerTeamColors: [],
+    managerFormation: null,
     voltaRank: null,
     voltaRankPoint: null,
     voltaRankIconUrl: null,
@@ -468,27 +477,54 @@ function mergeCandidate(base: MatchSearchCandidate, incoming: Partial<MatchSearc
         ? incoming.officialTeamColors
         : base.officialTeamColors,
     officialFormation: incoming.officialFormation ?? base.officialFormation,
+    managerRank: incoming.managerRank ?? base.managerRank,
+    managerRankPoint: incoming.managerRankPoint ?? base.managerRankPoint,
+    managerRankIconUrl: incoming.managerRankIconUrl ?? base.managerRankIconUrl,
+    managerWinRate: incoming.managerWinRate ?? base.managerWinRate,
+    managerWins: incoming.managerWins ?? base.managerWins,
+    managerDraws: incoming.managerDraws ?? base.managerDraws,
+    managerLosses: incoming.managerLosses ?? base.managerLosses,
+    managerTeamColors:
+      incoming.managerTeamColors && incoming.managerTeamColors.length > 0
+        ? incoming.managerTeamColors
+        : base.managerTeamColors,
+    managerFormation: incoming.managerFormation ?? base.managerFormation,
   }
 }
 
 function applyModeSpecificFields(candidate: MatchSearchCandidate, mode: SearchModeKey): MatchSearchCandidate {
-  if (mode !== '1vs1') {
-    return candidate
+  if (mode === '1vs1') {
+    return {
+      ...candidate,
+      officialRank: candidate.rank,
+      officialRankPoint: candidate.elo,
+      officialRankLabel: candidate.rankLabel ?? null,
+      officialRankIconUrl: candidate.rankIconUrl ?? null,
+      officialWinRate: candidate.winRate,
+      officialWins: candidate.wins,
+      officialDraws: candidate.draws,
+      officialLosses: candidate.losses,
+      officialTeamColors: candidate.teamColors,
+      officialFormation: candidate.formation,
+    }
   }
 
-  return {
-    ...candidate,
-    officialRank: candidate.rank,
-    officialRankPoint: candidate.elo,
-    officialRankLabel: candidate.rankLabel ?? null,
-    officialRankIconUrl: candidate.rankIconUrl ?? null,
-    officialWinRate: candidate.winRate,
-    officialWins: candidate.wins,
-    officialDraws: candidate.draws,
-    officialLosses: candidate.losses,
-    officialTeamColors: candidate.teamColors,
-    officialFormation: candidate.formation,
+  if (mode === 'manager') {
+    return {
+      ...candidate,
+      managerRank: candidate.rank,
+      managerRankPoint: candidate.elo,
+      managerRankIconUrl: candidate.rankIconUrl ?? null,
+      managerWinRate: candidate.winRate,
+      managerWins: candidate.wins,
+      managerDraws: candidate.draws,
+      managerLosses: candidate.losses,
+      managerTeamColors: candidate.teamColors,
+      managerFormation: candidate.formation,
+    }
   }
+
+  return candidate
 }
 
 function mergeRankCandidates(rankResults: RankSearchModeResult[]) {

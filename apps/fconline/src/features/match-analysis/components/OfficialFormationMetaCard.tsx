@@ -6,6 +6,8 @@ type Props = {
   items: OfficialFormationMetaItem[]
   sampleSize: number
   isLoading?: boolean
+  accentColor?: string
+  badgeLabel?: string
 }
 
 function formatUsageRate(value: number) {
@@ -60,6 +62,8 @@ export default function OfficialFormationMetaCard({
   items,
   sampleSize,
   isLoading = false,
+  accentColor = 'var(--app-accent-blue)',
+  badgeLabel = 'FORMATION',
 }: Props) {
   const maxUsageRate = Math.max(...items.map((item) => item.usageRate), 0)
   const otherUsageRate = Math.max(
@@ -72,18 +76,18 @@ export default function OfficialFormationMetaCard({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="app-theme-title text-sm font-semibold">
-            <span style={{ color: 'var(--app-accent-blue)' }}>{'\uD3EC\uBA54\uC774\uC158 '}</span>
+            <span style={{ color: accentColor }}>{'\uD3EC\uBA54\uC774\uC158 '}</span>
             <span>{'\uC0C1\uC704\uAD8C \uC0AC\uC6A9 \uBE44\uC728'}</span>
           </h2>
         </div>
         <span
           className="inline-flex h-7 items-center justify-center rounded-[8px] px-3 text-[12px] font-semibold leading-none"
           style={{
-            backgroundColor: 'rgba(37, 110, 244, 0.1)',
-            color: 'var(--app-accent-blue)',
+            backgroundColor: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+            color: accentColor,
           }}
         >
-          FORMATION
+          {badgeLabel}
         </span>
       </div>
 
@@ -112,7 +116,7 @@ export default function OfficialFormationMetaCard({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
                       <span className="app-theme-title truncate text-sm font-semibold">{item.formation}</span>
-                      <span className="shrink-0 text-[12px] font-semibold" style={{ color: 'var(--app-accent-blue)' }}>
+                      <span className="shrink-0 text-[12px] font-semibold" style={{ color: accentColor }}>
                         {formatUsageRate(item.usageRate)}
                       </span>
                     </div>

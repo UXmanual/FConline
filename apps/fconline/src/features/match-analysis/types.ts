@@ -53,6 +53,15 @@ export interface MatchSearchCandidate {
   officialLosses: number | null
   officialTeamColors: string[]
   officialFormation: string | null
+  managerRank: number | null
+  managerRankPoint: number | null
+  managerRankIconUrl: string | null
+  managerWinRate: number | null
+  managerWins: number | null
+  managerDraws: number | null
+  managerLosses: number | null
+  managerTeamColors: string[]
+  managerFormation: string | null
   voltaRank: number | null
   voltaRankPoint: number | null
   voltaRankIconUrl: string | null
@@ -192,6 +201,21 @@ export interface VoltaTopRankItem {
 }
 
 export interface OfficialTopRankItem {
+  rank: number
+  nickname: string
+  ouid?: string | null
+  rankPoint: number | null
+  winRate: number | null
+  wins: number | null
+  draws: number | null
+  losses: number | null
+  formation: string | null
+  price: string | null
+  rankIconUrl: string | null
+  teamColors: string[]
+}
+
+export interface ManagerTopRankItem {
   rank: number
   nickname: string
   ouid?: string | null
