@@ -417,12 +417,6 @@ export default function PlayerReviewSection({
         setPosts(cached.items)
         setTotalCount(cached.totalCount)
         setCurrentPage(cached.page)
-        setPageWindowStart(
-          Math.max(
-            1,
-            Math.min(cached.page, Math.max(1, Math.ceil(cached.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1)),
-          ),
-        )
         setIsLoadingPosts(false)
         return
       }
@@ -457,12 +451,6 @@ export default function PlayerReviewSection({
         setPosts(data.items)
         setTotalCount(data.totalCount)
         setCurrentPage(data.page)
-        setPageWindowStart(
-          Math.max(
-            1,
-            Math.min(data.page, Math.max(1, Math.ceil(data.totalCount / POSTS_PER_PAGE) - MAX_VISIBLE_PAGES + 1)),
-          ),
-        )
       } catch (error) {
         window.alert(error instanceof Error ? error.message : '선수 평가를 불러오지 못했습니다.')
       } finally {
@@ -487,7 +475,6 @@ export default function PlayerReviewSection({
     setPosts([])
     setTotalCount(0)
     setCurrentPage(1)
-    setPageWindowStart(1)
     setHighlightedPostId(initialHighlightedPostId)
     void fetchPostsPage(1, { highlightPostId: initialHighlightedPostId })
   }, [fetchPostsPage, initialHighlightedPostId, playerId])
@@ -589,7 +576,6 @@ export default function PlayerReviewSection({
       invalidatePlayerSearchCaches()
       cacheRef.current.clear()
       setCurrentPage(1)
-      setPageWindowStart(1)
       await fetchPostsPage(1, { useSkeleton: false })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '선수 평가를 등록하지 못했습니다.')
@@ -675,7 +661,6 @@ export default function PlayerReviewSection({
       const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / POSTS_PER_PAGE))
       const targetPage = Math.min(currentPage, nextTotalPages)
       setCurrentPage(targetPage)
-      setPageWindowStart((current) => Math.min(current, Math.max(1, nextTotalPages - MAX_VISIBLE_PAGES + 1)))
       await fetchPostsPage(targetPage, { useSkeleton: false })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '선수 평가를 삭제하지 못했습니다.')
