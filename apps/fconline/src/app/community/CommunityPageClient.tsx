@@ -466,7 +466,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       setHighlightedPostId(result.item?.id ?? null)
       cacheRef.current.clear()
       setCurrentPage(1)
-      setPageWindowStart(1)
       await fetchPostsPage(1, false)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 저장하지 못했습니다.')
@@ -541,7 +540,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
       const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / POSTS_PER_PAGE))
       const targetPage = Math.min(currentPage, nextTotalPages)
       setCurrentPage(targetPage)
-      setPageWindowStart((current) => Math.min(current, Math.max(1, nextTotalPages - MAX_VISIBLE_PAGES + 1)))
       await refreshCurrentPage(targetPage)
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '게시글을 삭제하지 못했습니다.')
