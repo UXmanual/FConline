@@ -191,7 +191,6 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [posts, setPosts] = useState(initialData.items)
   const [totalCount, setTotalCount] = useState(initialData.totalCount)
   const [currentPage, setCurrentPage] = useState(initialData.page)
-  const [pageWindowStart, setPageWindowStart] = useState(1)
   const [isLoadingPosts, setIsLoadingPosts] = useState(false)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [isSubmittingPost, setIsSubmittingPost] = useState(false)
@@ -210,10 +209,9 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   const [isReportSuccessOpen, setIsReportSuccessOpen] = useState(false)
   const communityNickname = resolvedCommunityNickname || (authUser ? deriveCommunityNickname(authUser) : '')
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
-  const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
-  const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
-  const pageGroupEnd = Math.min(totalPages, safePageWindowStart + MAX_VISIBLE_PAGES - 1)
-  const visiblePages = Array.from({ length: pageGroupEnd - safePageWindowStart + 1 }, (_, index) => safePageWindowStart + index)
+  const windowStart = Math.max(1, Math.min(currentPage - Math.floor(MAX_VISIBLE_PAGES / 2), totalPages - MAX_VISIBLE_PAGES + 1))
+  const windowEnd = Math.min(totalPages, windowStart + MAX_VISIBLE_PAGES - 1)
+  const visiblePages = Array.from({ length: windowEnd - windowStart + 1 }, (_, i) => windowStart + i)
   const sortedComments = [...comments].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 
   useLockedBodyScroll(isComposerOpen, isComposerOpen ? composerScrollRef : null)
@@ -779,13 +777,13 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
         )}
 
         <div className="flex items-center justify-center gap-2 rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-card-bg)', border: '1px solid var(--app-card-border)' }}>
-          <button type="button" onClick={() => { const nextPage = Math.max(1, currentPage - 1); setPageWindowStart(Math.max(1, safePageWindowStart - 1)); void goToPage(nextPage) }} disabled={currentPage === 1} className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}><CaretLeft size={16} weight="bold" /></button>
+          <button type="button" onClick={() => void goToPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}><CaretLeft size={16} weight="bold" /></button>
           <div className="flex items-center gap-1.5">
             {visiblePages.map((page) => (
-              <button key={page} type="button" onClick={() => { if (page < safePageWindowStart) setPageWindowStart(page); else if (page > pageGroupEnd) setPageWindowStart(Math.min(page, maxPageWindowStart)); void goToPage(page) }} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition" style={{ backgroundColor: page === currentPage ? '#457ae5' : 'var(--app-surface-soft)', color: page === currentPage ? '#fff' : 'var(--app-body-text)' }}>{page}</button>
+              <button key={page} type="button" onClick={() => void goToPage(page)} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition" style={{ backgroundColor: page === currentPage ? '#457ae5' : 'var(--app-surface-soft)', color: page === currentPage ? '#fff' : 'var(--app-body-text)' }}>{page}</button>
             ))}
           </div>
-          <button type="button" onClick={() => { const nextPage = Math.min(totalPages, currentPage + 1); setPageWindowStart(Math.min(maxPageWindowStart, safePageWindowStart + 1)); void goToPage(nextPage) }} disabled={currentPage === totalPages} className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}><CaretRight size={16} weight="bold" /></button>
+          <button type="button" onClick={() => void goToPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40" style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}><CaretRight size={16} weight="bold" /></button>
         </div>
 
         <button type="button" onClick={openComposer} disabled={isAuthLoading} className="mx-auto mt-1 mb-2 flex items-center justify-center text-sm font-semibold text-white transition disabled:opacity-60" style={{ width: '100%', height: '54px', borderRadius: '16px', backgroundColor: '#457ae5' }}>글쓰기</button>

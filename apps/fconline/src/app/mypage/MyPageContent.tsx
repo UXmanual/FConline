@@ -162,6 +162,7 @@ export const privacyContent = [
   '- [Supabase](https://supabase.com): 데이터 저장 및 인증 서비스',
   '- [Vercel](https://vercel.com): 배포 및 호스팅 서비스',
   '- [Nexon Open API](https://openapi.nexon.com/ko/): 게임 데이터 조회를 위한 외부 API',
+  '- [Telegram](https://telegram.org): 문의 접수 운영자 알림',
   '- 기타 서비스 운영에 필요한 클라우드 또는 인프라 서비스',
   '이 과정에서 서비스 운영에 필요한 최소 범위의 정보가 관련 인프라를 통해 처리될 수 있습니다.',
   '실제 위탁 대상, 위탁 업무 내용, 보유 환경 등이 확정 또는 변경될 경우 앱 내 정책 또는 별도 문서를 통해 고지합니다.',
@@ -1148,6 +1149,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         label: '[Nexon Open API](https://openapi.nexon.com/ko/)',
         href: 'https://openapi.nexon.com/ko/',
         text: 'Nexon Open API',
+      },
+      {
+        label: '[Telegram](https://telegram.org)',
+        href: 'https://telegram.org',
+        text: 'Telegram',
       },
     ]
 

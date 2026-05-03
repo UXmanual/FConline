@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 import HeartIcon from '@/components/icons/HeartIcon'
 import {
   FormEvent,
@@ -255,7 +256,6 @@ export default function PlayerReviewSection({
   const [posts, setPosts] = useState<CommunityPostSummary[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageWindowStart, setPageWindowStart] = useState(1)
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [isSubmittingPost, setIsSubmittingPost] = useState(false)
@@ -272,13 +272,9 @@ export default function PlayerReviewSection({
   const reviewNickname = resolvedReviewNickname || (authUser ? deriveCommunityNickname(authUser) : '')
   const authUserKey = authUser ? `${authUser.id}:${authUser.email ?? ''}` : ''
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
-  const maxPageWindowStart = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1)
-  const safePageWindowStart = Math.min(pageWindowStart, maxPageWindowStart)
-  const pageGroupEnd = Math.min(totalPages, safePageWindowStart + MAX_VISIBLE_PAGES - 1)
-  const visiblePages = Array.from(
-    { length: pageGroupEnd - safePageWindowStart + 1 },
-    (_, index) => safePageWindowStart + index,
-  )
+  const windowStart = Math.max(1, Math.min(currentPage - Math.floor(MAX_VISIBLE_PAGES / 2), totalPages - MAX_VISIBLE_PAGES + 1))
+  const windowEnd = Math.min(totalPages, windowStart + MAX_VISIBLE_PAGES - 1)
+  const visiblePages = Array.from({ length: windowEnd - windowStart + 1 }, (_, i) => windowStart + i)
   const sortedComments = [...comments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )
@@ -1031,16 +1027,12 @@ export default function PlayerReviewSection({
         >
           <button
             type="button"
-            onClick={() => {
-              const nextPage = Math.max(1, currentPage - 1)
-              setPageWindowStart(Math.max(1, safePageWindowStart - 1))
-              void goToPage(nextPage)
-            }}
+            onClick={() => void goToPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40"
             style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
           >
-            이전
+            <CaretLeft size={16} weight="bold" />
           </button>
 
           <div className="flex items-center gap-1.5">
@@ -1048,11 +1040,7 @@ export default function PlayerReviewSection({
               <button
                 key={page}
                 type="button"
-                onClick={() => {
-                  if (page < safePageWindowStart) setPageWindowStart(page)
-                  else if (page > pageGroupEnd) setPageWindowStart(Math.min(page, maxPageWindowStart))
-                  void goToPage(page)
-                }}
+                onClick={() => void goToPage(page)}
                 className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition"
                 style={{
                   backgroundColor: page === currentPage ? '#457ae5' : 'var(--app-surface-soft)',
@@ -1066,16 +1054,12 @@ export default function PlayerReviewSection({
 
           <button
             type="button"
-            onClick={() => {
-              const nextPage = Math.min(totalPages, currentPage + 1)
-              setPageWindowStart(Math.min(maxPageWindowStart, safePageWindowStart + 1))
-              void goToPage(nextPage)
-            }}
+            onClick={() => void goToPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40"
             style={{ backgroundColor: 'var(--app-surface-soft)', color: 'var(--app-body-text)' }}
           >
-            다음
+            <CaretRight size={16} weight="bold" />
           </button>
         </div>
 
