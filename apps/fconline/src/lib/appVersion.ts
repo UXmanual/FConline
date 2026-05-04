@@ -3,6 +3,8 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '25.4': '2026-05-04T22:00:00+09:00',
+  '25.3': '2026-05-04T18:00:00+09:00',
   '25.2': '2026-05-03T22:00:00+09:00',
   '25.1': '2026-05-02T22:30:00+09:00',
   '25.0': '2026-05-02T22:00:00+09:00',
@@ -35,6 +37,13 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '25.4': [
+    '어드민 방문자 현황 그래프를 7일치 꺾은선 그래프로 개선했습니다.',
+  ],
+  '25.3': [
+    '어드민 페이지에 방문자 현황 블록을 추가했습니다.',
+    '브라우저 기준 순 방문자 수와 페이지뷰를 날짜별로 확인할 수 있습니다.',
+  ],
   '25.2': [
     '페이지네이션에서 현재 페이지가 항상 가운데에 위치하도록 개선했습니다.',
     '선수평가 페이지 이전/다음 버튼을 아이콘 버튼으로 통일했습니다.',
