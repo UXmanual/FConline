@@ -229,37 +229,102 @@ export default function MyPageAdminPushPage() {
                 불러오기를 눌러 방문자 현황을 확인하세요.
               </p>
             ) : (
-              <div className="space-y-3">
-                {visitors.days.map((day, index) => (
-                  <div
-                    key={day.date}
-                    className={index > 0 ? 'border-t pt-3' : ''}
-                    style={{ borderColor: 'var(--app-card-border)' }}
-                  >
-                    <p className="text-[11px] font-medium mb-1.5" style={mutedStyle}>
-                      {day.date} ({day.label})
-                    </p>
-                    <p
-                      className="font-bold leading-none"
-                      style={{ ...titleStyle, fontSize: index === 0 ? '26px' : '20px' }}
-                    >
-                      {day.visitors.toLocaleString()}
-                      <span
-                        className="font-semibold ml-1.5"
-                        style={{ ...mutedStyle, fontSize: index === 0 ? '13px' : '12px' }}
-                      >
-                        명
-                      </span>
-                    </p>
-                    <p className="text-[12px] mt-1" style={mutedStyle}>
-                      페이지뷰 {day.views.toLocaleString()}회
-                    </p>
+              (() => {
+                const chartDays = [...visitors.days].reverse()
+                const rawMax = Math.max(...chartDays.flatMap((d) => [d.visitors, d.views]), 1)
+                const niceMax = Math.ceil(rawMax / 5) * 5 || 5
+                const ticks = [0, Math.round(niceMax / 2), niceMax]
+
+                const VB_W = 300
+                const VB_H = 168
+                const padL = 38
+                const padR = 16
+                const padT = 18
+                const padB = 46
+                const plotW = VB_W - padL - padR
+                const plotH = VB_H - padT - padB
+                const n = chartDays.length
+
+                const px = (i: number) => padL + (i / (n - 1)) * plotW
+                const py = (v: number) => padT + plotH - (v / niceMax) * plotH
+
+                const visitorPoints = chartDays.map((d, i) => `${px(i)},${py(d.visitors)}`).join(' ')
+                const viewPoints = chartDays.map((d, i) => `${px(i)},${py(d.views)}`).join(' ')
+
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="#457ae5" strokeWidth="2.5" /></svg>
+                        <span className="text-[12px] font-medium" style={mutedStyle}>방문자</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="#94a3b8" strokeWidth="2.5" /></svg>
+                        <span className="text-[12px] font-medium" style={mutedStyle}>페이지뷰</span>
+                      </div>
+                    </div>
+
+                    <svg width="100%" viewBox={`0 0 ${VB_W} ${VB_H}`}>
+                      {ticks.map((tick) => (
+                        <g key={tick}>
+                          <line
+                            x1={padL} y1={py(tick)} x2={VB_W - padR} y2={py(tick)}
+                            stroke="var(--app-card-border)" strokeWidth="0.8"
+                          />
+                          <text x={padL - 18} y={py(tick) + 3} textAnchor="end" fontSize={9} fill="var(--app-muted-text)">
+                            {tick}
+                          </text>
+                        </g>
+                      ))}
+
+                      <polyline points={viewPoints} fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                      <polyline points={visitorPoints} fill="none" stroke="#457ae5" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+
+                      {chartDays.map((day, i) => {
+                        const cx = px(i)
+                        const isToday = day.label === '오늘'
+                        const weekday = new Date(day.date + 'T12:00:00').toLocaleDateString('ko-KR', { weekday: 'short' })
+                        const mmdd = `${parseInt(day.date.slice(5, 7))}.${parseInt(day.date.slice(8))}`
+
+                        return (
+                          <g key={day.date}>
+                            <circle cx={cx} cy={py(day.views)} r={3} fill="#94a3b8" />
+                            <circle cx={cx} cy={py(day.visitors)} r={3.5} fill="#457ae5" />
+
+                            {isToday && (
+                              <>
+                                <text x={cx} y={py(day.visitors) - 8} textAnchor="middle" fontSize={11} fill="#457ae5" fontWeight="700">
+                                  {day.visitors}
+                                </text>
+                                <text x={cx} y={py(day.views) - 8} textAnchor="middle" fontSize={11} fill="#94a3b8" fontWeight="600">
+                                  {day.views}
+                                </text>
+                              </>
+                            )}
+
+                            <text
+                              x={cx} y={padT + plotH + 16}
+                              textAnchor="middle" fontSize={9}
+                              fill={isToday ? '#457ae5' : 'var(--app-muted-text)'}
+                              fontWeight={isToday ? '700' : '400'}
+                            >
+                              {mmdd}
+                            </text>
+                            <text
+                              x={cx} y={padT + plotH + 27}
+                              textAnchor="middle" fontSize={9}
+                              fill={isToday ? '#457ae5' : 'var(--app-muted-text)'}
+                              fontWeight={isToday ? '700' : '400'}
+                            >
+                              {weekday}
+                            </text>
+                          </g>
+                        )
+                      })}
+                    </svg>
                   </div>
-                ))}
-                <p className="text-[11px]" style={mutedStyle}>
-                  * 브라우저 기준 순 방문자 / 페이지뷰는 앱 내 이동 총 횟수
-                </p>
-              </div>
+                )
+              })()
             )}
           </div>
         </section>

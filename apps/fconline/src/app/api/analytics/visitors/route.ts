@@ -42,22 +42,16 @@ export async function GET(req: NextRequest) {
   }
 
   const today = getKoreaTimestampString().slice(0, 10)
-  const yesterday = offsetKstDate(today, -1)
-  const twoDaysAgo = offsetKstDate(today, -2)
+  const dates = Array.from({ length: 7 }, (_, i) => offsetKstDate(today, -i))
 
   const supabase = createSupabaseAdminClient()
-
-  const [s0, s1, s2] = await Promise.all([
-    getDayStats(supabase, today),
-    getDayStats(supabase, yesterday),
-    getDayStats(supabase, twoDaysAgo),
-  ])
+  const stats = await Promise.all(dates.map((date) => getDayStats(supabase, date)))
 
   return Response.json({
-    days: [
-      { date: today, label: '오늘', ...s0 },
-      { date: yesterday, label: '어제', ...s1 },
-      { date: twoDaysAgo, label: '그저께', ...s2 },
-    ],
+    days: dates.map((date, i) => ({
+      date,
+      label: i === 0 ? '오늘' : i === 1 ? '어제' : '',
+      ...stats[i],
+    })),
   })
 }
