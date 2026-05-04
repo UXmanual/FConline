@@ -24,6 +24,8 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
 
 export default function MyPageAdminPushPage() {
   const [pushAdminToken, setPushAdminToken] = useState('')
+  const [visitors, setVisitors] = useState<{ days: { date: string; label: string; visitors: number; views: number }[] } | null>(null)
+  const [isLoadingVisitors, setIsLoadingVisitors] = useState(false)
   const [broadcastTitle, setBroadcastTitle] = useState('')
   const [broadcastBody, setBroadcastBody] = useState('')
   const [broadcastUrl, setBroadcastUrl] = useState('/home')
@@ -92,6 +94,26 @@ export default function MyPageAdminPushPage() {
       window.alert(error instanceof Error ? error.message : '운영 공지 발송에 실패했습니다.')
     } finally {
       setIsSendingBroadcast(false)
+    }
+  }
+
+  async function loadVisitors() {
+    if (isLoadingVisitors) return
+    const token = pushAdminToken.trim()
+    if (!token) {
+      window.alert('관리자 패스워드를 먼저 입력해 주세요.')
+      return
+    }
+    setIsLoadingVisitors(true)
+    try {
+      const response = await fetch(`/api/analytics/visitors?token=${encodeURIComponent(token)}`)
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.message ?? '방문자 데이터를 불러오지 못했습니다.')
+      setVisitors(result)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '방문자 데이터를 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingVisitors(false)
     }
   }
 
@@ -184,6 +206,61 @@ export default function MyPageAdminPushPage() {
                 placeholder="패스워드를 입력해주세요"
               />
             </label>
+          </div>
+        </section>
+
+        <section className="rounded-lg px-5 pt-7 pb-5" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold" style={titleStyle}>방문자 현황</p>
+              <button
+                type="button"
+                onClick={() => void loadVisitors()}
+                disabled={isLoadingVisitors}
+                className="inline-flex items-center justify-center text-[12px] font-semibold disabled:opacity-60"
+                style={{ color: '#457ae5' }}
+              >
+                {isLoadingVisitors ? '불러오는 중...' : '불러오기'}
+              </button>
+            </div>
+
+            {visitors === null ? (
+              <p className="py-2 text-sm" style={mutedStyle}>
+                불러오기를 눌러 방문자 현황을 확인하세요.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {visitors.days.map((day, index) => (
+                  <div
+                    key={day.date}
+                    className={index > 0 ? 'border-t pt-3' : ''}
+                    style={{ borderColor: 'var(--app-card-border)' }}
+                  >
+                    <p className="text-[11px] font-medium mb-1.5" style={mutedStyle}>
+                      {day.date} ({day.label})
+                    </p>
+                    <p
+                      className="font-bold leading-none"
+                      style={{ ...titleStyle, fontSize: index === 0 ? '26px' : '20px' }}
+                    >
+                      {day.visitors.toLocaleString()}
+                      <span
+                        className="font-semibold ml-1.5"
+                        style={{ ...mutedStyle, fontSize: index === 0 ? '13px' : '12px' }}
+                      >
+                        명
+                      </span>
+                    </p>
+                    <p className="text-[12px] mt-1" style={mutedStyle}>
+                      페이지뷰 {day.views.toLocaleString()}회
+                    </p>
+                  </div>
+                ))}
+                <p className="text-[11px]" style={mutedStyle}>
+                  * 브라우저 기준 순 방문자 / 페이지뷰는 앱 내 이동 총 횟수
+                </p>
+              </div>
+            )}
           </div>
         </section>
 

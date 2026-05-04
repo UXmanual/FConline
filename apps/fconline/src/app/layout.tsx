@@ -4,6 +4,7 @@ import Image from 'next/image'
 import './globals.css'
 import AppChrome from '@/components/layout/AppChrome'
 import PwaBootstrap from '@/components/pwa/PwaBootstrap'
+import PageViewTracker from '@/components/analytics/PageViewTracker'
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site'
 
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
@@ -188,6 +189,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full" style={{ backgroundColor: 'var(--app-body-bg)' }}>
         <PwaBootstrap />
+        <PageViewTracker />
         <div id="startup-splash" aria-hidden="true">
           <Image
             src="/logo-dark.svg"
