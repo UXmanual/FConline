@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_SHORT_NAME, SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
-  title: { absolute: 'FConline Ground' },
   description: SITE_DESCRIPTION,
   keywords: SITE_KEYWORDS,
 }

@@ -44,10 +44,7 @@ const siteDescription = SITE_DESCRIPTION
 
 export const metadata: Metadata = {
   metadataBase,
-  title: {
-    default: siteTitle,
-    template: `%s | ${siteTitle}`,
-  },
+  title: siteTitle,
   applicationName: siteName,
   description: siteDescription,
   keywords: SITE_KEYWORDS,

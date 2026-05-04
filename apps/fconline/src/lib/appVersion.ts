@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '25.7': '2026-05-04T23:50:00+09:00',
   '25.6': '2026-05-04T23:30:00+09:00',
   '25.5': '2026-05-04T23:00:00+09:00',
   '25.4': '2026-05-04T22:00:00+09:00',
@@ -39,6 +40,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '25.7': [
+    '모든 탭에서 사이트 타이틀이 FConline Ground로 고정되도록 수정했습니다.',
+  ],
   '25.6': [
     '사이트 타이틀을 FConline Ground로 원복했습니다.',
   ],
