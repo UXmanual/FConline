@@ -26,6 +26,7 @@ import {
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
 const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v7'
 const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v5'
+const MATCH_RETURN_STATE_KEY = 'fconline.match.return-state.v1'
 const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-meta-cache.v2'
 const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v8'
 const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v3'
@@ -66,6 +67,15 @@ type MatchResultsCacheEntry = {
   matches: MatchData[]
 }
 type MatchResultsCacheStore = Record<string, MatchResultsCacheEntry>
+type MatchReturnState = {
+  cachedAt: number
+  nickname: string
+  mode: SearchMode
+  exactCandidate: MatchSearchCandidate | null
+  candidates: MatchSearchCandidate[]
+  matches: MatchData[]
+  activeMatchId: string
+}
 type VoltaTopRankCacheEntry = {
   cachedAt: number
   items: VoltaTopRankItem[]
@@ -932,6 +942,34 @@ function writeJsonStorage<T>(key: string, value: T) {
 
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {}
+}
+
+function readSessionJson<T>(key: string) {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.sessionStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+function writeSessionJson<T>(key: string, value: T) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value))
+  } catch {}
+}
+
+function clearSessionKey(key: string) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.sessionStorage.removeItem(key)
   } catch {}
 }
 
@@ -2869,6 +2907,7 @@ type Props = {
 export default function MatchesPageClient({ initialNickname, initialMatchId, initialSearchMode }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
+  const restoredReturnStateRef = useRef(false)
   const shareFeedbackTimerRef = useRef<number | null>(null)
   const normalizedInitialMode = normalizeSearchMode(initialSearchMode)
 
@@ -3461,9 +3500,64 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     setMatchesError('')
   }
 
+  const saveReturnState = () => {
+    if (!activeSearchQuery.trim()) {
+      return
+    }
+
+    writeSessionJson(MATCH_RETURN_STATE_KEY, {
+      cachedAt: Date.now(),
+      nickname: activeSearchQuery,
+      mode: selectedSearchMode,
+      exactCandidate,
+      candidates,
+      matches,
+      activeMatchId,
+    } satisfies MatchReturnState)
+  }
+
+  useEffect(() => {
+    if (!initialNickname) {
+      clearSessionKey(MATCH_RETURN_STATE_KEY)
+      return
+    }
+
+    const restored = readSessionJson<MatchReturnState>(MATCH_RETURN_STATE_KEY)
+    if (!restored) {
+      return
+    }
+
+    const isFresh = Date.now() - restored.cachedAt < 1000 * 60 * 5
+    const modeToCompare = normalizeSearchMode(initialSearchMode)
+
+    if (!isFresh || normalizeNicknameKey(restored.nickname) !== normalizeNicknameKey(initialNickname) || restored.mode !== modeToCompare) {
+      clearSessionKey(MATCH_RETURN_STATE_KEY)
+      return
+    }
+
+    restoredReturnStateRef.current = true
+    setSelectedSearchMode(restored.mode)
+    setQuery(restored.nickname)
+    setActiveSearchQuery(restored.nickname)
+    setExactCandidate(restored.exactCandidate)
+    setCandidates(restored.candidates)
+    setMatches(restored.matches)
+    setActiveMatchId(restored.activeMatchId)
+    setHasPendingRouteSearch(false)
+    setSearchLoading(false)
+    setMatchLoading(false)
+    setMatchesError('')
+    clearSessionKey(MATCH_RETURN_STATE_KEY)
+  }, [initialNickname, initialSearchMode])
+
   useEffect(() => {
     if (!initialNickname) {
       setHasPendingRouteSearch(false)
+      return
+    }
+
+    if (restoredReturnStateRef.current) {
+      restoredReturnStateRef.current = false
       return
     }
 
@@ -3688,6 +3782,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           <a
                             href={`/matches/${exactCandidate.ouid}/formation?formation=${encodeURIComponent(officialDisplay.formation ?? '')}&nickname=${encodeURIComponent(exactCandidate.nickname)}&teamColors=${encodeURIComponent(officialDisplay.teamColors.join('|'))}&nexonSn=${encodeURIComponent(exactCandidate.nexonSn)}&mode=${encodeURIComponent(selectedSearchMode)}`}
                             className="block active:opacity-60"
+                            onClick={() => saveReturnState()}
                           >
                             <InfoCard
                               label="주요 포메이션"
