@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '25.8': '2026-05-05T01:00:00+09:00',
   '25.7': '2026-05-04T23:50:00+09:00',
   '25.6': '2026-05-04T23:30:00+09:00',
   '25.5': '2026-05-04T23:00:00+09:00',
@@ -40,6 +41,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '25.8': [
+    '구단주 상세 > 주요 포메이션을 탭하면 그라운드 이미지 위에 최근 경기 선수 배치를 확인할 수 있습니다.',
+    '선수 이미지, 시즌 엠블럼, 선수명, 오버롤, 포지션, 강화단계를 포메이션에 맞게 표시합니다.',
+  ],
   '25.7': [
     '모든 탭에서 사이트 타이틀이 FConline Ground로 고정되도록 수정했습니다.',
   ],

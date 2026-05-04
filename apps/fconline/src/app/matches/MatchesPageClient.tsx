@@ -3705,7 +3705,16 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                     <section className="app-theme-card rounded-lg border px-5 py-5">
                       <h2 className="app-theme-title text-base font-semibold">상세 정보</h2>
                       <div className="mt-4 grid grid-cols-2 gap-3">
-                        <DetailStatCard label="주요 포메이션" value={officialDisplay.formation ?? '-'} />
+                        {exactCandidate.ouid ? (
+                          <a
+                            href={`/matches/${exactCandidate.ouid}/formation?formation=${encodeURIComponent(officialDisplay.formation ?? '')}&nickname=${encodeURIComponent(exactCandidate.nickname)}`}
+                            className="block active:opacity-60"
+                          >
+                            <DetailStatCard label="주요 포메이션 ›" value={officialDisplay.formation ?? '-'} />
+                          </a>
+                        ) : (
+                          <DetailStatCard label="주요 포메이션" value={officialDisplay.formation ?? '-'} />
+                        )}
                         <DetailStatCard label="대표 팀컬러" value={officialTeamColorValue} />
                         <DetailStatCard
                           label="랭크 / 포인트"
