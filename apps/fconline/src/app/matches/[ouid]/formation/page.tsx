@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { CaretLeft } from '@phosphor-icons/react'
+import { ArrowLeft } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
 import FormationPitch, { type FormationPlayer } from './FormationPitch'
 
@@ -17,7 +17,6 @@ export default function FormationPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const formation = searchParams.get('formation') ?? ''
-  const nickname = searchParams.get('nickname') ?? ''
 
   const [data, setData] = useState<FormationResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -41,24 +40,15 @@ export default function FormationPage() {
   return (
     <div className="min-h-dvh pt-5 pb-8">
       {/* 헤더 */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex h-6 items-center">
         <button
           type="button"
           onClick={() => router.back()}
-          className="app-theme-title flex h-8 w-8 items-center justify-center rounded-full"
+          className="app-theme-title inline-flex items-center gap-1.5 text-[18px] font-bold tracking-[-0.02em]"
         >
-          <CaretLeft size={20} weight="bold" />
+          <ArrowLeft size={18} weight="bold" />
+          <span>포메이션</span>
         </button>
-        <div>
-          <h1 className="app-theme-title text-lg font-bold tracking-[-0.02em]">포메이션</h1>
-          {(formation || nickname) && (
-            <p className="app-theme-muted text-xs">
-              {nickname && <span>{nickname}</span>}
-              {formation && nickname && <span> · </span>}
-              {formation && <span>{formation}</span>}
-            </p>
-          )}
-        </div>
       </div>
 
       {loading && (
