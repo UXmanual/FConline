@@ -352,6 +352,135 @@ async function fetchOwnerProfile(ownerProfileId: string) {
   }
 }
 
+async function fetchRepresentativeSquadSummary(ownerProfileId: string) {
+  const headers = {
+    'user-agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+  }
+  const popupUrl = `https://fconline.nexon.com/profile/squad/popup/${ownerProfileId}`
+  const popupHtml = await fetchTextWithRetry(
+    popupUrl,
+    {
+      headers,
+      cache: 'no-store',
+    },
+    4000,
+    0,
+  )
+
+  if (!popupHtml) {
+    return { formation: null, teamColors: [] as string[] }
+  }
+
+  const contextMatch = popupHtml.match(
+    new RegExp(
+      `SquadProfile\\.SetSquadInfo\\("([^"]+)",\\s*"([^"]+)",\\s*"${escapeRegExp(ownerProfileId)}",\\s*"([^"]+)"\\)`,
+    ),
+  )
+
+  if (!contextMatch) {
+    return { formation: null, teamColors: [] as string[] }
+  }
+
+  const squadText = await fetchTextWithRetry(
+    `https://fconline.nexon.com/datacenter/SquadGetUserInfo?strTeamType=${encodeURIComponent(contextMatch[1])}&n1Type=${encodeURIComponent(contextMatch[2])}&n8NexonSN=${encodeURIComponent(ownerProfileId)}&strCharacterID=${encodeURIComponent(contextMatch[3])}`,
+    {
+      headers: {
+        ...headers,
+        referer: popupUrl,
+        'X-Requested-With': 'XMLHttpRequest',
+        accept: 'application/json, text/javascript, */*; q=0.01',
+      },
+      cache: 'no-store',
+    },
+    4000,
+    0,
+  )
+
+  if (!squadText) {
+    return { formation: null, teamColors: [] as string[] }
+  }
+
+  const squadData = JSON.parse(squadText) as {
+    formation?: string | null
+    players?: Array<{
+      teamColor?: {
+        teamColor1?: { name?: string | null }
+        teamColor2?: { name?: string | null }
+        teamColor3?: { name?: string | null }
+      }
+    }>
+  }
+
+  const teamColors = new Set<string>()
+  for (const player of squadData.players ?? []) {
+    for (const key of ['teamColor1', 'teamColor2', 'teamColor3'] as const) {
+      const name = player.teamColor?.[key]?.name?.trim() ?? ''
+      if (name && !/물결/u.test(name)) {
+        teamColors.add(name)
+      }
+    }
+  }
+
+  return {
+    formation: squadData.formation?.trim() || null,
+    teamColors: [...teamColors],
+  }
+}
+
+async function fetchRecentOfficialFormation(ouid: string | null | undefined) {
+  if (!ouid) {
+    return null
+  }
+
+  const matchIds = await fetchJsonWithRetry<string[]>(
+    `https://open.api.nexon.com/fconline/v1/user/match?ouid=${encodeURIComponent(ouid)}&matchtype=50&offset=0&limit=1`,
+    { headers: nexonHeaders, cache: 'no-store' },
+    3500,
+    0,
+  )
+
+  const matchId = Array.isArray(matchIds) && matchIds.length > 0 ? matchIds[0] : null
+  if (!matchId) {
+    return null
+  }
+
+  const detail = await fetchJsonWithRetry<{
+    matchInfo?: Array<{
+      ouid?: string
+      player?: Array<{ spPosition?: number | null }>
+    }>
+  }>(
+    `https://open.api.nexon.com/fconline/v1/match-detail?matchid=${encodeURIComponent(matchId)}`,
+    { headers: nexonHeaders, cache: 'no-store' },
+    3500,
+    0,
+  )
+
+  const userTeam = detail?.matchInfo?.find((info) => info.ouid === ouid)
+  const positions = (userTeam?.player ?? [])
+    .map((player) => player.spPosition)
+    .filter((position): position is number => typeof position === 'number' && position >= 0 && position <= 27)
+
+  return deriveFormation(positions) || null
+}
+
+function deriveFormation(positions: number[]) {
+  const defPositions = new Set([1, 2, 3, 4, 5, 6, 7, 8])
+  const midPositions = new Set([9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+  const fwdPositions = new Set([20, 21, 22, 23, 24, 25, 26, 27])
+
+  const def = positions.filter((p) => defPositions.has(p)).length
+  const mid = positions.filter((p) => midPositions.has(p)).length
+  const fwd = positions.filter((p) => fwdPositions.has(p)).length
+
+  if (def === 0 && mid === 0 && fwd === 0) {
+    return ''
+  }
+
+  return [def, mid, fwd].filter((count) => count > 0).join('-')
+}
+
 function buildTeamEmblemMap(html: string) {
   const map = new Map<string, string>()
   const names = Array.from(
@@ -594,6 +723,11 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
     const ownerProfile = ownerProfileId
       ? await fetchOwnerProfile(ownerProfileId)
       : { ownerSince: null, representativeTeam: null, representativeTeamEmblemUrl: null }
+    const representativeSquadSummary = ownerProfileId
+      ? await fetchRepresentativeSquadSummary(ownerProfileId)
+      : { formation: null, teamColors: [] as string[] }
+    const recentOfficialFormation = await fetchRecentOfficialFormation(exactData?.ouid)
+    const resolvedOfficialFormation = representativeSquadSummary.formation ?? recentOfficialFormation
     let exactCandidate: MatchSearchCandidate | null = null
     const rankResults = await Promise.all(
       SEARCH_MODES.map(async (mode) => {
@@ -620,7 +754,7 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
 
     if (exactData?.ouid) {
       exactCandidate = {
-        ...createEmptyCandidate(nickname, `exact:${exactData.ouid}`, 'exact'),
+        ...createEmptyCandidate(nickname, ownerProfileId ?? `exact:${exactData.ouid}`, 'exact'),
         ouid: exactData.ouid,
         ownerSince: ownerProfile.ownerSince,
         representativeTeam: ownerProfile.representativeTeam,
@@ -628,16 +762,22 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
           ownerProfile.representativeTeamEmblemUrl ??
           (await resolveRepresentativeTeamEmblem(ownerProfile.representativeTeam)),
         modes: ['exact'],
+        formation: resolvedOfficialFormation,
+        officialFormation: resolvedOfficialFormation,
+        officialTeamColors: representativeSquadSummary.teamColors,
       }
     } else if (voltaCandidate) {
       exactCandidate = {
-        ...createEmptyCandidate(nickname, `volta:${nickname}`, 'exact'),
+        ...createEmptyCandidate(nickname, ownerProfileId ?? `volta:${nickname}`, 'exact'),
         ownerSince: ownerProfile.ownerSince,
         representativeTeam: ownerProfile.representativeTeam,
         representativeTeamEmblemUrl:
           ownerProfile.representativeTeamEmblemUrl ??
           (await resolveRepresentativeTeamEmblem(ownerProfile.representativeTeam)),
         modes: ['volta'],
+        formation: resolvedOfficialFormation,
+        officialFormation: resolvedOfficialFormation,
+        officialTeamColors: representativeSquadSummary.teamColors,
       }
     }
 
@@ -651,6 +791,10 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
     if (exactCandidate && exactOfficialCandidate) {
       exactCandidate = {
         ...mergeCandidate(exactCandidate, exactOfficialCandidate),
+        officialFormation:
+          exactOfficialCandidate.officialFormation ??
+          exactCandidate.officialFormation ??
+          resolvedOfficialFormation,
         source: 'exact',
       }
     }

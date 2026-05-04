@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '25.9': '2026-05-04T17:04:38+09:00',
   '25.8': '2026-05-05T01:00:00+09:00',
   '25.7': '2026-05-04T23:50:00+09:00',
   '25.6': '2026-05-04T23:30:00+09:00',
@@ -41,6 +42,11 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '25.9': [
+    '구단주 상세 기본정보에서 주요 포메이션 카드로 바로 이동할 수 있도록 링크 스타일을 정리했습니다.',
+    '공식 랭킹권 밖 구단주도 대표 스쿼드와 최근 공식경기 기준으로 주요 포메이션과 대표 팀컬러가 채워지도록 보강했습니다.',
+    '주요 포메이션 상세에서 팀컬러·강화팀컬러·적응도 계산 기준을 자동 반영하고, 선수 배치가 그라운드 밖으로 벗어나지 않도록 조정했습니다.',
+  ],
   '25.8': [
     '구단주 상세 > 주요 포메이션을 탭하면 그라운드 이미지 위에 최근 경기 선수 배치를 확인할 수 있습니다.',
     '선수 이미지, 시즌 엠블럼, 선수명, 오버롤, 포지션, 강화단계를 포메이션에 맞게 표시합니다.',
