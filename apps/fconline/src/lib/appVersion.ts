@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '25.5': '2026-05-04T23:00:00+09:00',
   '25.4': '2026-05-04T22:00:00+09:00',
   '25.3': '2026-05-04T18:00:00+09:00',
   '25.2': '2026-05-03T22:00:00+09:00',
@@ -37,6 +38,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '25.5': [
+    'FC온라인·피파온라인 관련 주요 검색어 SEO를 강화했습니다.',
+    '페이지별 메타 설명과 키워드, JSON-LD 구조화 데이터를 추가했습니다.',
+  ],
   '25.4': [
     '어드민 방문자 현황 그래프를 7일치 꺾은선 그래프로 개선했습니다.',
   ],

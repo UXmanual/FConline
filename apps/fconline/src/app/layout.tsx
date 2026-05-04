@@ -5,7 +5,7 @@ import './globals.css'
 import AppChrome from '@/components/layout/AppChrome'
 import PwaBootstrap from '@/components/pwa/PwaBootstrap'
 import PageViewTracker from '@/components/analytics/PageViewTracker'
-import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site'
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_URL } from '@/lib/site'
 
 const HOME_SPLASH_SESSION_KEY = 'fc_home_splash_seen'
 const HOME_SPLASH_VISIBLE_MS = 1000
@@ -50,6 +50,7 @@ export const metadata: Metadata = {
   },
   applicationName: siteName,
   description: siteDescription,
+  keywords: SITE_KEYWORDS,
   manifest: '/manifest.webmanifest',
   alternates: {
     canonical: '/',
@@ -121,6 +122,34 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#f0f3f5" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              {
+                '@context': 'https://schema.org',
+                '@type': 'WebSite',
+                name: SITE_NAME,
+                alternateName: ['FC온라인 그라운드', '피파그라운드', 'FConline Ground'],
+                url: SITE_URL,
+                description: siteDescription,
+                potentialAction: {
+                  '@type': 'SearchAction',
+                  target: `${SITE_URL}/players?q={search_term_string}`,
+                  'query-input': 'required name=search_term_string',
+                },
+              },
+              {
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: SITE_NAME,
+                url: SITE_URL,
+                logo: `${SITE_URL}/icons/favicon-32x32.png`,
+                sameAs: [`${SITE_URL}`],
+              },
+            ]),
+          }}
+        />
         <style>{`
           #startup-splash {
             position: fixed;
