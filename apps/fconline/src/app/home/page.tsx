@@ -1,4 +1,10 @@
-import { SITE_NAME, SITE_SHORT_NAME, SITE_URL } from '@/lib/site'
+import type { Metadata } from 'next'
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_SHORT_NAME, SITE_URL } from '@/lib/site'
+
+export const metadata: Metadata = {
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+}
 import HomeStatusPanel from './HomeStatusPanel'
 import HomeEventCarousel from './HomeEventCarousel'
 import HomeControllerUsageCard from './HomeControllerUsageCard'
@@ -50,8 +56,14 @@ export default async function HomePage() {
             '@context': 'https://schema.org',
             '@type': 'WebSite',
             name: SITE_NAME,
-            alternateName: [SITE_SHORT_NAME, 'FCOnline Ground', 'fconlineground.com'],
-            url: `${SITE_URL}/`,
+            alternateName: ['FC온라인 그라운드', '피파그라운드', SITE_SHORT_NAME, 'FCOnline Ground'],
+            url: SITE_URL,
+            description: SITE_DESCRIPTION,
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: `${SITE_URL}/players?q={search_term_string}`,
+              'query-input': 'required name=search_term_string',
+            },
           }),
         }}
       />

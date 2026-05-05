@@ -1,4 +1,10 @@
+import type { Metadata } from 'next'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
+
+export const metadata: Metadata = {
+  description: 'FC온라인 유저들과 자유롭게 소통하는 커뮤니티입니다. 피파온라인 공략, 팁, 선수 정보, 게임 이야기를 나눠보세요.',
+  keywords: ['FC온라인 커뮤니티', '피파 커뮤니티', '피파커뮤니티', '축구 커뮤니티', '피파 게시판', 'FC온라인 게시판', '피파온라인 커뮤니티', 'FC온라인 공략', '축구게임 커뮤니티'],
+}
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import { canDeleteCommunityPost } from '@/lib/communityAuth'
 import { formatRelativeTime, type CommunityPostSummary } from '@/lib/community'

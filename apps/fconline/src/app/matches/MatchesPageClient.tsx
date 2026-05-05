@@ -24,8 +24,9 @@ import {
 } from '@/features/match-analysis/types'
 
 const OUID_CACHE_KEY = 'fconline.match.ouid-cache'
-const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v6'
+const MATCH_SEARCH_CACHE_KEY = 'fconline.match.search-cache.v7'
 const MATCH_RESULTS_CACHE_KEY = 'fconline.match.results-cache.v5'
+const MATCH_RETURN_STATE_KEY = 'fconline.match.return-state.v1'
 const OFFICIAL_FORMATION_META_CACHE_KEY = 'fconline.match.official-formation-meta-cache.v2'
 const OFFICIAL_TEAM_COLOR_META_CACHE_KEY = 'fconline.match.official-team-color-meta-cache.v8'
 const OFFICIAL_TOP_CACHE_KEY = 'fconline.match.official-top-cache.v3'
@@ -66,6 +67,15 @@ type MatchResultsCacheEntry = {
   matches: MatchData[]
 }
 type MatchResultsCacheStore = Record<string, MatchResultsCacheEntry>
+type MatchReturnState = {
+  cachedAt: number
+  nickname: string
+  mode: SearchMode
+  exactCandidate: MatchSearchCandidate | null
+  candidates: MatchSearchCandidate[]
+  matches: MatchData[]
+  activeMatchId: string
+}
 type VoltaTopRankCacheEntry = {
   cachedAt: number
   items: VoltaTopRankItem[]
@@ -935,6 +945,34 @@ function writeJsonStorage<T>(key: string, value: T) {
   } catch {}
 }
 
+function readSessionJson<T>(key: string) {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.sessionStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+function writeSessionJson<T>(key: string, value: T) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value))
+  } catch {}
+}
+
+function clearSessionKey(key: string) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.sessionStorage.removeItem(key)
+  } catch {}
+}
+
 function readCachedOuid(nickname: string) {
   if (typeof window === 'undefined') return null
 
@@ -1179,11 +1217,28 @@ function DetailValueContent({
   }
 }
 
-function InfoCard({ label, value, valueColor }: { label: string; value: string | number; valueColor?: string }) {
+function InfoCard({
+  label,
+  value,
+  valueColor,
+}: {
+  label: string
+  value: React.ReactNode
+  valueColor?: string
+}) {
   return (
-    <div className="rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}>
+    <div
+      className="flex h-[68px] flex-col justify-between rounded-lg px-4 py-3"
+      style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}
+    >
       <div className="app-theme-muted text-[11px]">{label}</div>
-      <div className="mt-1 text-sm font-semibold" style={{ color: valueColor ?? 'var(--app-title)' }}>{value}</div>
+      <div
+        className="mt-1 truncate text-sm font-semibold"
+        style={{ color: valueColor ?? 'var(--app-title)' }}
+        title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}
+      >
+        {value}
+      </div>
     </div>
   )
 }
@@ -2852,6 +2907,7 @@ type Props = {
 export default function MatchesPageClient({ initialNickname, initialMatchId, initialSearchMode }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const requestIdRef = useRef(0)
+  const restoredReturnStateRef = useRef(false)
   const shareFeedbackTimerRef = useRef<number | null>(null)
   const normalizedInitialMode = normalizeSearchMode(initialSearchMode)
 
@@ -3444,9 +3500,64 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     setMatchesError('')
   }
 
+  const saveReturnState = () => {
+    if (!activeSearchQuery.trim()) {
+      return
+    }
+
+    writeSessionJson(MATCH_RETURN_STATE_KEY, {
+      cachedAt: Date.now(),
+      nickname: activeSearchQuery,
+      mode: selectedSearchMode,
+      exactCandidate,
+      candidates,
+      matches,
+      activeMatchId,
+    } satisfies MatchReturnState)
+  }
+
+  useEffect(() => {
+    if (!initialNickname) {
+      clearSessionKey(MATCH_RETURN_STATE_KEY)
+      return
+    }
+
+    const restored = readSessionJson<MatchReturnState>(MATCH_RETURN_STATE_KEY)
+    if (!restored) {
+      return
+    }
+
+    const isFresh = Date.now() - restored.cachedAt < 1000 * 60 * 5
+    const modeToCompare = normalizeSearchMode(initialSearchMode)
+
+    if (!isFresh || normalizeNicknameKey(restored.nickname) !== normalizeNicknameKey(initialNickname) || restored.mode !== modeToCompare) {
+      clearSessionKey(MATCH_RETURN_STATE_KEY)
+      return
+    }
+
+    restoredReturnStateRef.current = true
+    setSelectedSearchMode(restored.mode)
+    setQuery(restored.nickname)
+    setActiveSearchQuery(restored.nickname)
+    setExactCandidate(restored.exactCandidate)
+    setCandidates(restored.candidates)
+    setMatches(restored.matches)
+    setActiveMatchId(restored.activeMatchId)
+    setHasPendingRouteSearch(false)
+    setSearchLoading(false)
+    setMatchLoading(false)
+    setMatchesError('')
+    clearSessionKey(MATCH_RETURN_STATE_KEY)
+  }, [initialNickname, initialSearchMode])
+
   useEffect(() => {
     if (!initialNickname) {
       setHasPendingRouteSearch(false)
+      return
+    }
+
+    if (restoredReturnStateRef.current) {
+      restoredReturnStateRef.current = false
       return
     }
 
@@ -3485,8 +3596,6 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
     : getOfficialDisplayFields(exactCandidate)
   const fallbackOwnerEmblemUrl = exactCandidate?.representativeTeamEmblemUrl ?? null
   const officialBadgeImageUrl = officialDisplay.rankIconUrl ?? fallbackOwnerEmblemUrl
-  const hasOfficialRank =
-    officialDisplay.rank !== null || officialDisplay.rankPoint !== null || !!officialDisplay.rankIconUrl
   const modeAccentColor = isManagerMode ? '#10b981' : 'var(--app-accent-blue)'
   const modeRecentMatchLabel = isManagerMode ? '감독모드 최근 10경기' : '1:1 공식경기 최근 10경기'
   const modeNoMatchText = isManagerMode ? '감독모드 경기 기록이 없어요.' : '1:1 공식경기 기록이 없어요.'
@@ -3669,7 +3778,31 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           label="승률"
                           value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'}
                         />
-                        <InfoCard label="주요 포메이션" value={statValue(officialDisplay.formation ?? null)} />
+                        {exactCandidate.ouid ? (
+                          <a
+                            href={`/matches/${exactCandidate.ouid}/formation?formation=${encodeURIComponent(officialDisplay.formation ?? '')}&nickname=${encodeURIComponent(exactCandidate.nickname)}&teamColors=${encodeURIComponent(officialDisplay.teamColors.join('|'))}&nexonSn=${encodeURIComponent(exactCandidate.nexonSn)}&mode=${encodeURIComponent(selectedSearchMode)}`}
+                            className="block active:opacity-60"
+                            onClick={() => saveReturnState()}
+                          >
+                            <InfoCard
+                              label="주요 포메이션"
+                              value={
+                                <span
+                                  className="underline underline-offset-2"
+                                  style={{ color: officialDisplay.formation ? 'var(--app-accent-blue)' : 'var(--app-title)' }}
+                                >
+                                  {statValue(officialDisplay.formation ?? null)}
+                                </span>
+                              }
+                            />
+                          </a>
+                        ) : (
+                          <InfoCard
+                            label="주요 포메이션"
+                            value={statValue(officialDisplay.formation ?? null)}
+                            valueColor={officialDisplay.formation ? 'var(--app-accent-blue)' : undefined}
+                          />
+                        )}
                         <InfoCard label="대표 팀컬러" value={officialTeamColorValue} />
                         <InfoCard label="구단가치" value={statValue(exactCandidate.price)} />
                         <InfoCard
@@ -3700,36 +3833,6 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                           />
                         </div>
                       ) : null}
-                    </section>
-
-                    <section className="app-theme-card rounded-lg border px-5 py-5">
-                      <h2 className="app-theme-title text-base font-semibold">상세 정보</h2>
-                      <div className="mt-4 grid grid-cols-2 gap-3">
-                        <DetailStatCard label="주요 포메이션" value={officialDisplay.formation ?? '-'} />
-                        <DetailStatCard label="대표 팀컬러" value={officialTeamColorValue} />
-                        <DetailStatCard
-                          label="랭크 / 포인트"
-                          value={
-                            hasOfficialRank
-                              ? `${officialDisplay.rank != null ? `${officialDisplay.rank}위` : '-'} · ${statValue(officialDisplay.rankPoint)}`
-                              : '-'
-                          }
-                        />
-                        <DetailStatCard label="승률" value={officialDisplay.winRate != null ? `${officialDisplay.winRate}%` : '-'} />
-                        <DetailStatCard
-                          label="최근 평균 슈팅"
-                          value={officialSummary ? formatMetricNumber(officialSummary.averageShots, 1) : '-'}
-                        />
-                        <DetailStatCard
-                          label="최근 평균 유효슛"
-                          value={officialSummary ? formatMetricNumber(officialSummary.averageEffectiveShots, 1) : '-'}
-                        />
-                        <DetailStatCard
-                          label="최근 클린시트"
-                          value={officialSummary ? `${officialSummary.cleanSheets}회` : '-'}
-                        />
-                        <DetailStatCard label="검색 모드" value={getModeLabel(selectedSearchMode)} />
-                      </div>
                     </section>
 
                     <section className="app-theme-card rounded-lg border px-5 py-5">
