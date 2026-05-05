@@ -2081,7 +2081,7 @@ function getOfficialDisplayFields(candidate: MatchSearchCandidate | null) {
     wins: candidate?.officialWins ?? candidate?.wins ?? null,
     draws: candidate?.officialDraws ?? candidate?.draws ?? null,
     losses: candidate?.officialLosses ?? candidate?.losses ?? null,
-    formation: candidate?.officialFormation ?? candidate?.formation ?? null,
+    formation: candidate?.officialFormation ?? null,
     teamColors:
       candidate?.officialTeamColors && candidate.officialTeamColors.length > 0
         ? candidate.officialTeamColors
@@ -2099,7 +2099,7 @@ function getManagerDisplayFields(candidate: MatchSearchCandidate | null) {
     wins: candidate?.managerWins ?? candidate?.wins ?? null,
     draws: candidate?.managerDraws ?? candidate?.draws ?? null,
     losses: candidate?.managerLosses ?? candidate?.losses ?? null,
-    formation: candidate?.managerFormation ?? candidate?.formation ?? null,
+    formation: candidate?.managerFormation ?? null,
     teamColors:
       candidate?.managerTeamColors && candidate.managerTeamColors.length > 0
         ? candidate.managerTeamColors

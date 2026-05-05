@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '25.3': '2026-05-05T22:00:00+09:00',
   '25.2': '2026-05-03T22:00:00+09:00',
   '25.1': '2026-05-02T22:30:00+09:00',
   '25.0': '2026-05-02T22:00:00+09:00',
@@ -35,6 +36,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '25.3': [
+    '감독모드 상세 화면에서 주요 포메이션이 1:1 공식경기 데이터로 표시되던 오류를 수정했습니다.',
+  ],
   '25.2': [
     '페이지네이션에서 현재 페이지가 항상 가운데에 위치하도록 개선했습니다.',
     '선수평가 페이지 이전/다음 버튼을 아이콘 버튼으로 통일했습니다.',
