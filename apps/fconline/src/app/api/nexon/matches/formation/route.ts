@@ -40,13 +40,15 @@ export async function GET(req: NextRequest) {
   const ouid = req.nextUrl.searchParams.get('ouid')
   const nexonSn = req.nextUrl.searchParams.get('nexonSn')
   const nickname = req.nextUrl.searchParams.get('nickname')
+  const mode = req.nextUrl.searchParams.get('mode') ?? 'official1on1'
+  const matchType = mode === 'manager' ? 52 : 50
   if (!ouid) return Response.json({ error: 'ouid required' }, { status: 400 })
 
   try {
-    // 1. 최근 공식경기 matchId 조회
+    // 1. 최근 경기 matchId 조회
     const matchIds: string[] = JSON.parse(
       await fetchRaw(
-        `https://open.api.nexon.com/fconline/v1/user/match?ouid=${ouid}&matchtype=50&offset=0&limit=3`
+        `https://open.api.nexon.com/fconline/v1/user/match?ouid=${ouid}&matchtype=${matchType}&offset=0&limit=3`
       )
     )
     if (!matchIds.length) return Response.json({ error: 'no matches' }, { status: 404 })

@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '26.1': '2026-05-05T23:00:00+09:00',
   '26.0': '2026-05-05T22:30:00+09:00',
   '25.9': '2026-05-04T17:04:38+09:00',
   '25.8': '2026-05-05T01:00:00+09:00',
@@ -43,6 +44,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '26.1': [
+    '감독모드 포메이션 상세가 감독모드 경기 기록 기준으로 표시되도록 수정했습니다.',
+  ],
   '26.0': [
     '감독모드 상세 화면에서 주요 포메이션이 1:1 공식경기 데이터로 표시되던 오류를 수정했습니다.',
   ],

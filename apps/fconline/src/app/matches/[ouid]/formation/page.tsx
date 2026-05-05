@@ -45,7 +45,8 @@ export default function FormationPage() {
     const formationUrl =
       `/api/nexon/matches/formation?ouid=${encodeURIComponent(ouid)}` +
       (nexonSn ? `&nexonSn=${encodeURIComponent(nexonSn)}` : '') +
-      (nickname ? `&nickname=${encodeURIComponent(nickname)}` : '')
+      (nickname ? `&nickname=${encodeURIComponent(nickname)}` : '') +
+      `&mode=${encodeURIComponent(mode)}`
 
     fetch(formationUrl)
       .then((r) => {
@@ -87,7 +88,7 @@ export default function FormationPage() {
       {!loading && error && (
         <div className="py-16 text-center">
           <p className="app-theme-muted text-sm">경기 데이터를 불러올 수 없습니다.</p>
-          <p className="app-theme-muted mt-1 text-xs">최근 1:1 공식경기 기록이 없거나 오류가 발생했습니다.</p>
+          <p className="app-theme-muted mt-1 text-xs">{mode === 'manager' ? '최근 감독모드 경기 기록이 없거나 오류가 발생했습니다.' : '최근 1:1 공식경기 기록이 없거나 오류가 발생했습니다.'}</p>
         </div>
       )}
 
