@@ -131,7 +131,7 @@ function PlayerCard({
     >
       <div className="flex items-center">
         {/* OVR + 포지션 (왼쪽) */}
-        <div className="mr-[3px] flex flex-col items-end gap-[3px]">
+        <div className="mr-[3px] flex flex-col items-center gap-[3px]">
           {displayedOverall !== null && (
             <span
               className="text-[10px] font-extrabold leading-none text-white"
@@ -161,7 +161,7 @@ function PlayerCard({
         </div>
 
         {/* 급여 + 강화단계 (오른쪽) */}
-        <div className="ml-[3px] flex flex-col items-start gap-[3px]">
+        <div className="ml-[3px] flex flex-col items-center gap-[3px]">
           {player.pay != null && (
             <span
               className="text-[9px] font-semibold leading-none text-white/80"

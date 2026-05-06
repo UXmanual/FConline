@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '27.3': '2026-05-07T03:20:00+09:00',
   '27.2': '2026-05-07T03:00:00+09:00',
   '27.1': '2026-05-07T02:40:00+09:00',
   '27.0': '2026-05-07T02:10:00+09:00',
@@ -55,6 +56,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '27.3': [
+    '포메이션 선수 카드 OVR·포지션(좌측)과 급여·강화단계(우측) 정렬을 가운데로 통일했습니다.',
+  ],
   '27.2': [
     '포메이션 강화단계 배지 숫자 세로 정렬 및 굵기를 개선했습니다.',
   ],
