@@ -60,9 +60,10 @@ function getEnhancementStyle(level: number): React.CSSProperties {
     minWidth: '16px',
     height: '14px',
     fontSize: '9px',
-    fontWeight: 600,
-    lineHeight: 1,
+    fontWeight: 800,
+    lineHeight: '14px',
     padding: '0 3px',
+    boxSizing: 'border-box',
   }
   if (level <= 1) {
     return { ...base, color: '#c5c8c9', background: 'linear-gradient(140deg, #51545a 0%, #42464d 100%)', borderColor: '#393a3c', borderTopColor: '#62676d', borderLeftColor: '#62676d', borderRightColor: '#393a3c' }
