@@ -28,6 +28,7 @@ const LEGACY_APP_NOTIFICATION_BOTTOM_SHEET_KEYS = [
 ]
 const COMMUNITY_NICKNAME_CACHE_KEY_PREFIX = 'mypage-community-nickname'
 const GAME_CLUB_NAME_CACHE_KEY_PREFIX = 'mypage-game-club-name'
+const LEVEL_PROFILE_CACHE_KEY_PREFIX = 'mypage-level-profile'
 
 type MyPageLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate?: string | null
@@ -312,6 +313,29 @@ function writeCachedGameClubName(userId: string, clubName: string) {
   window.localStorage.setItem(getGameClubNameCacheKey(userId), normalized)
 }
 
+function getLevelProfileCacheKey(userId: string) {
+  return `${LEVEL_PROFILE_CACHE_KEY_PREFIX}:${userId}`
+}
+
+function readCachedLevelProfile(userId: string): MyPageLevelProfile | null {
+  if (typeof window === 'undefined' || !userId) return null
+  try {
+    const raw = window.localStorage.getItem(getLevelProfileCacheKey(userId))
+    return raw ? (JSON.parse(raw) as MyPageLevelProfile) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedLevelProfile(userId: string, profile: MyPageLevelProfile) {
+  if (typeof window === 'undefined' || !userId) return
+  try {
+    window.localStorage.setItem(getLevelProfileCacheKey(userId), JSON.stringify(profile))
+  } catch {
+    // storage quota exceeded — ignore
+  }
+}
+
 export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOpen?: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -385,7 +409,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
       setAuthUser(user)
       setAvatarUrl((user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
-      if (user) setIsProfileLoading(true)
+      if (user) {
+        const cachedProfile = readCachedLevelProfile(user.id)
+        setUserLevelProfile(cachedProfile)
+        if (!cachedProfile) setIsProfileLoading(true)
+      }
       setCommunityNickname(user ? readCachedCommunityNickname(user.id) || deriveCommunityNickname(user) : '')
       setGameClubName(user ? readCachedGameClubName(user.id) : '')
       setIsEditingNickname(false)
@@ -404,7 +432,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
       setAuthUser(session?.user ?? null)
       setAvatarUrl((session?.user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
-      if (session?.user) setIsProfileLoading(true)
+      if (session?.user) {
+        const cachedProfile = readCachedLevelProfile(session.user.id)
+        setUserLevelProfile(cachedProfile)
+        if (!cachedProfile) setIsProfileLoading(true)
+      }
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
       )
@@ -452,7 +484,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const resolvedNickname = String(nicknameResult?.nickname ?? fallbackNickname)
         setCommunityNickname(resolvedNickname)
         writeCachedCommunityNickname(userId, resolvedNickname)
-        setUserLevelProfile((nicknameResult?.levelProfile as MyPageLevelProfile | undefined) ?? null)
+        const freshProfile = (nicknameResult?.levelProfile as MyPageLevelProfile | undefined) ?? null
+        setUserLevelProfile(freshProfile)
+        if (freshProfile) writeCachedLevelProfile(userId, freshProfile)
 
         if (gameClubRes.ok && gameClubResult?.gameClubName) {
           const resolvedClubName = String(gameClubResult.gameClubName).trim()
@@ -767,7 +801,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       const resolvedNickname = result?.nickname ?? trimmedNickname
       setCommunityNickname(resolvedNickname)
       writeCachedCommunityNickname(authUser.id, resolvedNickname)
-      setUserLevelProfile((result?.levelProfile as MyPageLevelProfile | undefined) ?? userLevelProfile)
+      const updatedProfile = (result?.levelProfile as MyPageLevelProfile | undefined) ?? userLevelProfile
+      setUserLevelProfile(updatedProfile)
+      if (updatedProfile) writeCachedLevelProfile(authUser.id, updatedProfile)
       setNicknameError(null)
       setIsEditingNickname(false)
     } catch (error) {
