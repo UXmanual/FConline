@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '26.8': '2026-05-07T01:20:00+09:00',
   '26.7': '2026-05-07T01:00:00+09:00',
   '26.6': '2026-05-07T00:30:00+09:00',
   '26.5': '2026-05-06T23:50:00+09:00',
@@ -50,6 +51,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '26.8': [
+    '포메이션 LCM·RCM 위치를 중앙 방향으로 조정해 LM·LCM, RM·RCM 간격이 더 여유 있게 보이도록 개선했습니다.',
+  ],
   '26.7': [
     '포메이션 선수 카드 겹침 보정 시 같은 라인(LM·RM, LCM·RCM, LCB·RCB 등)을 함께 이동해 대칭이 유지되도록 개선했습니다.',
   ],
