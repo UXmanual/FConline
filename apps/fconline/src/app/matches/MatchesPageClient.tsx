@@ -3035,7 +3035,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
         }
 
         const data = await res.json().catch(() => null)
-        const items = Array.isArray(data?.items) ? (data.items as OfficialTopRankItem[]).slice(0, 3) : []
+        const items = Array.isArray(data?.items) ? (data.items as OfficialTopRankItem[]).slice(0, 5) : []
 
         if (cancelled) {
           return
