@@ -3,6 +3,9 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '26.4': '2026-05-06T23:30:00+09:00',
+  '26.3': '2026-05-06T23:00:00+09:00',
+  '26.2': '2026-05-06T22:30:00+09:00',
   '26.1': '2026-05-05T23:00:00+09:00',
   '26.0': '2026-05-05T22:30:00+09:00',
   '25.9': '2026-05-04T17:04:38+09:00',
@@ -44,6 +47,16 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '26.4': [
+    '1:1 공식경기 랭킹 TOP 5 리스트가 5위까지 정상 표시되도록 수정했습니다.',
+  ],
+  '26.3': [
+    '분석 탭 1:1 공식경기 랭킹 블록을 TOP 3에서 TOP 5로 확장했습니다.',
+  ],
+  '26.2': [
+    '어드민 방문자 그래프의 날짜별 방문자·페이지뷰 수치를 모든 날짜에 표시하도록 개선했습니다.',
+    '수치 레이블이 그래프 점(dot)과 겹치지 않도록 위치 보정 로직을 추가했습니다.',
+  ],
   '26.1': [
     '감독모드 포메이션 상세가 감독모드 경기 기록 기준으로 표시되도록 수정했습니다.',
   ],
