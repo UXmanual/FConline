@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '26.6': '2026-05-07T00:30:00+09:00',
   '26.5': '2026-05-06T23:50:00+09:00',
   '26.4': '2026-05-06T23:30:00+09:00',
   '26.3': '2026-05-06T23:00:00+09:00',
@@ -48,6 +49,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '26.6': [
+    '포메이션 상세 화면에서 선수 이름이 말줄임(...)으로 잘리지 않고 전체 표시됩니다.',
+    '선수 카드가 서로 겹치는 경우 자동으로 위아래로 밀어 텍스트가 보이도록 조정합니다.',
+  ],
   '26.5': [
     '구단주 상세 분석 탭 주요 선수 포지션 배지 색상을 수정했습니다. (RS·LS→공격수 빨강, RCM·LCM·RDM·LDM→미드필더 초록)',
     'TT·TB·NHD·CAP·PL 등 구시즌 선수 이미지를 불러오지 못하는 문제를 수정했습니다. 시즌 이미지가 없는 경우 해당 선수의 기본 이미지로 자동 대체됩니다.',

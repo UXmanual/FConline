@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getStrongPoint } from '@/features/player-search/player-detail'
 import { getPlayerImageCandidates } from '@/features/player-search/player-image'
 
@@ -68,9 +68,13 @@ function getDisplayedOverall(
 function PlayerCard({
   player,
   adaptationBoost,
+  cardRef,
+  extraDy,
 }: {
   player: FormationPlayer
   adaptationBoost: number
+  cardRef?: (el: HTMLDivElement | null) => void
+  extraDy: number
 }) {
   const [x, y] = POSITION_COORDS[player.spPosition] ?? [50, 50]
   const candidates = useMemo(
@@ -81,18 +85,17 @@ function PlayerCard({
   const displayedOverall = getDisplayedOverall(player, adaptationBoost)
   const horizontalClass =
     x <= 12 ? 'items-start' : x >= 88 ? 'items-end' : 'items-center'
-  const verticalTranslate =
-    y <= 18 ? 'translateY(0)' : y >= 82 ? 'translateY(-100%)' : 'translateY(-50%)'
-  const horizontalTranslate =
-    x <= 12 ? 'translateX(0)' : x >= 88 ? 'translateX(-100%)' : 'translateX(-50%)'
+  const xOff = x <= 12 ? '0%' : x >= 88 ? '-100%' : '-50%'
+  const yOff = y <= 18 ? '0%' : y >= 82 ? '-100%' : '-50%'
 
   return (
     <div
-      className={`absolute flex max-w-[72px] flex-col ${horizontalClass}`}
+      ref={cardRef}
+      className={`absolute flex flex-col ${horizontalClass}`}
       style={{
         left: `${x}%`,
         top: `${y}%`,
-        transform: `${horizontalTranslate} ${verticalTranslate}`,
+        transform: `translate(${xOff}, calc(${yOff} + ${extraDy}px))`,
       }}
     >
       <div className="flex items-center">
@@ -147,8 +150,8 @@ function PlayerCard({
         </div>
       </div>
 
-      {/* 시즌엠블럼 + 선수명 */}
-      <div className="mt-[3px] flex max-w-[72px] items-center gap-[2px]">
+      {/* 시즌엠블럼 + 선수명 (말줄임 없음) */}
+      <div className="mt-[3px] flex items-center gap-[2px]">
         {player.seasonImg && (
           <Image
             src={player.seasonImg}
@@ -160,7 +163,7 @@ function PlayerCard({
           />
         )}
         <span
-          className="truncate text-[9px] font-semibold leading-none text-white"
+          className="whitespace-nowrap text-[9px] font-semibold leading-none text-white"
           style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
         >
           {player.playerName}
@@ -178,6 +181,55 @@ export default function FormationPitch({
   players: FormationPlayer[]
   adaptationBoost: number
 }) {
+  const cardEls = useRef<Map<number, HTMLDivElement>>(new Map())
+  const [extraDys, setExtraDys] = useState<Map<number, number>>(new Map())
+
+  useLayoutEffect(() => {
+    const items: { pos: number; rect: DOMRect }[] = []
+    for (const player of players) {
+      const el = cardEls.current.get(player.spPosition)
+      if (el) items.push({ pos: player.spPosition, rect: el.getBoundingClientRect() })
+    }
+    if (items.length === 0) return
+
+    const dy = new Map<number, number>(items.map((item) => [item.pos, 0]))
+    const GAP = 3
+
+    // 여러 패스로 겹침 해소 (상위 카드는 위로, 하위 카드는 아래로 밀기)
+    for (let pass = 0; pass < 5; pass++) {
+      for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) {
+          const a = items[i]
+          const b = items[j]
+          const aOff = dy.get(a.pos)!
+          const bOff = dy.get(b.pos)!
+          const aT = a.rect.top + aOff
+          const aB = a.rect.bottom + aOff
+          const bT = b.rect.top + bOff
+          const bB = b.rect.bottom + bOff
+
+          const hOverlap = a.rect.left < b.rect.right && a.rect.right > b.rect.left
+          const vOverlap = aT < bB && aB > bT
+
+          if (hOverlap && vOverlap) {
+            const overlap = Math.min(aB, bB) - Math.max(aT, bT) + GAP
+            const shift = overlap / 2
+            if (aT <= bT) {
+              dy.set(a.pos, aOff - shift)
+              dy.set(b.pos, bOff + shift)
+            } else {
+              dy.set(a.pos, aOff + shift)
+              dy.set(b.pos, bOff - shift)
+            }
+          }
+        }
+      }
+    }
+
+    const hasChange = items.some((item) => Math.abs(dy.get(item.pos)!) > 0.5)
+    if (hasChange) setExtraDys(new Map(dy))
+  }, [players])
+
   return (
     <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: '10/16' }}>
       <Image
@@ -193,6 +245,11 @@ export default function FormationPitch({
           key={`${player.spId}-${player.spPosition}`}
           player={player}
           adaptationBoost={adaptationBoost}
+          cardRef={(el) => {
+            if (el) cardEls.current.set(player.spPosition, el)
+            else cardEls.current.delete(player.spPosition)
+          }}
+          extraDy={extraDys.get(player.spPosition) ?? 0}
         />
       ))}
     </div>
