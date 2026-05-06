@@ -236,10 +236,10 @@ export default function MyPageAdminPushPage() {
                 const ticks = [0, Math.round(niceMax / 2), niceMax]
 
                 const VB_W = 300
-                const VB_H = 168
+                const VB_H = 174
                 const padL = 38
                 const padR = 16
-                const padT = 18
+                const padT = 24
                 const padB = 46
                 const plotW = VB_W - padL - padR
                 const plotH = VB_H - padT - padB
@@ -286,21 +286,42 @@ export default function MyPageAdminPushPage() {
                         const weekday = new Date(day.date + 'T12:00:00').toLocaleDateString('ko-KR', { weekday: 'short' })
                         const mmdd = `${parseInt(day.date.slice(5, 7))}.${parseInt(day.date.slice(8))}`
 
+                        const cyV = py(day.visitors)
+                        const cyPv = py(day.views)
+                        const MIN_LABEL_GAP = 13
+                        const MIN_DOT_GAP = 4  // 레이블 baseline ~ 원 상단 최소 간격
+                        let lyV = cyV - 10
+                        let lyPv = cyPv - 10
+                        if (Math.abs(lyV - lyPv) < MIN_LABEL_GAP) {
+                          const mid = (lyV + lyPv) / 2
+                          if (cyV <= cyPv) {
+                            lyV = mid - MIN_LABEL_GAP / 2
+                            lyPv = mid + MIN_LABEL_GAP / 2
+                          } else {
+                            lyPv = mid - MIN_LABEL_GAP / 2
+                            lyV = mid + MIN_LABEL_GAP / 2
+                          }
+                        }
+                        // 상단 경계 클램프 (차트 영역 밖으로 나가지 않도록)
+                        const minY = padT + 2
+                        const topOffset = Math.min(lyV, lyPv) < minY ? minY - Math.min(lyV, lyPv) : 0
+                        lyV += topOffset
+                        lyPv += topOffset
+                        // topOffset으로 밀린 후에도 자기 원과 안 겹치도록 재보정
+                        lyV = Math.min(lyV, cyV - 3.5 - MIN_DOT_GAP)
+                        lyPv = Math.min(lyPv, cyPv - 3 - MIN_DOT_GAP)
+
                         return (
                           <g key={day.date}>
-                            <circle cx={cx} cy={py(day.views)} r={3} fill="#94a3b8" />
-                            <circle cx={cx} cy={py(day.visitors)} r={3.5} fill="#457ae5" />
+                            <circle cx={cx} cy={cyPv} r={3} fill="#94a3b8" />
+                            <circle cx={cx} cy={cyV} r={3.5} fill="#457ae5" />
 
-                            {isToday && (
-                              <>
-                                <text x={cx} y={py(day.visitors) - 8} textAnchor="middle" fontSize={11} fill="#457ae5" fontWeight="700">
-                                  {day.visitors}
-                                </text>
-                                <text x={cx} y={py(day.views) - 8} textAnchor="middle" fontSize={11} fill="#94a3b8" fontWeight="600">
-                                  {day.views}
-                                </text>
-                              </>
-                            )}
+                            <text x={cx} y={lyV} textAnchor="middle" fontSize={isToday ? 10 : 9} fill="#457ae5" fontWeight="700">
+                              {day.visitors}
+                            </text>
+                            <text x={cx} y={lyPv} textAnchor="middle" fontSize={isToday ? 10 : 9} fill="#94a3b8" fontWeight="600">
+                              {day.views}
+                            </text>
 
                             <text
                               x={cx} y={padT + plotH + 16}
