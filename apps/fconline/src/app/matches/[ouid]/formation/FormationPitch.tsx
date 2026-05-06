@@ -141,10 +141,20 @@ function PlayerCard({
           )}
           {player.enhancement > 0 && (
             <span
-              className="text-[10px] font-extrabold leading-none text-yellow-300"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
+              className="inline-flex items-center justify-center rounded-[2px] px-[3px] text-[9px] font-semibold leading-none"
+              style={{
+                color: '#c5c8c9',
+                background: 'linear-gradient(140deg, #51545a 0%, #42464d 100%)',
+                border: '1px solid #393a3c',
+                borderTopColor: '#62676d',
+                borderLeftColor: '#62676d',
+                borderRightColor: '#393a3c',
+                borderBottomColor: '#2d2f31',
+                minWidth: '16px',
+                height: '14px',
+              }}
             >
-              +{player.enhancement}
+              {player.enhancement}
             </span>
           )}
         </div>
