@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getStrongPoint } from '@/features/player-search/player-detail'
 import { getPlayerImageCandidates } from '@/features/player-search/player-image'
 
@@ -48,6 +48,36 @@ const POSITION_COORDS: Record<number, [number, number]> = {
   25: [50, 14], // ST
   26: [33, 14], // LS
   27: [9,  23], // LW
+}
+
+function getEnhancementStyle(level: number): React.CSSProperties {
+  const base: React.CSSProperties = {
+    border: '1px solid',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '2px',
+    minWidth: '16px',
+    height: '14px',
+    fontSize: '9px',
+    fontWeight: 600,
+    lineHeight: 1,
+    padding: '0 3px',
+  }
+  if (level <= 1) {
+    return { ...base, color: '#c5c8c9', background: 'linear-gradient(140deg, #51545a 0%, #42464d 100%)', borderColor: '#393a3c', borderTopColor: '#62676d', borderLeftColor: '#62676d', borderRightColor: '#393a3c' }
+  }
+  if (level <= 4) {
+    return { ...base, color: '#7e3f27', background: 'linear-gradient(140deg, #de946b 0%, #ad5f42 100%)', borderColor: '#864229', borderTopColor: '#e4b7a2', borderLeftColor: '#e4b7a2', borderRightColor: '#864229' }
+  }
+  if (level <= 7) {
+    return { ...base, color: '#4e545e', background: 'linear-gradient(140deg, rgb(216,217,220) 0%, rgb(184,189,202) 100%)', borderColor: '#a5a8ae', borderTopColor: '#d8dadc', borderLeftColor: '#d8dadc', borderRightColor: '#a9aaae' }
+  }
+  if (level <= 10) {
+    return { ...base, color: '#695100', background: 'linear-gradient(140deg, #f9dd62 0%, #dca908 100%)', borderColor: '#cda000', borderTopColor: '#e9d36c', borderLeftColor: '#e9d36c', borderRightColor: '#cda000' }
+  }
+  // 11-13: 플래티넘 (배경 이미지)
+  return { ...base, color: '#2d2b43', backgroundImage: 'url(https://ssl.nexon.com/s2/game/fc/online/obt/datacenter/bg_plt.png)', backgroundRepeat: 'no-repeat', backgroundPosition: '0 0', backgroundSize: '100% 100%', borderColor: '#5274c0', borderTopColor: '#bdc5e5', borderLeftColor: '#607dc4', borderRightColor: '#5274c0' }
 }
 
 function getDisplayedOverall(
@@ -140,20 +170,7 @@ function PlayerCard({
             </span>
           )}
           {player.enhancement > 0 && (
-            <span
-              className="inline-flex items-center justify-center rounded-[2px] px-[3px] text-[9px] font-semibold leading-none"
-              style={{
-                color: '#c5c8c9',
-                background: 'linear-gradient(140deg, #51545a 0%, #42464d 100%)',
-                border: '1px solid #393a3c',
-                borderTopColor: '#62676d',
-                borderLeftColor: '#62676d',
-                borderRightColor: '#393a3c',
-                borderBottomColor: '#2d2f31',
-                minWidth: '16px',
-                height: '14px',
-              }}
-            >
+            <span style={getEnhancementStyle(player.enhancement)}>
               {player.enhancement}
             </span>
           )}

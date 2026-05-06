@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '27.1': '2026-05-07T02:40:00+09:00',
   '27.0': '2026-05-07T02:10:00+09:00',
   '26.9': '2026-05-07T01:40:00+09:00',
   '26.8': '2026-05-07T01:20:00+09:00',
@@ -53,6 +54,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '27.1': [
+    '포메이션 강화단계 배지 색상을 넥슨 데이터센터 기준으로 정확하게 적용했습니다. (1=회색, 2~4=브론즈, 5~7=실버, 8~10=골드, 11~13=플래티넘)',
+  ],
   '27.0': [
     '포메이션 강화단계 표시를 넥슨 데이터센터 스타일의 메탈릭 배지로 변경했습니다.',
   ],
