@@ -3022,8 +3022,8 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
       const isCacheFresh =
         typeof cached?.cachedAt === 'number' && Date.now() - cached.cachedAt < TOP_RANK_CACHE_TTL_MS
 
-      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 3) {
-        setOfficialTopItems(cached.items.slice(0, 3))
+      if (isCacheFresh && Array.isArray(cached?.items) && cached.items.length >= 5) {
+        setOfficialTopItems(cached.items.slice(0, 5))
         setOfficialTopLoading(false)
         return
       }
