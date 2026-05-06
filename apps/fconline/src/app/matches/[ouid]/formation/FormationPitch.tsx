@@ -185,49 +185,76 @@ export default function FormationPitch({
   const [extraDys, setExtraDys] = useState<Map<number, number>>(new Map())
 
   useLayoutEffect(() => {
-    const items: { pos: number; rect: DOMRect }[] = []
+    // POSITION_COORDS의 y값이 같은 포지션끼리 같은 row로 묶어 대칭 유지
+    const posRects = new Map<number, DOMRect>()
     for (const player of players) {
       const el = cardEls.current.get(player.spPosition)
-      if (el) items.push({ pos: player.spPosition, rect: el.getBoundingClientRect() })
+      if (el) posRects.set(player.spPosition, el.getBoundingClientRect())
     }
-    if (items.length === 0) return
+    if (posRects.size === 0) return
 
-    const dy = new Map<number, number>(items.map((item) => [item.pos, 0]))
+    // rowId: POSITION_COORDS의 y값 (같은 y = 같은 라인)
+    const rowId = (pos: number) => POSITION_COORDS[pos]?.[1] ?? 50
+
+    // row별로 포지션 묶기
+    const rowMap = new Map<number, number[]>()
+    for (const pos of posRects.keys()) {
+      const id = rowId(pos)
+      if (!rowMap.has(id)) rowMap.set(id, [])
+      rowMap.get(id)!.push(pos)
+    }
+
+    // row별 bounding box (세로만 사용 — 좌우 대칭이므로 수직 이동만)
+    type RowBox = { id: number; top: number; bottom: number }
+    const rows: RowBox[] = []
+    for (const [id, positions] of rowMap) {
+      let top = Infinity, bottom = -Infinity
+      for (const pos of positions) {
+        const r = posRects.get(pos)!
+        if (r.top < top) top = r.top
+        if (r.bottom > bottom) bottom = r.bottom
+      }
+      rows.push({ id, top, bottom })
+    }
+    rows.sort((a, b) => a.top - b.top) // 위→아래 정렬
+
+    // row 단위 수직 겹침 해소 (같은 라인은 동일 offset 적용)
+    const rowDy = new Map<number, number>(rows.map((r) => [r.id, 0]))
     const GAP = 3
 
-    // 여러 패스로 겹침 해소 (상위 카드는 위로, 하위 카드는 아래로 밀기)
     for (let pass = 0; pass < 5; pass++) {
-      for (let i = 0; i < items.length; i++) {
-        for (let j = i + 1; j < items.length; j++) {
-          const a = items[i]
-          const b = items[j]
-          const aOff = dy.get(a.pos)!
-          const bOff = dy.get(b.pos)!
-          const aT = a.rect.top + aOff
-          const aB = a.rect.bottom + aOff
-          const bT = b.rect.top + bOff
-          const bB = b.rect.bottom + bOff
+      for (let i = 0; i < rows.length; i++) {
+        for (let j = i + 1; j < rows.length; j++) {
+          const a = rows[i], b = rows[j]
+          const aOff = rowDy.get(a.id)!
+          const bOff = rowDy.get(b.id)!
+          const aT = a.top + aOff, aB = a.bottom + aOff
+          const bT = b.top + bOff, bB = b.bottom + bOff
 
-          const hOverlap = a.rect.left < b.rect.right && a.rect.right > b.rect.left
-          const vOverlap = aT < bB && aB > bT
-
-          if (hOverlap && vOverlap) {
+          if (aT < bB && aB > bT) {
             const overlap = Math.min(aB, bB) - Math.max(aT, bT) + GAP
             const shift = overlap / 2
             if (aT <= bT) {
-              dy.set(a.pos, aOff - shift)
-              dy.set(b.pos, bOff + shift)
+              rowDy.set(a.id, aOff - shift)
+              rowDy.set(b.id, bOff + shift)
             } else {
-              dy.set(a.pos, aOff + shift)
-              dy.set(b.pos, bOff - shift)
+              rowDy.set(a.id, aOff + shift)
+              rowDy.set(b.id, bOff - shift)
             }
           }
         }
       }
     }
 
-    const hasChange = items.some((item) => Math.abs(dy.get(item.pos)!) > 0.5)
-    if (hasChange) setExtraDys(new Map(dy))
+    // row offset을 각 포지션에 그대로 적용
+    const newDys = new Map<number, number>()
+    for (const [id, positions] of rowMap) {
+      const dy = rowDy.get(id) ?? 0
+      for (const pos of positions) newDys.set(pos, dy)
+    }
+
+    const hasChange = [...newDys.values()].some((v) => Math.abs(v) > 0.5)
+    if (hasChange) setExtraDys(newDys)
   }, [players])
 
   return (
