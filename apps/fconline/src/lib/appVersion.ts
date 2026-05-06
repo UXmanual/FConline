@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '26.9': '2026-05-07T01:40:00+09:00',
   '26.8': '2026-05-07T01:20:00+09:00',
   '26.7': '2026-05-07T01:00:00+09:00',
   '26.6': '2026-05-07T00:30:00+09:00',
@@ -51,6 +52,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '26.9': [
+    '포메이션 선수 카드 텍스트 크기를 소폭 키우고 OVR·포지션, 급여·강화단계 간 행간을 넓혔습니다.',
+  ],
   '26.8': [
     '포메이션 LCM·RCM 위치를 중앙 방향으로 조정해 LM·LCM, RM·RCM 간격이 더 여유 있게 보이도록 개선했습니다.',
   ],

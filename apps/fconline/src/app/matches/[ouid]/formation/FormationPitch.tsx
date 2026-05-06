@@ -100,17 +100,17 @@ function PlayerCard({
     >
       <div className="flex items-center">
         {/* OVR + 포지션 (왼쪽) */}
-        <div className="mr-[3px] flex flex-col items-end">
+        <div className="mr-[3px] flex flex-col items-end gap-[3px]">
           {displayedOverall !== null && (
             <span
-              className="text-[9px] font-extrabold leading-none text-white"
+              className="text-[10px] font-extrabold leading-none text-white"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
             >
               {displayedOverall}
             </span>
           )}
           <span
-            className="text-[8px] font-semibold leading-none text-white/90"
+            className="text-[9px] font-semibold leading-none text-white/90"
             style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
           >
             {player.positionLabel}
@@ -130,10 +130,10 @@ function PlayerCard({
         </div>
 
         {/* 급여 + 강화단계 (오른쪽) */}
-        <div className="ml-[3px] flex flex-col items-start gap-[2px]">
+        <div className="ml-[3px] flex flex-col items-start gap-[3px]">
           {player.pay != null && (
             <span
-              className="text-[8px] font-semibold leading-none text-white/80"
+              className="text-[9px] font-semibold leading-none text-white/80"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
             >
               {player.pay.toLocaleString()}
@@ -141,7 +141,7 @@ function PlayerCard({
           )}
           {player.enhancement > 0 && (
             <span
-              className="text-[9px] font-extrabold leading-none text-yellow-300"
+              className="text-[10px] font-extrabold leading-none text-yellow-300"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
             >
               +{player.enhancement}
@@ -151,19 +151,19 @@ function PlayerCard({
       </div>
 
       {/* 시즌엠블럼 + 선수명 (말줄임 없음) */}
-      <div className="mt-[3px] flex items-center gap-[2px]">
+      <div className="mt-[5px] flex items-center gap-[2px]">
         {player.seasonImg && (
           <Image
             src={player.seasonImg}
             alt=""
-            width={11}
-            height={11}
-            className="h-[11px] w-[11px] shrink-0 object-contain"
+            width={12}
+            height={12}
+            className="h-[12px] w-[12px] shrink-0 object-contain"
             unoptimized
           />
         )}
         <span
-          className="whitespace-nowrap text-[9px] font-semibold leading-none text-white"
+          className="whitespace-nowrap text-[10px] font-semibold leading-none text-white"
           style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
         >
           {player.playerName}
