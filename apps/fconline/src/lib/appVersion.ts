@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '26.5': '2026-05-06T23:50:00+09:00',
   '26.4': '2026-05-06T23:30:00+09:00',
   '26.3': '2026-05-06T23:00:00+09:00',
   '26.2': '2026-05-06T22:30:00+09:00',
@@ -47,6 +48,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '26.5': [
+    '구단주 상세 분석 탭 주요 선수 포지션 배지 색상을 수정했습니다. (RS·LS→공격수 빨강, RCM·LCM·RDM·LDM→미드필더 초록)',
+    'TT·TB·NHD·CAP·PL 등 구시즌 선수 이미지를 불러오지 못하는 문제를 수정했습니다. 시즌 이미지가 없는 경우 해당 선수의 기본 이미지로 자동 대체됩니다.',
+  ],
   '26.4': [
     '1:1 공식경기 랭킹 TOP 5 리스트가 5위까지 정상 표시되도록 수정했습니다.',
   ],

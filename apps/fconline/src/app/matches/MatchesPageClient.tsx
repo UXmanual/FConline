@@ -1119,11 +1119,11 @@ function PlayerPositionBadge({ position }: { position: string }) {
 }
 
 function getPlayerPositionBadgeStyle(position: string) {
-  if (['ST', 'CF', 'LW', 'RW', 'LF', 'RF'].includes(position)) {
+  if (['ST', 'CF', 'LW', 'RW', 'LF', 'RF', 'RS', 'LS'].includes(position)) {
     return { backgroundColor: 'var(--app-position-fw-bg)', color: 'var(--app-position-fw-fg)' }
   }
 
-  if (['CAM', 'CM', 'CDM', 'LM', 'RM', 'LAM', 'RAM'].includes(position)) {
+  if (['CAM', 'LAM', 'RAM', 'CM', 'RCM', 'LCM', 'CDM', 'RDM', 'LDM', 'LM', 'RM'].includes(position)) {
     return { backgroundColor: 'var(--app-position-mf-bg)', color: 'var(--app-position-mf-fg)' }
   }
 
