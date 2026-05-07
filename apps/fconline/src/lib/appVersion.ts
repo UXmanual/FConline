@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '27.6': '2026-05-07T05:30:00+09:00',
   '27.5': '2026-05-06T22:00:00+09:00',
   '27.4': '2026-05-07T03:40:00+09:00',
   '27.3': '2026-05-07T03:20:00+09:00',
@@ -58,6 +59,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '27.6': [
+    'API 레이트리밋을 적용했습니다. 글쓰기 1분 5회, 댓글 1분 10회, 검색 1분 30회, 문의 10분 3회를 초과하면 일시적으로 요청이 제한됩니다.',
+  ],
   '27.5': [
     '마이페이지 로그인 정보·경험치 영역이 페이지 재방문 시마다 깜빡이던 문제를 개선했습니다. 이제 이전 방문의 XP·레벨 정보를 즉시 표시하고 백그라운드에서 조용히 갱신합니다.',
   ],
