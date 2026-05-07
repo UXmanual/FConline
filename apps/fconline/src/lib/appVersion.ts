@@ -3,6 +3,8 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '28.2': '2026-05-07T10:00:00+09:00',
+  '28.1': '2026-05-07T09:00:00+09:00',
   '28.0': '2026-05-07T07:30:00+09:00',
   '27.9': '2026-05-07T07:00:00+09:00',
   '27.8': '2026-05-07T06:30:00+09:00',
@@ -63,6 +65,14 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '28.2': [
+    '포메이션 그라운드 배경 이미지를 업데이트했습니다.',
+  ],
+  '28.1': [
+    '포메이션 상세 화면 포지션 라벨 카테고리별 색상 · 급여 육각형 배지 · 선수명 아래 강화단계별 BP 시세 표시를 추가했습니다.',
+    '포메이션 정보 블록(급여 / 포메이션 / 총BP)을 추가하고, 포메이션 계산 방식을 5줄(DEF/DM/CM/AM/FW) 기준으로 개선해 4-2-3-1 등 실제 포메이션이 정확하게 표시됩니다.',
+    '랭킹 미등록 구단주도 주요 포메이션 카드에 최근 경기 기반 포메이션을 바로 표시합니다.',
+  ],
   '28.0': [
     '포메이션 상세 화면 포지션 라벨에 카테고리별 색상을 적용했습니다. (GK 노랑 · 수비 파랑 · 미드필더 초록 · 공격 빨강)',
   ],
