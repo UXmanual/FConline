@@ -50,6 +50,13 @@ const POSITION_COORDS: Record<number, [number, number]> = {
   27: [9,  23], // LW
 }
 
+function getPositionColor(spPosition: number): string {
+  if (spPosition === 0) return '#f5c842'          // GK — 노랑
+  if (spPosition <= 8) return '#4fa3f7'           // 수비 — 파랑
+  if (spPosition <= 16) return '#4fc87a'          // 미드필더 — 초록
+  return '#f76464'                                 // 공격 — 빨강
+}
+
 function getEnhancementStyle(level: number): React.CSSProperties {
   const base: React.CSSProperties = {
     border: '1px solid',
@@ -141,8 +148,11 @@ function PlayerCard({
             </span>
           )}
           <span
-            className="text-[9px] font-semibold leading-none text-white/90"
-            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
+            className="text-[9px] font-semibold leading-none"
+            style={{
+              color: getPositionColor(player.spPosition),
+              textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)',
+            }}
           >
             {player.positionLabel}
           </span>

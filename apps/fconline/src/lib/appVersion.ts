@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '28.0': '2026-05-07T07:30:00+09:00',
   '27.9': '2026-05-07T07:00:00+09:00',
   '27.8': '2026-05-07T06:30:00+09:00',
   '27.7': '2026-05-07T06:00:00+09:00',
@@ -62,6 +63,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '28.0': [
+    '포메이션 상세 화면 포지션 라벨에 카테고리별 색상을 적용했습니다. (GK 노랑 · 수비 파랑 · 미드필더 초록 · 공격 빨강)',
+  ],
   '27.9': [
     'OG 이미지를 재업데이트했습니다.',
   ],
