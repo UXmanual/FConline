@@ -1362,11 +1362,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                             height={60}
                             className="h-full w-full object-cover"
                           />
-                        ) : (
+                        ) : !isAuthLoading ? (
                           <span className="text-[28px] leading-none">
                             {authUser ? pickDefaultAvatar(authUser.id) : '😀'}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       {!isUploadingAvatar && (
                         <span
