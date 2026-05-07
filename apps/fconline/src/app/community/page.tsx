@@ -40,43 +40,58 @@ type InitialCommunityData = {
   autoOpenComments?: boolean
 }
 
+async function resolveHighlightPage(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  highlightPostId: string,
+): Promise<{ page: number; from: number; to: number }> {
+  const postResponse = await supabase
+    .from('community_posts')
+    .select('id, created_at')
+    .eq('id', highlightPostId)
+    .single()
+
+  if (postResponse.error || !postResponse.data) {
+    return { page: INITIAL_PAGE, from: 0, to: POSTS_PER_PAGE - 1 }
+  }
+
+  const { count } = await supabase
+    .from('community_posts')
+    .select('id', { count: 'exact', head: true })
+    .gt('created_at', postResponse.data.created_at)
+
+  const page = Math.floor((Number(count ?? 0) || 0) / POSTS_PER_PAGE) + 1
+  return { page, from: (page - 1) * POSTS_PER_PAGE, to: page * POSTS_PER_PAGE - 1 }
+}
+
 async function fetchInitialPosts(highlightPostId?: string | null): Promise<InitialCommunityData> {
   try {
     const supabase = createSupabaseAdminClient()
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
-    let page = INITIAL_PAGE
-    let from = 0
-    let to = POSTS_PER_PAGE - 1
 
-    if (highlightPostId) {
-      const postResponse = await supabase
-        .from('community_posts')
-        .select('id, created_at')
-        .eq('id', highlightPostId)
-        .single()
+    const authPromise = createSupabaseSsrClient().then((s) => s.auth.getUser())
 
-      if (!postResponse.error && postResponse.data) {
-        const { count } = await supabase
+    // For the common case (no highlight), kick off posts query immediately in parallel with auth.
+    // For highlight case, page must be resolved first to know the correct range.
+    const defaultPostsPromise = !highlightPostId
+      ? supabase
           .from('community_posts')
-          .select('id', { count: 'exact', head: true })
-          .gt('created_at', postResponse.data.created_at)
+          .select('id, category, nickname, comment_count, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(0, POSTS_PER_PAGE - 1)
+      : null
 
-        page = Math.floor((Number(count ?? 0) || 0) / POSTS_PER_PAGE) + 1
-        from = (page - 1) * POSTS_PER_PAGE
-        to = page * POSTS_PER_PAGE - 1
-      }
-    }
+    const pagePromise = highlightPostId
+      ? resolveHighlightPage(supabase, highlightPostId)
+      : Promise.resolve({ page: INITIAL_PAGE, from: 0, to: POSTS_PER_PAGE - 1 })
 
-    const primaryResponsePromise = supabase
-      .from('community_posts')
-      .select('id, category, nickname, comment_count, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to)
+    const [{ data: { user } }, { page, from, to }] = await Promise.all([authPromise, pagePromise])
 
-    const primaryResponse = await primaryResponsePromise
+    const primaryResponse = defaultPostsPromise
+      ? await defaultPostsPromise
+      : await supabase
+          .from('community_posts')
+          .select('id, category, nickname, comment_count, author_user_id, password_hash, ip_prefix, title, content, created_at', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(from, to)
 
     const fallbackResponse = primaryResponse.error
       ? await supabase
