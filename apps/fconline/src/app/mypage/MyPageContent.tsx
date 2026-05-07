@@ -528,18 +528,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     }
   }, [authUser])
 
-  useEffect(() => {
-    if (isAuthLoading) return
-    // iOS Safari hit-test region fix: after auth skeleton → content layout shift,
-    // force a 1px scroll to make iOS recalculate all touch target positions.
-    const raf1 = requestAnimationFrame(() => {
-      window.scrollBy(0, 1)
-      const raf2 = requestAnimationFrame(() => window.scrollBy(0, -1))
-      return () => cancelAnimationFrame(raf2)
-    })
-    return () => cancelAnimationFrame(raf1)
-  }, [isAuthLoading])
-
   useLayoutEffect(() => {
     if (!initialPrivacyOpen || !privacySectionRef.current) {
       return
