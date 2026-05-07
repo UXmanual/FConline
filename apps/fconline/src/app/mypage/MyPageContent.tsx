@@ -1626,7 +1626,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               }}
             >
               <span
-                className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+                className="pointer-events-none block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
                 style={{ transform: `translateX(${isDarkModeEnabled ? '24px' : '0px'})` }}
                 aria-hidden="true"
               />
@@ -1674,7 +1674,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </span>
               ) : (
                 <span
-                  className="block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
+                  className="pointer-events-none block h-[22px] w-[34px] rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-transform duration-200"
                   style={{ transform: `translateX(${isAppNotificationsEnabled ? '24px' : '0px'})` }}
                   aria-hidden="true"
                 />
