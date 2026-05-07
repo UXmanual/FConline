@@ -1626,7 +1626,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
               style={{
                 backgroundColor: isDarkModeEnabled ? '#457ae5' : '#d5dbe3',
-                touchAction: 'manipulation',
                 cursor: 'pointer',
               }}
             >
