@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '27.9': '2026-05-07T07:00:00+09:00',
   '27.8': '2026-05-07T06:30:00+09:00',
   '27.7': '2026-05-07T06:00:00+09:00',
   '27.6': '2026-05-07T05:30:00+09:00',
@@ -61,6 +62,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '27.9': [
+    'OG 이미지를 재업데이트했습니다.',
+  ],
   '27.8': [
     'OG 이미지와 메인 배너 이미지를 업데이트했습니다.',
   ],
