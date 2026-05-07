@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '27.7': '2026-05-07T06:00:00+09:00',
   '27.6': '2026-05-07T05:30:00+09:00',
   '27.5': '2026-05-06T22:00:00+09:00',
   '27.4': '2026-05-07T03:40:00+09:00',
@@ -59,6 +60,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '27.7': [
+    '라이트 모드 스플래시 화면의 로고 색상을 홈 화면 로고와 동일하게 수정했습니다.',
+  ],
   '27.6': [
     'API 레이트리밋을 적용했습니다. 글쓰기 1분 5회, 댓글 1분 10회, 검색 1분 30회, 문의 10분 3회를 초과하면 일시적으로 요청이 제한됩니다.',
   ],
