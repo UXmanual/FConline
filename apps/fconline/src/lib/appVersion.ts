@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '28.6': '2026-05-07T17:00:00+09:00',
   '28.5': '2026-05-07T15:00:00+09:00',
   '28.4': '2026-05-07T14:00:00+09:00',
   '28.3': '2026-05-07T13:00:00+09:00',
@@ -68,6 +69,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '28.6': [
+    '서버 리전을 한국(서울)으로 변경해 전반적인 API 응답 속도를 크게 개선했습니다.',
+    '커뮤니티·선수평가 페이지네이션 클릭 시 즉시 페이지 최상단으로 이동합니다.',
+  ],
   '28.5': [
     '커뮤니티 탭 초기 로딩 속도를 추가 개선했습니다. 인증 확인과 게시글 조회를 동시에 실행해 대기 시간을 줄였습니다.',
   ],
