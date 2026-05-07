@@ -356,6 +356,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [gameClubName, setGameClubName] = useState('')
   const [userLevelProfile, setUserLevelProfile] = useState<MyPageLevelProfile | null>(null)
   const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const [isAvatarResolved, setIsAvatarResolved] = useState(false)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isEditingGameClubName, setIsEditingGameClubName] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
@@ -462,6 +463,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     if (!authUser) {
       setUserLevelProfile(null)
       setIsProfileLoading(false)
+      setIsAvatarResolved(false)
       return
     }
 
@@ -484,6 +486,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           setCommunityNickname(fallbackNickname)
           writeCachedCommunityNickname(userId, fallbackNickname)
           setIsProfileLoading(false)
+          setIsAvatarResolved(true)
           return
         }
 
@@ -506,12 +509,14 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         }
 
         setIsProfileLoading(false)
+        setIsAvatarResolved(true)
       } catch {
         if (!isCancelled) {
           setCommunityNickname(fallbackNickname)
           writeCachedCommunityNickname(userId, fallbackNickname)
           setUserLevelProfile(null)
           setIsProfileLoading(false)
+          setIsAvatarResolved(true)
         }
       }
     }
@@ -522,6 +527,18 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       isCancelled = true
     }
   }, [authUser])
+
+  useEffect(() => {
+    if (isAuthLoading) return
+    // iOS Safari hit-test region fix: after auth skeleton → content layout shift,
+    // force a 1px scroll to make iOS recalculate all touch target positions.
+    const raf1 = requestAnimationFrame(() => {
+      window.scrollBy(0, 1)
+      const raf2 = requestAnimationFrame(() => window.scrollBy(0, -1))
+      return () => cancelAnimationFrame(raf2)
+    })
+    return () => cancelAnimationFrame(raf1)
+  }, [isAuthLoading])
 
   useLayoutEffect(() => {
     if (!initialPrivacyOpen || !privacySectionRef.current) {
@@ -1373,7 +1390,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                             height={60}
                             className="h-full w-full object-cover"
                           />
-                        ) : !isAuthLoading ? (
+                        ) : isAvatarResolved ? (
                           <span className="text-[28px] leading-none">
                             {authUser ? pickDefaultAvatar(authUser.id) : '😀'}
                           </span>
@@ -1609,6 +1626,8 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               className="relative inline-flex h-7 w-[64px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200"
               style={{
                 backgroundColor: isDarkModeEnabled ? '#457ae5' : '#d5dbe3',
+                touchAction: 'manipulation',
+                cursor: 'pointer',
               }}
             >
               <span
