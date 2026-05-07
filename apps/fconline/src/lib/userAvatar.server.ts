@@ -1,6 +1,11 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
+import { appendAvatarVersion } from '@/lib/avatar'
 
-type AvatarRow = { user_id: string; avatar_url: string | null }
+type AvatarRow = {
+  user_id: string
+  avatar_url: string | null
+  updated_at?: string | null
+}
 
 export async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
   const ids = [
@@ -18,7 +23,7 @@ export async function getAvatarUrlMap(userIds: Array<string | null | undefined>)
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('user_level_profiles')
-    .select('user_id, avatar_url')
+    .select('user_id, avatar_url, updated_at')
     .in('user_id', ids)
 
   if (error) {
@@ -27,8 +32,9 @@ export async function getAvatarUrlMap(userIds: Array<string | null | undefined>)
 
   const map = new Map<string, string>()
   for (const row of (data ?? []) as AvatarRow[]) {
-    if (row.user_id && typeof row.avatar_url === 'string' && row.avatar_url.trim()) {
-      map.set(row.user_id, row.avatar_url.trim())
+    const avatarUrl = appendAvatarVersion(row.avatar_url, row.updated_at)
+    if (row.user_id && avatarUrl) {
+      map.set(row.user_id, avatarUrl)
     }
   }
   return map

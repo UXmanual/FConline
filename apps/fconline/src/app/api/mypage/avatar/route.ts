@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server'
+import { getKoreaTimestampString } from '@/lib/community'
+import { appendAvatarVersion } from '@/lib/avatar'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 
@@ -24,6 +26,7 @@ export async function POST(request: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const filePath = `${user.id}/avatar`
+    const updatedAt = getKoreaTimestampString()
     const adminSupabase = createSupabaseAdminClient()
 
     const { error: uploadError } = await adminSupabase.storage
@@ -48,11 +51,11 @@ export async function POST(request: NextRequest) {
     await adminSupabase
       .from('user_level_profiles')
       .upsert(
-        { user_id: user.id, avatar_url: publicUrl },
+        { user_id: user.id, avatar_url: publicUrl, updated_at: updatedAt },
         { onConflict: 'user_id' },
       )
 
-    return Response.json({ avatarUrl: publicUrl })
+    return Response.json({ avatarUrl: appendAvatarVersion(publicUrl, updatedAt) ?? publicUrl })
   } catch (error) {
     const message = error instanceof Error ? error.message : '프로필 사진을 저장하지 못했습니다.'
     return Response.json({ message }, { status: 500 })
@@ -85,7 +88,7 @@ export async function DELETE() {
 
     await adminSupabase
       .from('user_level_profiles')
-      .update({ avatar_url: null })
+      .update({ avatar_url: null, updated_at: getKoreaTimestampString() })
       .eq('user_id', user.id)
 
     return Response.json({ ok: true })
