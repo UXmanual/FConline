@@ -255,11 +255,7 @@ export async function POST(request: NextRequest) {
       user.id,
       user.email,
       new Map([[user.id, 1]]),
-      new Map(
-        typeof user.user_metadata?.custom_avatar_url === 'string' && user.user_metadata.custom_avatar_url.trim()
-          ? [[user.id, user.user_metadata.custom_avatar_url.trim()]]
-          : [],
-      ),
+      await getAvatarUrlMap([user.id]),
     )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix
