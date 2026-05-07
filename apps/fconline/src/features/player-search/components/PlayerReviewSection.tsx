@@ -500,8 +500,8 @@ export default function PlayerReviewSection({
     if (page < 1 || page > totalPages || page === currentPage) return
 
     setCurrentPage(page)
-    await fetchPostsPage(page)
     scrollToListTop()
+    await fetchPostsPage(page)
   }
 
   async function loadComments(post: CommunityPostSummary) {
