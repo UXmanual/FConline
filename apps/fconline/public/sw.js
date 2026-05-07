@@ -1,6 +1,6 @@
-const STATIC_CACHE_NAME = 'fco-ground-static-v2'
-const PAGE_CACHE_NAME = 'fco-ground-pages-v2'
-const ASSET_CACHE_NAME = 'fco-ground-assets-v2'
+const STATIC_CACHE_NAME = 'fco-ground-static-v3'
+const PAGE_CACHE_NAME = 'fco-ground-pages-v3'
+const ASSET_CACHE_NAME = 'fco-ground-assets-v3'
 const NOTIFICATION_FEED_CACHE_NAME = 'fco-ground-notification-feed-v1'
 const NOTIFICATION_FEED_CACHE_URL = '/__notifications_feed__'
 const MAX_STORED_NOTIFICATIONS = 30
@@ -251,15 +251,24 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) =>
         Promise.all(
           cacheNames
-            .filter(
-              (cacheName) =>
-                ![STATIC_CACHE_NAME, PAGE_CACHE_NAME, ASSET_CACHE_NAME].includes(cacheName),
-            )
+            .filter((cacheName) => {
+              if (cacheName === NOTIFICATION_FEED_CACHE_NAME) {
+                return false
+              }
+
+              return ![STATIC_CACHE_NAME, PAGE_CACHE_NAME, ASSET_CACHE_NAME].includes(cacheName)
+            })
             .map((cacheName) => caches.delete(cacheName)),
         ),
       )
       .then(() => self.clients.claim()),
   )
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    void self.skipWaiting()
+  }
 })
 
 self.addEventListener('fetch', (event) => {

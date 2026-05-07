@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '30.1': '2026-05-08T13:10:00+09:00',
   '30.0': '2026-05-08T12:30:00+09:00',
   '29.9': '2026-05-08T02:40:00+09:00',
   '29.8': '2026-05-08T02:10:00+09:00',
@@ -83,6 +84,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '30.1': [
+    '서비스워커 캐시 버전을 갱신하고 새 워커를 즉시 활성화하도록 보강해 운영에서 최신 토글 코드가 빠르게 반영되도록 수정했습니다.',
+    '마이페이지 다크모드 토글과 앱 알림 토글의 커서 처리를 동일하게 맞췄습니다.',
+  ],
   '30.0': [
     '마이페이지 다크모드 토글의 스위치 thumb가 iOS Safari에서 터치를 가로채던 문제를 수정했습니다.',
   ],

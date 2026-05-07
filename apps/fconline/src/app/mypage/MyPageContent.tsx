@@ -1666,6 +1666,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                   : isAppNotificationsEnabled
                     ? '#457ae5'
                     : '#d5dbe3',
+                cursor: 'pointer',
               }}
             >
               {isAppNotificationPending ? (

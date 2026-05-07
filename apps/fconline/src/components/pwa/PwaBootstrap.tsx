@@ -47,12 +47,45 @@ export default function PwaBootstrap() {
     }
 
     let isCancelled = false
+    let hasReloadedForControllerChange = false
+
+    const activateUpdatedServiceWorker = (registration: ServiceWorkerRegistration) => {
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+      }
+    }
+
+    const handleControllerChange = () => {
+      if (hasReloadedForControllerChange) {
+        return
+      }
+
+      hasReloadedForControllerChange = true
+      window.location.reload()
+    }
 
     const registerServiceWorker = async () => {
       try {
-        await navigator.serviceWorker.register('/sw.js', {
+        const registration = await navigator.serviceWorker.register('/sw.js', {
           scope: '/',
           updateViaCache: 'none',
+        })
+
+        await registration.update()
+        activateUpdatedServiceWorker(registration)
+
+        registration.addEventListener('updatefound', () => {
+          const installingWorker = registration.installing
+
+          if (!installingWorker) {
+            return
+          }
+
+          installingWorker.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              activateUpdatedServiceWorker(registration)
+            }
+          })
         })
       } catch (error) {
         if (!isCancelled) {
@@ -60,6 +93,8 @@ export default function PwaBootstrap() {
         }
       }
     }
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
 
     if (document.readyState === 'complete') {
       void registerServiceWorker()
@@ -69,6 +104,7 @@ export default function PwaBootstrap() {
 
     return () => {
       isCancelled = true
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
       window.removeEventListener('load', registerServiceWorker)
     }
   }, [])
