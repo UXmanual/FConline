@@ -438,8 +438,10 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const cachedProfile = readCachedLevelProfile(session.user.id)
         setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
+        setIsProfileLoading(true)
       } else {
         setAvatarUrl(null)
+        setIsProfileLoading(false)
       }
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
