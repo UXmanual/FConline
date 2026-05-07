@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '28.8': '2026-05-07T19:00:00+09:00',
   '28.7': '2026-05-07T18:00:00+09:00',
   '28.6': '2026-05-07T17:00:00+09:00',
   '28.5': '2026-05-07T15:00:00+09:00',
@@ -70,6 +71,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '28.8': [
+    '프로필 이미지 변경 후 다른 탭을 갔다가 돌아와도 변경된 이미지가 유지됩니다.',
+  ],
   '28.7': [
     '프로필 이미지를 변경한 직후 작성하는 글·댓글에도 변경된 이미지가 즉시 반영됩니다.',
   ],

@@ -32,6 +32,7 @@ const LEVEL_PROFILE_CACHE_KEY_PREFIX = 'mypage-level-profile'
 
 type MyPageLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate?: string | null
+  avatarUrl?: string | null
 }
 
 const levelGuideItems = [
@@ -409,11 +410,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(user)
-      setAvatarUrl((user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (user) {
         const cachedProfile = readCachedLevelProfile(user.id)
+        setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
         if (!cachedProfile) setIsProfileLoading(true)
+      } else {
+        setAvatarUrl(null)
       }
       setCommunityNickname(user ? readCachedCommunityNickname(user.id) || deriveCommunityNickname(user) : '')
       setGameClubName(user ? readCachedGameClubName(user.id) : '')
@@ -432,11 +435,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(session?.user ?? null)
-      setAvatarUrl((session?.user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (session?.user) {
         const cachedProfile = readCachedLevelProfile(session.user.id)
+        setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
         if (!cachedProfile) setIsProfileLoading(true)
+      } else {
+        setAvatarUrl(null)
       }
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
@@ -488,6 +493,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const freshProfile = (nicknameResult?.levelProfile as MyPageLevelProfile | undefined) ?? null
         setUserLevelProfile(freshProfile)
         if (freshProfile) writeCachedLevelProfile(userId, freshProfile)
+        setAvatarUrl(freshProfile?.avatarUrl ?? null)
 
         if (gameClubRes.ok && gameClubResult?.gameClubName) {
           const resolvedClubName = String(gameClubResult.gameClubName).trim()
