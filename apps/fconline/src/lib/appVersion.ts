@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '29.2': '2026-05-07T23:30:00+09:00',
   '29.1': '2026-05-07T23:00:00+09:00',
   '29.0': '2026-05-07T22:10:00+09:00',
   '28.9': '2026-05-07T21:30:00+09:00',
@@ -74,6 +75,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '29.2': [
+    '마이페이지 진입 시 프로필 이미지가 설정된 경우 기본 이모지가 잠깐 보였다가 바뀌는 현상을 수정했습니다.',
+  ],
   '29.1': [
     '마이페이지 진입 시 프로필 이미지가 설정된 경우 기본 이모지가 잠깐 보였다가 바뀌는 현상을 수정했습니다.',
   ],
