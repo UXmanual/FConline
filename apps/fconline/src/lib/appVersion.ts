@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '28.5': '2026-05-07T15:00:00+09:00',
   '28.4': '2026-05-07T14:00:00+09:00',
   '28.3': '2026-05-07T13:00:00+09:00',
   '28.2': '2026-05-07T10:00:00+09:00',
@@ -67,6 +68,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '28.5': [
+    '커뮤니티 탭 초기 로딩 속도를 추가 개선했습니다. 인증 확인과 게시글 조회를 동시에 실행해 대기 시간을 줄였습니다.',
+  ],
   '28.4': [
     '커뮤니티 탭 로딩 속도를 개선했습니다. 아바타·레벨 조회를 DB 단일 쿼리로 최적화해 체감 속도가 빨라집니다.',
     '개인정보처리방침에 Upstash Redis 위탁 처리 항목을 추가하고 최종 수정일을 갱신했습니다.',
