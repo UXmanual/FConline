@@ -148,6 +148,7 @@ async function fetchPostsPage(
 }
 
 export async function GET(request: NextRequest) {
+  const _t0 = Date.now()
   try {
     const { page: rawPage, pageSize, from: rawFrom, to: rawTo } = getPaginationParams(request)
     const includeTotalCount = shouldIncludeTotalCount(request)
@@ -163,10 +164,12 @@ export async function GET(request: NextRequest) {
       ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
       : Promise.resolve({ data: { user: null } })
     const postsPromise = fetchPostsPage(supabase, from, to, includeTotalCount)
+    const t1 = Date.now()
     const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
       userPromise,
       postsPromise,
     ])
+    console.log(`[perf] community/posts auth+posts ${Date.now() - t1}ms`)
 
     if (postsError) {
       return Response.json({ message: '게시글을 불러오지 못했습니다.' }, { status: 500 })
@@ -174,6 +177,7 @@ export async function GET(request: NextRequest) {
 
     const typedPosts = (posts ?? []) as unknown as PostRow[]
     const postIds = typedPosts.map((post) => post.id)
+    const t2 = Date.now()
     const [levelMap, avatarUrlMap, likeResult] = await Promise.all([
       getUserLevelMap(typedPosts.map((post) => post.author_user_id)),
       getAvatarUrlMap(typedPosts.map((post) => post.author_user_id)),
@@ -181,6 +185,7 @@ export async function GET(request: NextRequest) {
         ? supabase.from('post_likes').select('post_id, user_id').eq('post_type', 'community').in('post_id', postIds)
         : Promise.resolve({ data: [] as Array<{ post_id: string; user_id: string }> }),
     ])
+    console.log(`[perf] community/posts level+avatar+likes ${Date.now() - t2}ms | total ${Date.now() - _t0}ms`)
     const likeCountMap = new Map<string, number>()
     const likedPostIds = new Set<string>()
     for (const row of (likeResult.data ?? []) as Array<{ post_id: string; user_id: string }>) {
