@@ -493,7 +493,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const freshProfile = (nicknameResult?.levelProfile as MyPageLevelProfile | undefined) ?? null
         setUserLevelProfile(freshProfile)
         if (freshProfile) writeCachedLevelProfile(userId, freshProfile)
-        setAvatarUrl(freshProfile?.avatarUrl ?? null)
+        if (freshProfile?.avatarUrl) {
+          setAvatarUrl(`${freshProfile.avatarUrl}?t=${Date.now()}`)
+        } else {
+          setAvatarUrl(null)
+        }
 
         if (gameClubRes.ok && gameClubResult?.gameClubName) {
           const resolvedClubName = String(gameClubResult.gameClubName).trim()
