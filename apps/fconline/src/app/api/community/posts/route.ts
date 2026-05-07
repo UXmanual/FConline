@@ -12,6 +12,7 @@ import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import { getUserLevelMap, getUserLevelProfile, rewardCommunityPostXp } from '@/lib/userLevel.server'
+import { getAvatarUrlMap } from '@/lib/userAvatar.server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const DEFAULT_PAGE = 1
@@ -29,47 +30,6 @@ type PostRow = {
   title: string
   content: string
   created_at: string
-}
-
-async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
-  const normalizedIds = [...new Set(userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))]
-
-  if (normalizedIds.length === 0) {
-    return new Map<string, string>()
-  }
-
-  const supabase = createSupabaseAdminClient()
-  const avatarUrlMap = new Map<string, string>()
-  let page = 1
-  const perPage = 1000
-
-  while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
-
-    if (error || !data?.users?.length) {
-      break
-    }
-
-    for (const user of data.users) {
-      if (!normalizedIds.includes(user.id)) {
-        continue
-      }
-
-      const avatarUrl = user.user_metadata?.custom_avatar_url
-
-      if (typeof avatarUrl === 'string' && avatarUrl.trim()) {
-        avatarUrlMap.set(user.id, avatarUrl.trim())
-      }
-    }
-
-    if (data.users.length < perPage || avatarUrlMap.size >= normalizedIds.length) {
-      break
-    }
-
-    page += 1
-  }
-
-  return avatarUrlMap
 }
 
 function mapPostSummary(
@@ -188,6 +148,7 @@ async function fetchPostsPage(
 }
 
 export async function GET(request: NextRequest) {
+  const _t0 = Date.now()
   try {
     const { page: rawPage, pageSize, from: rawFrom, to: rawTo } = getPaginationParams(request)
     const includeTotalCount = shouldIncludeTotalCount(request)
@@ -203,10 +164,12 @@ export async function GET(request: NextRequest) {
       ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
       : Promise.resolve({ data: { user: null } })
     const postsPromise = fetchPostsPage(supabase, from, to, includeTotalCount)
+    const t1 = Date.now()
     const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
       userPromise,
       postsPromise,
     ])
+    console.log(`[perf] community/posts auth+posts ${Date.now() - t1}ms`)
 
     if (postsError) {
       return Response.json({ message: '게시글을 불러오지 못했습니다.' }, { status: 500 })
@@ -214,6 +177,7 @@ export async function GET(request: NextRequest) {
 
     const typedPosts = (posts ?? []) as unknown as PostRow[]
     const postIds = typedPosts.map((post) => post.id)
+    const t2 = Date.now()
     const [levelMap, avatarUrlMap, likeResult] = await Promise.all([
       getUserLevelMap(typedPosts.map((post) => post.author_user_id)),
       getAvatarUrlMap(typedPosts.map((post) => post.author_user_id)),
@@ -221,6 +185,7 @@ export async function GET(request: NextRequest) {
         ? supabase.from('post_likes').select('post_id, user_id').eq('post_type', 'community').in('post_id', postIds)
         : Promise.resolve({ data: [] as Array<{ post_id: string; user_id: string }> }),
     ])
+    console.log(`[perf] community/posts level+avatar+likes ${Date.now() - t2}ms | total ${Date.now() - _t0}ms`)
     const likeCountMap = new Map<string, number>()
     const likedPostIds = new Set<string>()
     for (const row of (likeResult.data ?? []) as Array<{ post_id: string; user_id: string }>) {
@@ -314,11 +279,7 @@ export async function POST(request: NextRequest) {
       user.id,
       user.email,
       new Map([[user.id, 1]]),
-      new Map(
-        typeof user.user_metadata?.custom_avatar_url === 'string' && user.user_metadata.custom_avatar_url.trim()
-          ? [[user.id, user.user_metadata.custom_avatar_url.trim()]]
-          : [],
-      ),
+      await getAvatarUrlMap([user.id]),
       new Map(),
       new Set(),
     )

@@ -12,6 +12,7 @@ import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
 import { getUserLevelMap, getUserLevelProfile, rewardPlayerReviewCommentXp } from '@/lib/userLevel.server'
+import { getAvatarUrlMap } from '@/lib/userAvatar.server'
 
 type PlayerReviewCommentRow = {
   id: string
@@ -22,47 +23,6 @@ type PlayerReviewCommentRow = {
   ip_prefix?: string | null
   content: string
   created_at: string
-}
-
-async function getAvatarUrlMap(userIds: Array<string | null | undefined>) {
-  const normalizedIds = [...new Set(userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))]
-
-  if (normalizedIds.length === 0) {
-    return new Map<string, string>()
-  }
-
-  const supabase = createSupabaseAdminClient()
-  const avatarUrlMap = new Map<string, string>()
-  let page = 1
-  const perPage = 1000
-
-  while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
-
-    if (error || !data?.users?.length) {
-      break
-    }
-
-    for (const user of data.users) {
-      if (!normalizedIds.includes(user.id)) {
-        continue
-      }
-
-      const avatarUrl = user.user_metadata?.custom_avatar_url
-
-      if (typeof avatarUrl === 'string' && avatarUrl.trim()) {
-        avatarUrlMap.set(user.id, avatarUrl.trim())
-      }
-    }
-
-    if (data.users.length < perPage || avatarUrlMap.size >= normalizedIds.length) {
-      break
-    }
-
-    page += 1
-  }
-
-  return avatarUrlMap
 }
 
 function mapComment(
@@ -277,11 +237,7 @@ export async function POST(request: NextRequest) {
       user.id,
       user.email,
       new Map([[user.id, 1]]),
-      new Map(
-        typeof user.user_metadata?.custom_avatar_url === 'string' && user.user_metadata.custom_avatar_url.trim()
-          ? [[user.id, user.user_metadata.custom_avatar_url.trim()]]
-          : [],
-      ),
+      await getAvatarUrlMap([user.id]),
     )
     if (!item.ipPrefix && ipPrefix) {
       item.ipPrefix = ipPrefix

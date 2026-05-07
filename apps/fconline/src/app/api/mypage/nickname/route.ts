@@ -98,19 +98,25 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    const t0 = Date.now()
     const authSupabase = await createSupabaseSsrClient()
     const {
       data: { user },
     } = await authSupabase.auth.getUser()
+    console.log(`[perf] nickname GET auth ${Date.now() - t0}ms`)
 
     if (!user) {
       return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })
     }
 
+    const t1 = Date.now()
+    const levelProfile = await getUserLevelProfile(user.id)
+    console.log(`[perf] nickname GET levelProfile ${Date.now() - t1}ms | total ${Date.now() - t0}ms`)
+
     return Response.json({
       nickname: deriveCommunityNickname(user),
       user,
-      levelProfile: await getUserLevelProfile(user.id),
+      levelProfile,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : '닉네임을 불러오지 못했습니다.'

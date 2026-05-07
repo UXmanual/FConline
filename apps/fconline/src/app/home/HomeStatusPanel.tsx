@@ -50,12 +50,14 @@ function getPlayerReviewHref(post: LatestPlayerReviewRow) {
 
 async function getLatestPlayerReviews() {
   try {
+    const t0 = Date.now()
     const supabase = createSupabaseAdminClient()
     const { data, error } = await supabase
       .from('player_review_posts')
       .select('id, player_id, player_name, nickname, title, created_at')
       .order('created_at', { ascending: false })
       .limit(LATEST_REVIEW_LIMIT)
+    console.log(`[perf] HomeStatusPanel DB query ${Date.now() - t0}ms`)
 
     if (error) {
       return [] as LatestPlayerReviewRow[]
@@ -63,7 +65,8 @@ async function getLatestPlayerReviews() {
 
     const reviews = (data ?? []) as Omit<LatestPlayerReviewRow, 'season_img'>[]
 
-    return Promise.all(
+    const t1 = Date.now()
+    const result = await Promise.all(
       reviews.map(async (review) => {
         const detail = await getPlayerDetail(review.player_id)
 
@@ -73,6 +76,8 @@ async function getLatestPlayerReviews() {
         }
       }),
     )
+    console.log(`[perf] HomeStatusPanel getPlayerDetail x${reviews.length} ${Date.now() - t1}ms | total ${Date.now() - t0}ms`)
+    return result
   } catch {
     return [] as LatestPlayerReviewRow[]
   }

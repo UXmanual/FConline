@@ -20,3 +20,35 @@ export function pickDefaultAvatar(userId: string) {
   }
   return DEFAULT_AVATARS[hash % DEFAULT_AVATARS.length]
 }
+
+export function appendAvatarVersion(
+  avatarUrl: string | null | undefined,
+  version: string | number | null | undefined,
+) {
+  if (typeof avatarUrl !== 'string') {
+    return null
+  }
+
+  const trimmedAvatarUrl = avatarUrl.trim()
+  if (!trimmedAvatarUrl) {
+    return null
+  }
+
+  if (version === null || version === undefined) {
+    return trimmedAvatarUrl
+  }
+
+  const trimmedVersion = String(version).trim()
+  if (!trimmedVersion) {
+    return trimmedAvatarUrl
+  }
+
+  try {
+    const url = new URL(trimmedAvatarUrl)
+    url.searchParams.set('v', trimmedVersion)
+    return url.toString()
+  } catch {
+    const separator = trimmedAvatarUrl.includes('?') ? '&' : '?'
+    return `${trimmedAvatarUrl}${separator}v=${encodeURIComponent(trimmedVersion)}`
+  }
+}

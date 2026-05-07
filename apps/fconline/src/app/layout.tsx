@@ -165,16 +165,17 @@ export default function RootLayout({
             width: 151px;
             max-width: calc(100vw - 80px);
             height: auto;
-            filter: invert(1);
           }
+
+          .startup-splash-logo-light { display: block; }
+          .startup-splash-logo-dark  { display: none;  }
 
           html.app-dark-mode #startup-splash {
             background: ${HOME_SPLASH_BG_DARK};
           }
 
-          html.app-dark-mode .startup-splash-logo {
-            filter: none;
-          }
+          html.app-dark-mode .startup-splash-logo-light { display: none;  }
+          html.app-dark-mode .startup-splash-logo-dark  { display: block; }
 
           #app-shell {
             visibility: hidden;
@@ -218,12 +219,20 @@ export default function RootLayout({
         <PageViewTracker />
         <div id="startup-splash" aria-hidden="true">
           <Image
+            src="/logo.svg"
+            alt=""
+            width={151}
+            height={32}
+            priority
+            className="startup-splash-logo startup-splash-logo-light"
+          />
+          <Image
             src="/logo-dark.svg"
             alt=""
             width={151}
             height={32}
             priority
-            className="startup-splash-logo"
+            className="startup-splash-logo startup-splash-logo-dark"
           />
         </div>
         <div

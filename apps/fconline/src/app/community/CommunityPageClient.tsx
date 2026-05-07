@@ -353,7 +353,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   }, [posts])
 
   function scrollToListTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   function openComposer() {
@@ -372,8 +372,8 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   async function goToPage(page: number) {
     if (page < 1 || page > totalPages || page === currentPage) return
     setCurrentPage(page)
-    await fetchPostsPage(page)
     scrollToListTop()
+    await fetchPostsPage(page)
   }
 
   async function fetchCommentsPage(postId: string, page: number): Promise<CommentsPageData> {

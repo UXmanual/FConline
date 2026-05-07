@@ -480,7 +480,7 @@ export default function PlayerReviewSection({
   }, [fetchPostsPage, initialHighlightedPostId, playerId])
 
   function scrollToListTop() {
-    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   function openComposer() {
@@ -500,8 +500,8 @@ export default function PlayerReviewSection({
     if (page < 1 || page > totalPages || page === currentPage) return
 
     setCurrentPage(page)
-    await fetchPostsPage(page)
     scrollToListTop()
+    await fetchPostsPage(page)
   }
 
   async function loadComments(post: CommunityPostSummary) {

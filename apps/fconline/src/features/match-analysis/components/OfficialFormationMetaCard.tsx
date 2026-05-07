@@ -128,7 +128,9 @@ export default function OfficialFormationMetaCard({
 
                 <div
                   className="h-1.5 overflow-hidden rounded-full"
-                  style={{ backgroundColor: 'var(--app-analysis-soft-bg)' }}
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${accentColor} 16%, var(--app-analysis-soft-bg))`,
+                  }}
                 >
                   <motion.div
                     className="h-full rounded-full"
@@ -141,7 +143,7 @@ export default function OfficialFormationMetaCard({
                       ease: [0.22, 1, 0.36, 1],
                     }}
                     style={{
-                      backgroundColor: 'rgba(190, 197, 208, 0.94)',
+                      background: `linear-gradient(90deg, color-mix(in srgb, ${accentColor} 78%, white) 0%, ${accentColor} 100%)`,
                       transformOrigin: 'left center',
                     }}
                   />

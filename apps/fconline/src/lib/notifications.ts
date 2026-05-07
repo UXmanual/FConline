@@ -52,19 +52,20 @@ function isFiniteDate(value: string) {
 }
 
 export function getReleaseNotifications(): ReleaseNotificationFeedItem[] {
-  return Object.entries(RELEASE_NOTES_BY_VERSION)
-    .map(([version, notes]) => {
-      return {
-        id: `release-${version}`,
-        kind: 'release' as const,
-        title: `버전 ${version} 업데이트`,
-        body: notes.join(' ').trim() || '새 버전 업데이트가 적용되었습니다.',
-        createdAt: getReleasePublishedAt(version),
-        url: '/notifications',
-        version,
-      }
-    })
+  const all = Object.entries(RELEASE_NOTES_BY_VERSION)
+    .map(([version, notes]) => ({
+      id: `release-${version}`,
+      kind: 'release' as const,
+      title: `버전 ${version} 업데이트`,
+      body: notes.join(' ').trim() || '새 버전 업데이트가 적용되었습니다.',
+      createdAt: getReleasePublishedAt(version),
+      url: '/notifications',
+      version,
+    }))
     .filter((item) => isRecentNotification(item.createdAt))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+  return all.slice(0, 1)
 }
 
 export function isRecentNotification(createdAt: string) {

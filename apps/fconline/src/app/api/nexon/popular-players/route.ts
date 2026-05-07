@@ -92,17 +92,19 @@ export async function GET(request: NextRequest) {
 
   try {
     if (group === 'fw' || group === 'mf' || group === 'df') {
+      const t0 = Date.now()
       const items = await fetchGroup(group)
-      return Response.json({
-        items,
-      })
+      console.log(`[perf] popular-players group=${group} ${Date.now() - t0}ms`)
+      return Response.json({ items })
     }
 
+    const t0 = Date.now()
     const [fw, mf, df] = await Promise.all([
       fetchGroup('fw'),
       fetchGroup('mf'),
       fetchGroup('df'),
     ])
+    console.log(`[perf] popular-players all groups ${Date.now() - t0}ms`)
 
     return Response.json({ fw, mf, df })
   } catch {

@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { getKoreaTimestampString } from '@/lib/community'
+import { appendAvatarVersion } from '@/lib/avatar'
 import {
   buildUserLevelSnapshot,
   COMMUNITY_COMMENT_XP,
@@ -19,6 +20,8 @@ type UserLevelProfileRow = {
   xp_total: number | null
   level: number | null
   last_login_reward_date: string | null
+  avatar_url: string | null
+  updated_at?: string | null
 }
 
 type RecordUserXpRpcRow = {
@@ -30,6 +33,7 @@ type RecordUserXpRpcRow = {
 
 type UserLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate: string | null
+  avatarUrl: string | null
 }
 
 function getKoreaDateString(date = new Date()) {
@@ -64,6 +68,7 @@ function toUserLevelProfile(row?: UserLevelProfileRow | null): UserLevelProfile 
   return {
     ...snapshot,
     lastLoginRewardDate: row?.last_login_reward_date ?? null,
+    avatarUrl: appendAvatarVersion(row?.avatar_url, row?.updated_at),
   }
 }
 
@@ -71,7 +76,7 @@ async function fetchUserLevelProfileRow(userId: string) {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('user_level_profiles')
-    .select('user_id, xp_total, level, last_login_reward_date')
+    .select('user_id, xp_total, level, last_login_reward_date, avatar_url, updated_at')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -98,7 +103,7 @@ async function ensureUserLevelProfileRow(userId: string) {
       level: 1,
       updated_at: getKoreaTimestampString(),
     })
-    .select('user_id, xp_total, level, last_login_reward_date')
+    .select('user_id, xp_total, level, last_login_reward_date, avatar_url, updated_at')
     .single()
 
   if (error) {

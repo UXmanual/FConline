@@ -32,6 +32,7 @@ const LEVEL_PROFILE_CACHE_KEY_PREFIX = 'mypage-level-profile'
 
 type MyPageLevelProfile = UserLevelSnapshot & {
   lastLoginRewardDate?: string | null
+  avatarUrl?: string | null
 }
 
 const levelGuideItems = [
@@ -119,7 +120,7 @@ const termsContent = [
 ]
 
 export const privacyContent = [
-  '최종 업데이트: 2026.04.20',
+  '최종 업데이트: 2026.05.07',
   'FConline Ground(이하 "서비스")는 이용자의 개인정보를 중요하게 생각하며, 관련 법령을 준수하기 위해 노력합니다.',
   '본 방침은 서비스가 어떤 정보를 수집하고, 왜 이용하며, 어떻게 보관 및 삭제하는지 설명합니다.',
   '1. 기본 원칙',
@@ -164,6 +165,7 @@ export const privacyContent = [
   '- [Vercel](https://vercel.com): 배포 및 호스팅 서비스',
   '- [Nexon Open API](https://openapi.nexon.com/ko/): 게임 데이터 조회를 위한 외부 API',
   '- [Telegram](https://telegram.org): 문의 접수 운영자 알림',
+  '- Upstash (Redis): API 요청 빈도 제한(레이트리밋) 처리를 위한 임시 IP 기록',
   '- 기타 서비스 운영에 필요한 클라우드 또는 인프라 서비스',
   '이 과정에서 서비스 운영에 필요한 최소 범위의 정보가 관련 인프라를 통해 처리될 수 있습니다.',
   '실제 위탁 대상, 위탁 업무 내용, 보유 환경 등이 확정 또는 변경될 경우 앱 내 정책 또는 별도 문서를 통해 고지합니다.',
@@ -408,11 +410,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(user)
-      setAvatarUrl((user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (user) {
         const cachedProfile = readCachedLevelProfile(user.id)
+        setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
         if (!cachedProfile) setIsProfileLoading(true)
+      } else {
+        setAvatarUrl(null)
       }
       setCommunityNickname(user ? readCachedCommunityNickname(user.id) || deriveCommunityNickname(user) : '')
       setGameClubName(user ? readCachedGameClubName(user.id) : '')
@@ -431,11 +435,13 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       }
 
       setAuthUser(session?.user ?? null)
-      setAvatarUrl((session?.user?.user_metadata?.custom_avatar_url as string | undefined) ?? null)
       if (session?.user) {
         const cachedProfile = readCachedLevelProfile(session.user.id)
+        setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
         if (!cachedProfile) setIsProfileLoading(true)
+      } else {
+        setAvatarUrl(null)
       }
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
@@ -487,6 +493,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const freshProfile = (nicknameResult?.levelProfile as MyPageLevelProfile | undefined) ?? null
         setUserLevelProfile(freshProfile)
         if (freshProfile) writeCachedLevelProfile(userId, freshProfile)
+        if (freshProfile?.avatarUrl) {
+          setAvatarUrl(`${freshProfile.avatarUrl}?t=${Date.now()}`)
+        } else {
+          setAvatarUrl(null)
+        }
 
         if (gameClubRes.ok && gameClubResult?.gameClubName) {
           const resolvedClubName = String(gameClubResult.gameClubName).trim()
