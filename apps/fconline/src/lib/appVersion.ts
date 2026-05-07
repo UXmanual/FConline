@@ -3,6 +3,8 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '29.5': '2026-05-08T00:30:00+09:00',
+  '29.4': '2026-05-08T00:10:00+09:00',
   '29.3': '2026-05-07T23:50:00+09:00',
   '29.2': '2026-05-07T23:30:00+09:00',
   '29.1': '2026-05-07T23:00:00+09:00',
@@ -76,6 +78,12 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '29.5': [
+    '마이페이지 다크모드 버튼 iOS 터치 오류를 수정했습니다.',
+  ],
+  '29.4': [
+    '마이페이지 다크모드 카드 전체 영역을 탭 가능하게 변경했습니다.',
+  ],
   '29.3': [
     '마이페이지 프로필 이미지 로드 전 기본 이모지 깜빡임을 추가 수정했습니다.',
   ],

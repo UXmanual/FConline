@@ -355,7 +355,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [communityNickname, setCommunityNickname] = useState('')
   const [gameClubName, setGameClubName] = useState('')
   const [userLevelProfile, setUserLevelProfile] = useState<MyPageLevelProfile | null>(null)
-  const [isProfileLoading, setIsProfileLoading] = useState(true)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isEditingGameClubName, setIsEditingGameClubName] = useState(false)
   const [isSavingNickname, setIsSavingNickname] = useState(false)
@@ -414,6 +414,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const cachedProfile = readCachedLevelProfile(user.id)
         setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
+        if (!cachedProfile) setIsProfileLoading(true)
       } else {
         setAvatarUrl(null)
       }
@@ -438,10 +439,9 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const cachedProfile = readCachedLevelProfile(session.user.id)
         setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
-        setIsProfileLoading(true)
+        if (!cachedProfile) setIsProfileLoading(true)
       } else {
         setAvatarUrl(null)
-        setIsProfileLoading(false)
       }
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
@@ -470,7 +470,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     const fallbackNickname = deriveCommunityNickname(authUser)
 
     async function syncProfile() {
-      setIsProfileLoading(true)
       try {
         const [nicknameRes, gameClubRes] = await Promise.all([
           fetch('/api/mypage/nickname', { cache: 'no-store' }),
@@ -1374,7 +1373,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                             height={60}
                             className="h-full w-full object-cover"
                           />
-                        ) : !isAuthLoading && !isProfileLoading ? (
+                        ) : !isAuthLoading ? (
                           <span className="text-[28px] leading-none">
                             {authUser ? pickDefaultAvatar(authUser.id) : '😀'}
                           </span>
@@ -1427,7 +1426,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 </div>
               )}
 
-              {isProfileLoading && !userLevelProfile ? (
+              {isProfileLoading ? (
 
                 <div className="mt-4">
                   <div className="flex items-center gap-3">
