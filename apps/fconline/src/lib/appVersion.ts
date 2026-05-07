@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '29.0': '2026-05-07T22:10:00+09:00',
   '28.9': '2026-05-07T21:30:00+09:00',
   '28.8': '2026-05-07T19:00:00+09:00',
   '28.7': '2026-05-07T18:00:00+09:00',
@@ -72,6 +73,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '29.0': [
+    '분석 탭 포메이션 사용률 그래프 컬러를 모드별 탭 색상에 맞춰 조정했습니다. 1:1 공식경기는 블루, 감독모드는 그린으로 표시됩니다.',
+  ],
   '28.9': [
     '마이페이지에서 변경한 프로필 이미지가 커뮤니티와 선수평가 글·댓글에도 새 이미지로 안정적으로 반영됩니다.',
   ],
