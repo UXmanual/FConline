@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '27.8': '2026-05-07T06:30:00+09:00',
   '27.7': '2026-05-07T06:00:00+09:00',
   '27.6': '2026-05-07T05:30:00+09:00',
   '27.5': '2026-05-06T22:00:00+09:00',
@@ -60,6 +61,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '27.8': [
+    'OG 이미지와 메인 배너 이미지를 업데이트했습니다.',
+  ],
   '27.7': [
     '라이트 모드 스플래시 화면의 로고 색상을 홈 화면 로고와 동일하게 수정했습니다.',
   ],
