@@ -45,6 +45,13 @@ export async function POST(request: NextRequest) {
 
     if (updateError) throw updateError
 
+    await adminSupabase
+      .from('user_level_profiles')
+      .upsert(
+        { user_id: user.id, avatar_url: publicUrl },
+        { onConflict: 'user_id' },
+      )
+
     return Response.json({ avatarUrl: publicUrl })
   } catch (error) {
     const message = error instanceof Error ? error.message : '프로필 사진을 저장하지 못했습니다.'
@@ -75,6 +82,11 @@ export async function DELETE() {
     })
 
     if (error) throw error
+
+    await adminSupabase
+      .from('user_level_profiles')
+      .update({ avatar_url: null })
+      .eq('user_id', user.id)
 
     return Response.json({ ok: true })
   } catch (error) {
