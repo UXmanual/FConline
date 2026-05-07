@@ -353,7 +353,7 @@ export default function CommunityPageClient({ initialData }: { initialData: Comm
   }, [posts])
 
   function scrollToListTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   function openComposer() {

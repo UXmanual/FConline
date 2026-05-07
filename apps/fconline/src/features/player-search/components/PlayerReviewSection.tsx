@@ -480,7 +480,7 @@ export default function PlayerReviewSection({
   }, [fetchPostsPage, initialHighlightedPostId, playerId])
 
   function scrollToListTop() {
-    listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   function openComposer() {
