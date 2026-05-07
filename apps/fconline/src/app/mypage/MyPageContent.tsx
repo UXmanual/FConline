@@ -355,7 +355,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   const [communityNickname, setCommunityNickname] = useState('')
   const [gameClubName, setGameClubName] = useState('')
   const [userLevelProfile, setUserLevelProfile] = useState<MyPageLevelProfile | null>(null)
-  const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const [isProfileLoading, setIsProfileLoading] = useState(true)
   const [isAvatarResolved, setIsAvatarResolved] = useState(false)
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [isEditingGameClubName, setIsEditingGameClubName] = useState(false)
@@ -415,9 +415,12 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const cachedProfile = readCachedLevelProfile(user.id)
         setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
-        if (!cachedProfile) setIsProfileLoading(true)
+        setIsProfileLoading(true)
+        setIsAvatarResolved(false)
       } else {
         setAvatarUrl(null)
+        setIsProfileLoading(false)
+        setIsAvatarResolved(false)
       }
       setCommunityNickname(user ? readCachedCommunityNickname(user.id) || deriveCommunityNickname(user) : '')
       setGameClubName(user ? readCachedGameClubName(user.id) : '')
@@ -440,9 +443,12 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         const cachedProfile = readCachedLevelProfile(session.user.id)
         setAvatarUrl(cachedProfile?.avatarUrl ?? null)
         setUserLevelProfile(cachedProfile)
-        if (!cachedProfile) setIsProfileLoading(true)
+        setIsProfileLoading(true)
+        setIsAvatarResolved(false)
       } else {
         setAvatarUrl(null)
+        setIsProfileLoading(false)
+        setIsAvatarResolved(false)
       }
       setCommunityNickname(
         session?.user ? readCachedCommunityNickname(session.user.id) || deriveCommunityNickname(session.user) : '',
@@ -472,6 +478,8 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
     const fallbackNickname = deriveCommunityNickname(authUser)
 
     async function syncProfile() {
+      setIsProfileLoading(true)
+      setIsAvatarResolved(false)
       try {
         const [nicknameRes, gameClubRes] = await Promise.all([
           fetch('/api/mypage/nickname', { cache: 'no-store' }),

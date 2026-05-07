@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '29.9': '2026-05-08T02:40:00+09:00',
   '29.8': '2026-05-08T02:10:00+09:00',
   '29.7': '2026-05-08T01:20:00+09:00',
   '29.6': '2026-05-08T01:00:00+09:00',
@@ -81,6 +82,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '29.9': [
+    '사파리에서 마이페이지 상단 프로필 로딩 중 터치 좌표가 흔들리던 문제를 보정해 다크모드 토글이 다시 눌리도록 수정했습니다.',
+  ],
   '29.8': [
     '사파리 브라우저에서 마이페이지 다크모드 토글이 눌리지 않던 iOS 터치 회귀를 수정했습니다.',
   ],
