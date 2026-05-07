@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
             positionLabel: FC_POSITION_LABELS[spPosition] ?? '?',
             enhancement,
             pay: null,
+            price: null,
             playerName: null,
             seasonImg: null,
             overallBase: null,
@@ -102,6 +103,8 @@ export async function GET(req: NextRequest) {
 
         const detailValue = detail.status === 'fulfilled' ? detail.value : null
         const pay = detailValue?.pay ?? null
+        const priceLevel = enhancement > 0 ? enhancement : 1
+        const price = detailValue?.prices?.[priceLevel] ?? null
 
         return {
           spId,
@@ -109,6 +112,7 @@ export async function GET(req: NextRequest) {
           positionLabel: FC_POSITION_LABELS[spPosition] ?? '?',
           enhancement,
           pay,
+          price,
           playerName:
             spidMeta.status === 'fulfilled' ? (spidMeta.value?.name ?? null) : null,
           seasonImg:
@@ -155,7 +159,7 @@ export async function GET(req: NextRequest) {
             }
           })
 
-    // 5. 포메이션 스트링 구성 (수비-미드-공격 줄 수 계산)
+    // 5. 포메이션 스트링 구성 (DEF/DM/CM/AM/FW 5줄 기준)
     const formationStr = deriveFormation(players.map((p) => p.spPosition))
 
     return Response.json({
@@ -474,16 +478,19 @@ function getEnhancementChemBonus(tier: string, count: number): number {
 }
 
 function deriveFormation(positions: number[]): string {
-  // position 0 = GK, 1-8 = DEF, 9-19 = MID, 20-27 = FWD (rough grouping)
-  const defPositions = new Set([1, 2, 3, 4, 5, 6, 7, 8])
-  const midPositions = new Set([9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
-  const fwdPositions = new Set([20, 21, 22, 23, 24, 25, 26, 27])
+  // FC Online 5-line grouping: DEF / DM / CM / AM / FW
+  const defPos = new Set([1, 2, 3, 4, 5, 6, 7, 8])    // SW WB RB CB LB
+  const dmPos  = new Set([9, 10, 11])                   // RDM CDM LDM
+  const cmPos  = new Set([12, 13, 14, 15, 16])          // RM RCM CM LCM LM
+  const amPos  = new Set([17, 18, 19])                  // RAM CAM LAM
+  const fwPos  = new Set([20, 21, 22, 23, 24, 25, 26, 27]) // RF CF LF RW RS ST LS LW
 
-  const def = positions.filter((p) => defPositions.has(p)).length
-  const mid = positions.filter((p) => midPositions.has(p)).length
-  const fwd = positions.filter((p) => fwdPositions.has(p)).length
+  const def = positions.filter((p) => defPos.has(p)).length
+  const dm  = positions.filter((p) => dmPos.has(p)).length
+  const cm  = positions.filter((p) => cmPos.has(p)).length
+  const am  = positions.filter((p) => amPos.has(p)).length
+  const fw  = positions.filter((p) => fwPos.has(p)).length
 
-  if (def === 0 && mid === 0 && fwd === 0) return ''
-  const parts = [def, mid, fwd].filter((n) => n > 0)
+  const parts = [def, dm, cm, am, fw].filter((n) => n > 0)
   return parts.join('-')
 }

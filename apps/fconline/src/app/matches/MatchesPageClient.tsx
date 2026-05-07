@@ -2118,6 +2118,34 @@ function buildOfficialMatchInsight(teams: NonNullable<ReturnType<typeof buildOff
   return lines.sort((left, right) => right.priority - left.priority).map(({ text }) => text)
 }
 
+function deriveFormationClient(positions: number[]): string {
+  const defPos = new Set([1, 2, 3, 4, 5, 6, 7, 8])
+  const dmPos  = new Set([9, 10, 11])
+  const cmPos  = new Set([12, 13, 14, 15, 16])
+  const amPos  = new Set([17, 18, 19])
+  const fwPos  = new Set([20, 21, 22, 23, 24, 25, 26, 27])
+  const def = positions.filter((p) => defPos.has(p)).length
+  const dm  = positions.filter((p) => dmPos.has(p)).length
+  const cm  = positions.filter((p) => cmPos.has(p)).length
+  const am  = positions.filter((p) => amPos.has(p)).length
+  const fw  = positions.filter((p) => fwPos.has(p)).length
+  const parts = [def, dm, cm, am, fw].filter((n) => n > 0)
+  return parts.join('-')
+}
+
+function getFormationFromMatches(matches: MatchData[], ouid: string | null | undefined): string | null {
+  if (!ouid) return null
+  for (const match of matches) {
+    const myTeam = match.matchInfo?.find((info) => info.ouid === ouid)
+    if (!myTeam?.player?.length) continue
+    const positions = myTeam.player
+      .map((p) => p.spPosition)
+      .filter((p): p is number => typeof p === 'number' && p >= 0 && p <= 27)
+    if (positions.length > 0) return deriveFormationClient(positions)
+  }
+  return null
+}
+
 function formatOfficialTeamColors(teamColors: string[] | null | undefined) {
   if (!teamColors || teamColors.length === 0) {
     return '-'
@@ -3594,6 +3622,10 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
   const officialDisplay = isManagerMode
     ? getManagerDisplayFields(exactCandidate)
     : getOfficialDisplayFields(exactCandidate)
+  const matchDerivedFormation = officialDisplay.formation == null
+    ? getFormationFromMatches(matches, exactCandidate?.ouid)
+    : null
+  const displayFormation = officialDisplay.formation ?? matchDerivedFormation
   const fallbackOwnerEmblemUrl = exactCandidate?.representativeTeamEmblemUrl ?? null
   const officialBadgeImageUrl = officialDisplay.rankIconUrl ?? fallbackOwnerEmblemUrl
   const modeAccentColor = isManagerMode ? '#10b981' : 'var(--app-accent-blue)'
@@ -3780,7 +3812,7 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                         />
                         {exactCandidate.ouid ? (
                           <a
-                            href={`/matches/${exactCandidate.ouid}/formation?formation=${encodeURIComponent(officialDisplay.formation ?? '')}&nickname=${encodeURIComponent(exactCandidate.nickname)}&teamColors=${encodeURIComponent(officialDisplay.teamColors.join('|'))}&nexonSn=${encodeURIComponent(exactCandidate.nexonSn)}&mode=${encodeURIComponent(selectedSearchMode)}`}
+                            href={`/matches/${exactCandidate.ouid}/formation?formation=${encodeURIComponent(displayFormation ?? '')}&nickname=${encodeURIComponent(exactCandidate.nickname)}&teamColors=${encodeURIComponent(officialDisplay.teamColors.join('|'))}&nexonSn=${encodeURIComponent(exactCandidate.nexonSn)}&mode=${encodeURIComponent(selectedSearchMode)}`}
                             className="block active:opacity-60"
                             onClick={() => saveReturnState()}
                           >
@@ -3789,9 +3821,9 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                               value={
                                 <span
                                   className="underline underline-offset-2"
-                                  style={{ color: officialDisplay.formation ? 'var(--app-accent-blue)' : 'var(--app-title)' }}
+                                  style={{ color: 'var(--app-accent-blue)' }}
                                 >
-                                  {statValue(officialDisplay.formation ?? null)}
+                                  {displayFormation ? statValue(displayFormation) : '포메이션 보기'}
                                 </span>
                               }
                             />
@@ -3799,8 +3831,8 @@ export default function MatchesPageClient({ initialNickname, initialMatchId, ini
                         ) : (
                           <InfoCard
                             label="주요 포메이션"
-                            value={statValue(officialDisplay.formation ?? null)}
-                            valueColor={officialDisplay.formation ? 'var(--app-accent-blue)' : undefined}
+                            value={statValue(displayFormation ?? null)}
+                            valueColor={displayFormation ? 'var(--app-accent-blue)' : undefined}
                           />
                         )}
                         <InfoCard label="대표 팀컬러" value={officialTeamColorValue} />

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { getStrongPoint } from '@/features/player-search/player-detail'
+import { getStrongPoint, formatPriceWithKoreanUnits } from '@/features/player-search/player-detail'
 import { getPlayerImageCandidates } from '@/features/player-search/player-image'
 
 export type FormationPlayer = {
@@ -11,6 +11,7 @@ export type FormationPlayer = {
   positionLabel: string
   enhancement: number
   pay: number | null
+  price: string | null
   playerName: string | null
   seasonImg: string | null
   overallBase: number | null
@@ -53,8 +54,32 @@ const POSITION_COORDS: Record<number, [number, number]> = {
 function getPositionColor(spPosition: number): string {
   if (spPosition === 0) return '#f5c842'          // GK — 노랑
   if (spPosition <= 8) return '#4fa3f7'           // 수비 — 파랑
-  if (spPosition <= 16) return '#4fc87a'          // 미드필더 — 초록
+  if (spPosition <= 19) return '#4fc87a'          // 미드필더 (DM/CM/AM 포함) — 초록
   return '#f76464'                                 // 공격 — 빨강
+}
+
+function PayHexBadge({ value }: { value: number }) {
+  return (
+    <svg width="18" height="20" viewBox="0 0 18 20" fill="none">
+      <polygon
+        points="9,1 17,5.5 17,14.5 9,19 1,14.5 1,5.5"
+        stroke="rgba(255,255,255,0.6)"
+        strokeWidth="1.2"
+        fill="none"
+      />
+      <text
+        x="9"
+        y="10"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="8"
+        fontWeight="600"
+        fill="rgba(255,255,255,0.85)"
+      >
+        {value.toLocaleString()}
+      </text>
+    </svg>
+  )
 }
 
 function getEnhancementStyle(level: number): React.CSSProperties {
@@ -138,11 +163,11 @@ function PlayerCard({
     >
       <div className="flex items-center">
         {/* OVR + 포지션 (왼쪽) */}
-        <div className="mr-[3px] flex flex-col items-center gap-[3px]">
+        <div className="mr-[3px] flex flex-col items-center gap-[5px]">
           {displayedOverall !== null && (
             <span
-              className="text-[10px] font-extrabold leading-none text-white"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
+              className="text-[12px] font-extrabold leading-none text-white"
+              style={{ textShadow: '0 0 6px rgba(0,0,0,0.6), 0 0 12px rgba(0,0,0,0.4)' }}
             >
               {displayedOverall}
             </span>
@@ -151,7 +176,7 @@ function PlayerCard({
             className="text-[9px] font-semibold leading-none"
             style={{
               color: getPositionColor(player.spPosition),
-              textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)',
+              textShadow: '0 0 6px rgba(0,0,0,0.6), 0 0 12px rgba(0,0,0,0.4)',
             }}
           >
             {player.positionLabel}
@@ -172,14 +197,7 @@ function PlayerCard({
 
         {/* 급여 + 강화단계 (오른쪽) */}
         <div className="ml-[3px] flex flex-col items-center gap-[3px]">
-          {player.pay != null && (
-            <span
-              className="text-[9px] font-semibold leading-none text-white/80"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
-            >
-              {player.pay.toLocaleString()}
-            </span>
-          )}
+          {player.pay != null && <PayHexBadge value={player.pay} />}
           {player.enhancement > 0 && (
             <span style={getEnhancementStyle(player.enhancement)}>
               {player.enhancement}
@@ -188,24 +206,34 @@ function PlayerCard({
         </div>
       </div>
 
-      {/* 시즌엠블럼 + 선수명 (말줄임 없음) */}
-      <div className="mt-[5px] flex items-center gap-[2px]">
-        {player.seasonImg && (
-          <Image
-            src={player.seasonImg}
-            alt=""
-            width={12}
-            height={12}
-            className="h-[12px] w-[12px] shrink-0 object-contain"
-            unoptimized
-          />
+      {/* 시즌엠블럼 + 선수명 + 시세 */}
+      <div className="mt-[5px] flex flex-col items-center gap-[4px]">
+        <div className="flex items-center gap-[3px]">
+          {player.seasonImg && (
+            <Image
+              src={player.seasonImg}
+              alt=""
+              width={14}
+              height={14}
+              className="h-[14px] w-[14px] shrink-0 object-contain"
+              unoptimized
+            />
+          )}
+          <span
+            className="whitespace-nowrap text-[12px] font-semibold leading-[14px] text-white"
+            style={{ textShadow: '0 0 6px rgba(0,0,0,0.6), 0 0 12px rgba(0,0,0,0.4)' }}
+          >
+            {player.playerName}
+          </span>
+        </div>
+        {player.price && (
+          <span
+            className="whitespace-nowrap text-[9px] font-medium leading-none text-white/70"
+            style={{ textShadow: '0 0 6px rgba(0,0,0,0.6), 0 0 12px rgba(0,0,0,0.4)' }}
+          >
+            {formatPriceWithKoreanUnits(player.price)} BP
+          </span>
         )}
-        <span
-          className="whitespace-nowrap text-[10px] font-semibold leading-none text-white"
-          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)' }}
-        >
-          {player.playerName}
-        </span>
       </div>
     </div>
   )

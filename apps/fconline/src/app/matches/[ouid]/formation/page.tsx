@@ -4,7 +4,21 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from '@phosphor-icons/react'
 import LoadingDots from '@/components/ui/LoadingDots'
+import { formatPriceWithKoreanUnits } from '@/features/player-search/player-detail'
 import FormationPitch, { type FormationPlayer } from './FormationPitch'
+
+function formatFormation(f: string) {
+  return f.replace(/(\d)(?=\d)/g, '$1-')
+}
+
+function calcSquadStats(players: FormationPlayer[]) {
+  const totalPay = players.reduce((sum, p) => sum + (p.pay ?? 0), 0)
+  const totalPriceNum = players.reduce((sum, p) => {
+    if (!p.price) return sum
+    return sum + Number(p.price.replace(/[^\d]/g, ''))
+  }, 0)
+  return { totalPay, totalPriceNum }
+}
 
 type FormationResponse = {
   formation: string
@@ -120,12 +134,29 @@ export default function FormationPage() {
               </div>
             </div>
 
-            <p className="app-theme-muted mt-4 text-xs">
-              {data.isAutoApplied
-                ? '대표 스쿼드 기준으로 자동 반영됩니다.'
-                : '대표 스쿼드 정보를 찾지 못해 경기 데이터 기준으로 표시합니다.'}
-            </p>
           </section>
+
+          {(() => {
+            const { totalPay, totalPriceNum } = calcSquadStats(data.players)
+            const formationLabel = data.formation || formatFormation(formation)
+            const totalPriceLabel = totalPriceNum > 0 ? `${formatPriceWithKoreanUnits(String(totalPriceNum))} BP` : '-'
+            const divider = <span className="app-theme-muted mx-2 text-xs opacity-30">|</span>
+            return (
+              <section className="app-theme-card mb-4 rounded-lg border px-4 py-3">
+                <div className="flex items-center text-xs">
+                  <span className="app-theme-title font-medium">급여</span>
+                  <span className="ml-1.5 font-semibold" style={{ color: 'var(--app-accent-blue)' }}>{totalPay}</span>
+                  <span className="app-theme-title font-medium">/300</span>
+                  {divider}
+                  <span className="app-theme-title font-medium">포메이션</span>
+                  <span className="ml-1.5 font-semibold" style={{ color: 'var(--app-accent-blue)' }}>{formationLabel}</span>
+                  {divider}
+                  <span className="app-theme-title font-medium">BP</span>
+                  <span className="ml-1 font-semibold" style={{ color: 'var(--app-accent-blue)' }}>{totalPriceNum > 0 ? formatPriceWithKoreanUnits(String(totalPriceNum)) : '-'}</span>
+                </div>
+              </section>
+            )
+          })()}
 
           <FormationPitch
             formation={data.formation || formation}
