@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -9,13 +8,13 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput,
   Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { CaretRight, X } from 'phosphor-react-native'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
+import { Text, TextInput } from '@/components/Themed'
 
 type UserProfile = {
   id: string
@@ -324,7 +323,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+    content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
     sectionHeader: { marginBottom: 4 },
     pageTitle: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     card: {
@@ -368,7 +367,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     settingLabel: { fontSize: 14, fontWeight: '500' },
     settingValue: { fontSize: 14, fontWeight: '500' },
     modalSafe: { flex: 1 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
     modalTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 12 },
     termsText: { fontSize: 14, lineHeight: 22 },
     licenseTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },

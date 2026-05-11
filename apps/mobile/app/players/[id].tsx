@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -14,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { ArrowLeft, CaretDown } from 'phosphor-react-native'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
+import { Text } from '@/components/Themed'
 
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, i) => i + 1)
 
@@ -291,7 +291,7 @@ const pickerStyle = StyleSheet.create({
 const styles = (c: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: c.pageBg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+  content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, marginBottom: 4 },
   backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4, flex: 1 },
   loadingWrap: { flex: 1, paddingVertical: 48, alignItems: 'center', justifyContent: 'center' },

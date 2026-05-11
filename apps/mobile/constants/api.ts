@@ -1,1 +1,1 @@
-export const API_BASE = 'https://fconlineground.com'
+export const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'https://fconlineground.com'

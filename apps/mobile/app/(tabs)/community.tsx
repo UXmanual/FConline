@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Image,
@@ -16,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Heart, ChatCircle, PlusCircle, CaretLeft, CaretRight, X } from 'phosphor-react-native'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
+import { Text, TextInput } from '@/components/Themed'
 
 const POSTS_PER_PAGE = 5
 
@@ -301,7 +300,7 @@ export default function CommunityScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 16 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 16 }}>
               {/* 본문 */}
               {activePost && (
                 <View style={[s.postCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
@@ -400,7 +399,7 @@ export default function CommunityScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>
               <TextInput
                 style={[s.composerTitle, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.title }]}
                 value={composerTitle}
@@ -444,7 +443,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 16, paddingTop: 16, gap: 8 },
+    content: { paddingHorizontal: 20, paddingTop: 16, gap: 8 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     writeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -468,7 +467,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     pageBtnActive: { backgroundColor: c.surfaceStrong },
     pageBtnText: { fontSize: 14, fontWeight: '500' },
     modalSafe: { flex: 1 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
     modalTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 12 },
     commentSectionTitle: { fontSize: 14, fontWeight: '600' },
     emptyComment: { fontSize: 13, textAlign: 'center', paddingVertical: 16 },
@@ -481,7 +480,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     commentSendText: { fontSize: 13, fontWeight: '600', color: '#fff' },
     composerTitle: { height: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, fontSize: 15 },
     composerContent: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, minHeight: 180 },
-    composerFooter: { padding: 16, borderTopWidth: 1 },
+    composerFooter: { padding: 20, borderTopWidth: 1 },
     submitBtn: { backgroundColor: '#457ae5', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
     submitBtnText: { fontSize: 15, fontWeight: '600', color: '#fff' },
   })

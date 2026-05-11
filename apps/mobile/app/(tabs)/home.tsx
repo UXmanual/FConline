@@ -1,13 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Image,
-  Animated,
-  Easing,
   useWindowDimensions,
   FlatList,
 } from 'react-native'
@@ -18,17 +15,41 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { AppLogo } from '@/components/icons/AppLogo'
 import { PlayerActionIcon, AnalysisActionIcon } from '@/components/icons/QuickActionIcons'
+import { Text } from '@/components/Themed'
 
-// ─── 시즌 계산 ─────────────────────────────────────────────────────────────
 const RECURRING_SEASON_DAYS = 70
+const BANNER_ASPECT = 440 / 112
+
+const BANNERS = [
+  { id: '01', imageUrl: `${API_BASE}/banners/home-main-banner01@3x.png`, href: null },
+  { id: '02', imageUrl: `${API_BASE}/banners/home-main-banner02@3x.png`, href: '/matches' },
+  { id: '03', imageUrl: `${API_BASE}/banners/home-main-banner03@3x.png`, href: '/players' },
+  { id: '04', imageUrl: `${API_BASE}/banners/home-main-banner04@3x.png`, href: null },
+]
+
+type ControllerUsageItem = {
+  label: string
+  percentage: string
+  record: string
+}
+
+type HomeControllerUsage = {
+  items: ControllerUsageItem[]
+  basisLabel: string
+  sourceUrl: string
+  unavailable?: boolean
+}
 
 function getKstToday() {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }).formatToParts(new Date())
-  const year = Number(parts.find((p) => p.type === 'year')?.value ?? 0)
-  const month = Number(parts.find((p) => p.type === 'month')?.value ?? 1)
-  const day = Number(parts.find((p) => p.type === 'day')?.value ?? 1)
+  const year = Number(parts.find((part) => part.type === 'year')?.value ?? 0)
+  const month = Number(parts.find((part) => part.type === 'month')?.value ?? 1)
+  const day = Number(parts.find((part) => part.type === 'day')?.value ?? 1)
   return new Date(year, month - 1, day)
 }
 
@@ -50,54 +71,55 @@ function formatSeasonDate(date: Date) {
 function getRecurringSeasonStarts(year: number) {
   const starts: Date[] = []
   const nextYearStart = new Date(year + 1, 0, 1)
-  let cur = new Date(year, 4, 28)
-  while (cur < nextYearStart) { starts.push(cur); cur = addDays(cur, RECURRING_SEASON_DAYS) }
+  let current = new Date(year, 4, 28)
+
+  while (current < nextYearStart) {
+    starts.push(current)
+    current = addDays(current, RECURRING_SEASON_DAYS)
+  }
+
   return starts
 }
 
 function buildSeasonRanges(year: number) {
   const ranges: { seasonNumber: number; start: Date; end: Date }[] = []
-  const s2 = new Date(year, 2, 19)
-  const s3 = new Date(year, 4, 28)
-  const prev = getRecurringSeasonStarts(year - 1)
-  const prevLast = prev[prev.length - 1]
-  const s1 = prevLast ? addDays(prevLast, RECURRING_SEASON_DAYS) : new Date(year, 0, 1)
-  if (s1 < s2) ranges.push({ seasonNumber: 1, start: s1, end: addDays(s2, -1) })
-  ranges.push({ seasonNumber: 2, start: s2, end: addDays(s3, -1) })
-  getRecurringSeasonStarts(year).forEach((start, i, arr) => {
-    const next = arr[i + 1]
-    ranges.push({ seasonNumber: i + 3, start, end: next ? addDays(next, -1) : addDays(start, RECURRING_SEASON_DAYS - 1) })
+  const season2Start = new Date(year, 2, 19)
+  const season3Start = new Date(year, 4, 28)
+  const previousStarts = getRecurringSeasonStarts(year - 1)
+  const previousLastStart = previousStarts[previousStarts.length - 1]
+  const season1Start = previousLastStart ? addDays(previousLastStart, RECURRING_SEASON_DAYS) : new Date(year, 0, 1)
+
+  if (season1Start < season2Start) {
+    ranges.push({ seasonNumber: 1, start: season1Start, end: addDays(season2Start, -1) })
+  }
+
+  ranges.push({ seasonNumber: 2, start: season2Start, end: addDays(season3Start, -1) })
+
+  getRecurringSeasonStarts(year).forEach((start, index, list) => {
+    const next = list[index + 1]
+    ranges.push({
+      seasonNumber: index + 3,
+      start,
+      end: next ? addDays(next, -1) : addDays(start, RECURRING_SEASON_DAYS - 1),
+    })
   })
+
   return ranges
 }
 
 function getSeasonInfo(today: Date) {
   const year = today.getFullYear()
-  const all = [...buildSeasonRanges(year - 1), ...buildSeasonRanges(year), ...buildSeasonRanges(year + 1)]
-  const cur = all.find((r) => r.start <= today && today <= r.end) ?? buildSeasonRanges(year)[0]!
-  const daysLeft = Math.max(0, Math.ceil((cur.end.getTime() - today.getTime()) / 86400000))
-  return { label: `시즌${cur.seasonNumber} 진행 중`, period: `${formatSeasonDate(cur.start)} - ${formatSeasonDate(cur.end)}`, daysLeft }
+  const ranges = [...buildSeasonRanges(year - 1), ...buildSeasonRanges(year), ...buildSeasonRanges(year + 1)]
+  const current = ranges.find((range) => range.start <= today && today <= range.end) ?? buildSeasonRanges(year)[0]!
+  const daysLeft = Math.max(0, Math.ceil((current.end.getTime() - today.getTime()) / 86400000))
+
+  return {
+    label: `시즌${current.seasonNumber} 진행 중`,
+    period: `${formatSeasonDate(current.start)} - ${formatSeasonDate(current.end)}`,
+    daysLeft,
+  }
 }
 
-// ─── 타입 ──────────────────────────────────────────────────────────────────
-type Review = {
-  id: string; player_id: string; player_name: string
-  nickname: string; season_img: string | null; title: string; created_at: string
-}
-
-function formatRelativeTime(iso: string) {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1) return '방금'
-  if (m < 60) return `${m}분 전`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}시간 전`
-  return `${Math.floor(h / 24)}일 전`
-}
-
-function trimTitle(title: string) { return title.replace(/^\[\d+카\]\s*/, '').trim() || title }
-function getCardLevel(title: string) { const m = title.match(/^\[(\d+)카\]/); return m ? `${m[1]}카` : null }
-
-// ─── 알림 아이콘 (웹과 동일한 SVG) ─────────────────────────────────────────
 function NotificationIcon({ color }: { color: string }) {
   return (
     <Svg width={18} height={20} viewBox="0 0 18 20" fill="none">
@@ -108,20 +130,30 @@ function NotificationIcon({ color }: { color: string }) {
   )
 }
 
-// ─── 카운트다운 애니메이션 ───────────────────────────────────────────────────
 function CountdownNumber({ target, isUrgent }: { target: number; isUrgent: boolean }) {
   const [value, setValue] = useState(0)
   const frameRef = useRef<number | null>(null)
+
   useEffect(() => {
-    const start = performance.now()
+    const startAt = performance.now()
+
     const tick = (now: number) => {
-      const p = Math.min((now - start) / 1400, 1)
-      setValue(Math.round(target * (1 - (1 - p) * (1 - p))))
-      if (p < 1) frameRef.current = requestAnimationFrame(tick)
+      const progress = Math.min((now - startAt) / 1400, 1)
+      setValue(Math.round(target * (1 - (1 - progress) * (1 - progress))))
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick)
+      }
     }
+
     frameRef.current = requestAnimationFrame(tick)
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
+
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+      }
+    }
   }, [target])
+
   return (
     <Text style={{ fontSize: 16, fontWeight: '600', color: isUrgent ? '#d14343' : '#9aa3af' }}>
       D-{value}
@@ -129,29 +161,17 @@ function CountdownNumber({ target, isUrgent }: { target: number; isUrgent: boole
   )
 }
 
-// ─── 배너 이미지 ───────────────────────────────────────────────────────────
-const BANNER_ASPECT = 440 / 112
-const BANNERS = [
-  { id: '01', imageUrl: `${API_BASE}/banners/home-main-banner01@3x.png`, href: null },
-  { id: '02', imageUrl: `${API_BASE}/banners/home-main-banner02@3x.png`, href: '/matches' },
-  { id: '03', imageUrl: `${API_BASE}/banners/home-main-banner03@3x.png`, href: '/players' },
-  { id: '04', imageUrl: `${API_BASE}/banners/home-main-banner04@3x.png`, href: null },
-]
-
-// ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { colors, isDark } = useTheme()
   const router = useRouter()
-  const today = getKstToday()
-  const { label, period, daysLeft } = getSeasonInfo(today)
+  const { width: screenWidth } = useWindowDimensions()
+  const { label, period, daysLeft } = getSeasonInfo(getKstToday())
   const dateLabel = getKoreaDateLabel()
   const s = styles(colors)
-
-  // Banner
-  const { width: screenWidth } = useWindowDimensions()
-  const bannerWidth = screenWidth - 32
+  const bannerWidth = screenWidth - 40
   const bannerHeight = bannerWidth / BANNER_ASPECT
   const [bannerIndex, setBannerIndex] = useState(0)
+  const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
   const bannerRef = useRef<FlatList>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -163,17 +183,28 @@ export default function HomeScreen() {
         return next
       })
     }, 4500)
-    return () => { if (autoRef.current) clearInterval(autoRef.current) }
+
+    return () => {
+      if (autoRef.current) {
+        clearInterval(autoRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/home/controller-usage`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (Array.isArray(data?.items) && typeof data?.basisLabel === 'string') {
+          setControllerUsage(data)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   return (
-    <SafeAreaView style={[s.safeArea]} edges={['top']}>
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* 헤더 — h-6(24px) 컨테이너 안에 로고, 우측에 날짜+알림 */}
+    <SafeAreaView style={s.safeArea} edges={['top']}>
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <View style={s.header}>
           <View style={s.logoWrap}>
             <AppLogo isDark={isDark} />
@@ -186,97 +217,106 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 시즌 카드 */}
-        <View style={s.card}>
-          <View style={s.seasonRow}>
-            <Text style={[s.seasonLabel, { color: '#457ae5' }]}>{label}</Text>
-            <View style={s.seasonRight}>
-              <Text style={[s.seasonPeriod, { color: colors.title }]}>{period}</Text>
-              <Text style={[s.sep, { color: colors.mutedText }]}>|</Text>
-              {daysLeft > 0
-                ? <CountdownNumber target={daysLeft} isUrgent={daysLeft <= 10} />
-                : <Text style={[s.countdown, { color: '#d14343' }]}>D-0</Text>}
+        <View style={s.main}>
+          <View style={s.card}>
+            <View style={s.seasonRow}>
+              <Text style={[s.seasonLabel, { color: '#457ae5' }]}>{label}</Text>
+              <View style={s.seasonRight}>
+                <Text style={[s.seasonPeriod, { color: colors.title }]}>{period}</Text>
+                <Text style={[s.sep, { color: colors.mutedText }]}>|</Text>
+                {daysLeft > 0 ? (
+                  <CountdownNumber target={daysLeft} isUrgent={daysLeft <= 10} />
+                ) : (
+                  <Text style={[s.countdown, { color: '#d14343' }]}>D-0</Text>
+                )}
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* 퀵액션 */}
-        <View style={s.quickRow}>
-          <TouchableOpacity style={s.quickCard} onPress={() => router.push('/players')}>
-            <View style={s.quickText}>
-              <Text style={[s.quickTitle, { color: colors.title }]}>선수 이름으로</Text>
-              <Text style={[s.quickTitle, { color: colors.title }]}>정보 검색</Text>
+          <View style={s.quickRow}>
+            <TouchableOpacity style={s.quickCard} onPress={() => router.push('/players')}>
+              <View style={s.quickText}>
+                <Text style={[s.quickTitle, { color: colors.title }]}>선수 이름으로</Text>
+                <Text style={[s.quickTitle, { color: colors.title }]}>정보 검색</Text>
+              </View>
+              <PlayerActionIcon isDark={isDark} />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.quickCard} onPress={() => router.push('/matches')}>
+              <View style={s.quickText}>
+                <Text style={[s.quickTitle, { color: colors.title }]}>내 경기</Text>
+                <Text style={[s.quickTitle, { color: colors.title }]}>플레이 분석</Text>
+              </View>
+              <AnalysisActionIcon isDark={isDark} />
+            </TouchableOpacity>
+          </View>
+
+          <LatestReviews colors={colors} router={router} />
+
+          <View style={[s.bannerWrap, { height: bannerHeight }]}>
+            <FlatList
+              ref={bannerRef}
+              data={BANNERS}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              onMomentumScrollEnd={(event) => {
+                const index = Math.round(event.nativeEvent.contentOffset.x / bannerWidth)
+                setBannerIndex(index)
+
+                if (autoRef.current) {
+                  clearInterval(autoRef.current)
+                }
+
+                autoRef.current = setInterval(() => {
+                  setBannerIndex((prev) => {
+                    const next = (prev + 1) % BANNERS.length
+                    bannerRef.current?.scrollToIndex({ index: next, animated: true })
+                    return next
+                  })
+                }, 4500)
+              }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={{
+                    width: bannerWidth,
+                    height: bannerHeight,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    backgroundColor: colors.surfaceSoft,
+                  }}
+                  onPress={() => item.href && router.push(item.href as any)}
+                  activeOpacity={item.href ? 0.8 : 1}
+                >
+                  <Image source={{ uri: item.imageUrl }} style={{ width: bannerWidth, height: bannerHeight }} resizeMode="cover" />
+                </TouchableOpacity>
+              )}
+            />
+            <View style={s.bannerCounter}>
+              <Text style={s.bannerCounterText}>{bannerIndex + 1}/{BANNERS.length}</Text>
             </View>
-            <PlayerActionIcon isDark={isDark} />
+          </View>
+
+          <HomeControllerUsageCard colors={colors} usage={controllerUsage} />
+
+          <TouchableOpacity style={s.card} onPress={() => router.push('/community')}>
+            <View style={s.linkRow}>
+              <Text style={[s.cardTitle, { color: colors.title }]}>왁글왁글 커뮤니티 참여</Text>
+              <View style={[s.badge, { backgroundColor: colors.actionBadgeBg }]}>
+                <Text style={[s.badgeText, { color: colors.actionBadgeFg }]}>참여하기</Text>
+              </View>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={s.quickCard} onPress={() => router.push('/matches')}>
-            <View style={s.quickText}>
-              <Text style={[s.quickTitle, { color: colors.title }]}>내 경기</Text>
-              <Text style={[s.quickTitle, { color: colors.title }]}>플레이 분석</Text>
+
+          <TouchableOpacity style={s.card} onPress={() => router.push('/mypage')}>
+            <View style={s.linkRow}>
+              <Text style={[s.cardTitle, { color: colors.title }]}>화면 설정 바로가기</Text>
+              <View style={[s.badge, { backgroundColor: colors.actionBadgeBg }]}>
+                <Text style={[s.badgeText, { color: colors.actionBadgeFg }]}>설정하기</Text>
+              </View>
             </View>
-            <AnalysisActionIcon isDark={isDark} />
           </TouchableOpacity>
         </View>
-
-        {/* 최신 선수 평가 */}
-        <LatestReviews colors={colors} router={router} />
-
-        {/* 배너 캐러셀 */}
-        <View style={[s.bannerWrap, { height: bannerHeight }]}>
-          <FlatList
-            ref={bannerRef}
-            data={BANNERS}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            onMomentumScrollEnd={(e) => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / bannerWidth)
-              setBannerIndex(idx)
-              if (autoRef.current) clearInterval(autoRef.current)
-              autoRef.current = setInterval(() => {
-                setBannerIndex((prev) => {
-                  const next = (prev + 1) % BANNERS.length
-                  bannerRef.current?.scrollToIndex({ index: next, animated: true })
-                  return next
-                })
-              }, 4500)
-            }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={{ width: bannerWidth, height: bannerHeight, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.surfaceSoft }}
-                onPress={() => item.href && router.push(item.href as any)}
-                activeOpacity={item.href ? 0.8 : 1}
-              >
-                <Image source={{ uri: item.imageUrl }} style={{ width: bannerWidth, height: bannerHeight }} resizeMode="cover" />
-              </TouchableOpacity>
-            )}
-          />
-          {/* 페이지 카운터 */}
-          <View style={s.bannerCounter}>
-            <Text style={s.bannerCounterText}>{bannerIndex + 1}/{BANNERS.length}</Text>
-          </View>
-        </View>
-
-        {/* 커뮤니티 카드 */}
-        <TouchableOpacity style={s.card} onPress={() => router.push('/community')}>
-          <View style={s.linkRow}>
-            <Text style={[s.cardTitle, { color: colors.title }]}>와글와글 커뮤니티 ⌨️</Text>
-            <View style={[s.badge, { backgroundColor: colors.actionBadgeBg }]}>
-              <Text style={[s.badgeText, { color: colors.actionBadgeFg }]}>참여하기</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* 설정 카드 */}
-        <TouchableOpacity style={s.card} onPress={() => router.push('/mypage')}>
-          <View style={s.linkRow}>
-            <Text style={[s.cardTitle, { color: colors.title }]}>화면 설정 ⚙️</Text>
-            <View style={[s.badge, { backgroundColor: colors.actionBadgeBg }]}>
-              <Text style={[s.badgeText, { color: colors.actionBadgeFg }]}>설정하기</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -284,115 +324,184 @@ export default function HomeScreen() {
   )
 }
 
-// ─── 최신 선수 평가 컴포넌트 ──────────────────────────────────────────────
 function LatestReviews({ colors, router }: { colors: ReturnType<typeof useTheme>['colors']; router: any }) {
-  const [reviews, setReviews] = useState<Review[]>([])
   const s = styles(colors)
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/player-reviews/posts?limit=3`)
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data?.posts)) setReviews(data.posts.slice(0, 3)) })
-      .catch(() => {})
-  }, [])
 
   return (
     <View style={s.card}>
-      {reviews.length > 0 ? reviews.map((review, i) => (
-        <TouchableOpacity
-          key={review.id}
-          style={[s.reviewRow, i < reviews.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}
-          onPress={() => router.push(`/players/${review.player_id}?tab=review&postId=${review.id}` as any)}
-        >
-          <View style={[s.reviewThumb, { backgroundColor: colors.surfaceStrong }]}>
-            <Image
-              source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${review.player_id}.png` }}
-              style={{ width: 48, height: 48 }}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={s.reviewInfo}>
-            <View style={s.reviewNameRow}>
-              {review.season_img && (
-                <Image source={{ uri: review.season_img }} style={s.seasonBadge} resizeMode="contain" />
-              )}
-              <Text style={[s.reviewPlayer, { color: '#457ae5' }]} numberOfLines={1}>{review.player_name}</Text>
-              {getCardLevel(review.title) && (
-                <Text style={[s.cardLevelText, { color: colors.mutedText }]}> · {getCardLevel(review.title)}</Text>
-              )}
-            </View>
-            <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={1}>{trimTitle(review.title)}</Text>
-          </View>
-          <Text style={[s.reviewTime, { color: colors.mutedText }]}>{formatRelativeTime(review.created_at)}</Text>
-        </TouchableOpacity>
-      )) : (
-        <Text style={[{ fontSize: 14, paddingTop: 8 }, { color: colors.bodyText }]}>아직 등록된 선수 평가가 없어요.</Text>
-      )}
+      <TouchableOpacity style={s.reviewRow} onPress={() => router.push('/players' as any)}>
+        <View style={[s.reviewThumb, { backgroundColor: colors.surfaceStrong }]} />
+        <View style={s.reviewInfo}>
+          <Text style={[s.reviewPlayer, { color: '#457ae5' }]}>선수평가</Text>
+          <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={2}>
+            홈 최신 목록은 모바일 웹 테스트에서 제외하고, 선수 검색 후 상세 화면의 리뷰 탭에서 확인합니다.
+          </Text>
+        </View>
+      </TouchableOpacity>
     </View>
   )
 }
 
-// ─── 스타일 ────────────────────────────────────────────────────────────────
-const styles = (c: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: c.pageBg },
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: 20, gap: 12 },
+function HomeControllerUsageCard({
+  colors,
+  usage,
+}: {
+  colors: ReturnType<typeof useTheme>['colors']
+  usage: HomeControllerUsage | null
+}) {
+  const s = styles(colors)
+  const [animatedPercentages, setAnimatedPercentages] = useState<number[]>([])
 
-  // 헤더 — flex h-6 items-center justify-between (h-6 = 24px)
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 24 },
-  logoWrap: { height: 24, justifyContent: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dateLabel: { fontSize: 13, fontWeight: '500', color: c.bodyText },
-  notifBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  useEffect(() => {
+    if (!usage?.items?.length || usage.unavailable) {
+      setAnimatedPercentages([])
+      return
+    }
 
-  // 시즌 카드
-  card: {
-    backgroundColor: c.cardBg, borderRadius: 10,
-    paddingHorizontal: 20, paddingVertical: 16,
-    borderWidth: 1, borderColor: c.cardBorder,
-  },
-  seasonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seasonLabel: { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
-  seasonRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  seasonPeriod: { fontSize: 15, fontWeight: '700', letterSpacing: -0.3 },
-  sep: { fontSize: 13, fontWeight: '500' },
-  countdown: { fontSize: 16, fontWeight: '600' },
+    let frameRef: number | null = null
+    const targets = usage.items.map((item) => Number(item.percentage.replace('%', '').trim()) || 0)
+    const startAt = performance.now()
+    const duration = 1500
 
-  // 퀵액션 — min-h-[88px] px-4 py-5 flex items-center justify-between
-  quickRow: { flexDirection: 'row', gap: 12 },
-  quickCard: {
-    flex: 1, backgroundColor: c.cardBg, borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 20,
-    borderWidth: 1, borderColor: c.cardBorder,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    minHeight: 88,
-  },
-  quickText: { flex: 1 },
-  quickTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, lineHeight: 21 },
+    const tick = (now: number) => {
+      const progress = Math.min((now - startAt) / duration, 1)
+      const easedProgress = 1 - (1 - progress) * (1 - progress)
+      setAnimatedPercentages(targets.map((target) => target * easedProgress))
 
-  // 리뷰
-  reviewRow: { paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  reviewThumb: { width: 48, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0 },
-  reviewInfo: { flex: 1, minWidth: 0 },
-  reviewNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
-  seasonBadge: { width: 20, height: 20 },
-  reviewPlayer: { fontSize: 13, fontWeight: '600' },
-  cardLevelText: { fontSize: 13, fontWeight: '600' },
-  reviewTitle: { fontSize: 13, fontWeight: '600', marginTop: 2 },
-  reviewTime: { fontSize: 11, fontWeight: '500', flexShrink: 0 },
+      if (progress < 1) {
+        frameRef = requestAnimationFrame(tick)
+      }
+    }
 
-  // 배너
-  bannerWrap: { borderRadius: 10, overflow: 'hidden', position: 'relative' },
-  bannerCounter: {
-    position: 'absolute', right: 10, top: 10,
-    backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
-  bannerCounterText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+    frameRef = requestAnimationFrame(tick)
 
-  // 하단 카드
-  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { fontSize: 14, fontWeight: '600' },
-  badge: { borderRadius: 8, paddingHorizontal: 12, height: 28, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-})
+    return () => {
+      if (frameRef !== null) {
+        cancelAnimationFrame(frameRef)
+      }
+    }
+  }, [usage])
+
+  const items = usage?.items ?? [
+    { label: '키보드', percentage: '--%', record: '-승-무-패' },
+    { label: '패드', percentage: '--%', record: '-승-무-패' },
+  ]
+  const rawPercentages = items.map((item) => Number(item.percentage.replace('%', '').trim()) || 0)
+  const maxPercentage = Math.max(...rawPercentages, 0)
+
+  return (
+    <View style={s.card}>
+      <View style={s.controllerHeader}>
+        <Text style={[s.controllerTitle, { color: colors.title }]}>컨트롤러 이용 비중</Text>
+        <Text style={[s.controllerSource, { color: colors.mutedText }]}>데이터센터</Text>
+      </View>
+      <Text style={[s.controllerBasis, { color: colors.mutedText }]}>
+        {usage?.basisLabel ?? '공식 경기 1 ON 1 | 매일 12시 업데이트 상위 1만명 기준'}
+      </Text>
+
+      <View style={s.controllerGrid}>
+        {items.map((item, index) => {
+          const isPrimary = !usage?.unavailable && rawPercentages[index] === maxPercentage
+          const value = animatedPercentages[index] ?? 0
+          const percentage = usage?.unavailable
+            ? '--%'
+            : `${item.percentage.includes('.') ? value.toFixed(1) : Math.round(value)}%`
+
+          return (
+            <View key={item.label} style={[s.controllerPanel, { backgroundColor: colors.surfaceSoft }]}>
+              <Text style={[s.controllerLabel, { color: colors.bodyText }]}>{item.label}</Text>
+              <Text style={[s.controllerPercentage, { color: isPrimary ? '#457ae5' : colors.title }]}>
+                {percentage}
+              </Text>
+              <Text style={[s.controllerRecord, { color: colors.mutedText }]}>{item.record}</Text>
+            </View>
+          )
+        })}
+      </View>
+    </View>
+  )
+}
+
+const styles = (c: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: c.pageBg },
+    scroll: { flex: 1 },
+    content: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
+    main: { gap: 12 },
+
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
+    logoWrap: { height: 24, justifyContent: 'center' },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    dateLabel: { fontSize: 13, fontWeight: '500', color: c.bodyText },
+    notifBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+
+    card: {
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    seasonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+    seasonLabel: { fontSize: 18, fontWeight: '700', letterSpacing: -0.36 },
+    seasonRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    seasonPeriod: { fontSize: 18, fontWeight: '700', letterSpacing: -0.36 },
+    sep: { fontSize: 14, fontWeight: '500' },
+    countdown: { fontSize: 16, fontWeight: '600' },
+
+    quickRow: { flexDirection: 'row', gap: 12 },
+    quickCard: {
+      flex: 1,
+      minHeight: 88,
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 20,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    quickText: { flex: 1 },
+    quickTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, lineHeight: 18 },
+
+    reviewRow: { paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    reviewThumb: { width: 48, height: 48, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },
+    reviewInfo: { flex: 1, minWidth: 0 },
+    reviewNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+    seasonBadge: { width: 20, height: 20 },
+    reviewPlayer: { fontSize: 14, fontWeight: '600' },
+    cardLevelText: { fontSize: 14, fontWeight: '600' },
+    reviewTitle: { marginTop: 4, fontSize: 13, fontWeight: '600', lineHeight: 20 },
+    reviewTime: { fontSize: 11, fontWeight: '500', flexShrink: 0 },
+
+    bannerWrap: { borderRadius: 16, overflow: 'hidden', position: 'relative' },
+    bannerCounter: {
+      position: 'absolute',
+      right: 12,
+      top: 12,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    bannerCounterText: { fontSize: 12, fontWeight: '600', color: '#fff' },
+
+    controllerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+    controllerTitle: { fontSize: 14, fontWeight: '600' },
+    controllerSource: { fontSize: 11, fontWeight: '500' },
+    controllerBasis: { marginTop: 4, fontSize: 12, lineHeight: 20 },
+    controllerGrid: { marginTop: 12, flexDirection: 'row', gap: 12 },
+    controllerPanel: { flex: 1, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 16 },
+    controllerLabel: { fontSize: 13, fontWeight: '600' },
+    controllerPercentage: { marginTop: 4, fontSize: 22, fontWeight: '800', letterSpacing: -0.66 },
+    controllerRecord: { marginTop: 4, fontSize: 12, lineHeight: 20 },
+
+    linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+    cardTitle: { fontSize: 14, fontWeight: '600' },
+    badge: { borderRadius: 8, paddingHorizontal: 12, height: 28, alignItems: 'center', justifyContent: 'center' },
+    badgeText: { fontSize: 12, fontWeight: '600' },
+  })

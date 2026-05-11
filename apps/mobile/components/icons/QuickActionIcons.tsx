@@ -31,7 +31,7 @@ export function PlayerActionIcon({ isDark }: { isDark: boolean }) {
     <View style={s.wrap}>
       <Animated.View style={[s.glowRing, { backgroundColor: glowColor, opacity: glowOpacity }]} />
       <Animated.View style={[s.circle, { backgroundColor: circleBg, transform: [{ scale }] }]}>
-        <PlayerIcon size={26} color={iconColor} />
+        <PlayerIcon size={28} color={iconColor} />
       </Animated.View>
     </View>
   )
@@ -64,7 +64,7 @@ export function AnalysisActionIcon({ isDark }: { isDark: boolean }) {
     <View style={s.wrap}>
       <Animated.View style={[s.glowRing, { backgroundColor: glowColor, opacity: glowOpacity }]} />
       <Animated.View style={[s.circle, { backgroundColor: circleBg, transform: [{ scale }] }]}>
-        <AnalysisIcon size={26} color={iconColor} />
+        <AnalysisIcon size={28} color={iconColor} />
       </Animated.View>
     </View>
   )

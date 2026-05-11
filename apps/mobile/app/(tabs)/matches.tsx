@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Image,
@@ -14,6 +12,7 @@ import { useRouter } from 'expo-router'
 import { MagnifyingGlass, ArrowLeft } from 'phosphor-react-native'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
+import { Text, TextInput } from '@/components/Themed'
 
 type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
 
@@ -441,7 +440,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+    content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
     header: { height: 28, justifyContent: 'center', marginBottom: 4 },
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '85%' },

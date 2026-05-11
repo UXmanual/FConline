@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -12,6 +11,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CaretLeft } from 'phosphor-react-native'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
+import { Text } from '@/components/Themed'
 
 const MATCH_TYPE_NAMES: Record<number, string> = {
   30: '리그 친선',
@@ -226,7 +226,7 @@ export default function MatchDetailScreen() {
 const styles = (c: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: c.pageBg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+  content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 36, marginBottom: 4 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   matchType: { fontSize: 12, fontWeight: '500' },
