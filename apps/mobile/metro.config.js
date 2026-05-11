@@ -13,10 +13,10 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ]
 
-// Deduplicate React to prevent "Invalid hook call" in monorepo
+// 루트 React 단일 인스턴스로 통일 (SSR/client 동일하게)
 config.resolver.extraNodeModules = {
-  react: path.resolve(projectRoot, 'node_modules/react'),
-  'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
+  react: path.resolve(monorepoRoot, 'node_modules/react'),
+  'react-dom': path.resolve(monorepoRoot, 'node_modules/react-dom'),
   'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
 }
 
