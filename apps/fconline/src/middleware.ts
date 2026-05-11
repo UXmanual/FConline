@@ -47,10 +47,20 @@ function rateLimitedResponse() {
   )
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   const method = req.method
   const ip = getIp(req)
+
+  if (method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+  }
 
   try {
     // 글쓰기 (POST)
@@ -96,5 +106,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/community/:path*', '/api/player-reviews/:path*', '/api/nexon/:path*', '/api/contact'],
+  matcher: ['/api/community/:path*', '/api/player-reviews/:path*', '/api/nexon/:path*', '/api/contact', '/api/mypage/:path*', '/api/auth/:path*'],
 }
