@@ -19,11 +19,11 @@ export const Colors = {
     actionBadgeFg: '#457ae5',
     badgeBg: '#f3f6f8',
     navBg: '#ffffff',
-    navBorder: '#e6e8ea',
+    navBorder: '#f0f3f5',
     navShellBg: '#f0f3f5',
-    navActive: '#1e2124',
-    navIcon: '#8a949e',
-    navLabel: '#8a949e',
+    navActive: '#343e4d',
+    navIcon: '#ced3d9',
+    navLabel: '#86919e',
     resultWinSoft: '#f4f8ff',
     resultLossSoft: '#fff5f5',
     resultDrawSoft: '#eef2f5',
@@ -71,4 +71,4 @@ export const Colors = {
   },
 } as const
 
-export type ThemeColors = typeof Colors.light
+export type ThemeColors = (typeof Colors)[keyof typeof Colors]

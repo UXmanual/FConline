@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { MagnifyingGlass, ArrowLeft, CaretDown } from 'phosphor-react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
@@ -70,6 +71,7 @@ function normalizeBodyType(v: string | null): string {
 
 export default function PlayersScreen() {
   const { colors, isDark } = useTheme()
+  const tabBarHeight = useBottomTabBarHeight()
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -167,7 +169,7 @@ export default function PlayersScreen() {
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -175,7 +177,7 @@ export default function PlayersScreen() {
         <View style={s.header}>
           {showResults ? (
             <TouchableOpacity style={s.backBtn} onPress={handleBack}>
-              <ArrowLeft size={18} color={colors.title} weight="bold" />
+              <Feather name="arrow-left" size={18} color={colors.title} />
               <Text style={s.backText}>선수 홈</Text>
             </TouchableOpacity>
           ) : (
@@ -195,7 +197,7 @@ export default function PlayersScreen() {
             onSubmitEditing={handleSearch}
           />
           <TouchableOpacity style={s.searchBtn} onPress={handleSearch} activeOpacity={0.8}>
-            <MagnifyingGlass size={20} color="#fff" weight="bold" />
+            <Feather name="search" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -236,11 +238,11 @@ export default function PlayersScreen() {
                 <View style={s.filterRow}>
                   <TouchableOpacity style={s.picker} onPress={() => setShowSortPicker(true)} activeOpacity={0.8}>
                     <Text style={s.pickerText}>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label}</Text>
-                    <CaretDown size={14} color={colors.bodyText} weight="bold" />
+                    <Feather name="chevron-down" size={14} color={colors.bodyText} />
                   </TouchableOpacity>
                   <TouchableOpacity style={s.picker} onPress={() => setShowLevelPicker(true)} activeOpacity={0.8}>
                     <Text style={s.pickerText}>{strongLevel}강</Text>
-                    <CaretDown size={14} color={colors.bodyText} weight="bold" />
+                    <Feather name="chevron-down" size={14} color={colors.bodyText} />
                   </TouchableOpacity>
                 </View>
 
@@ -252,7 +254,7 @@ export default function PlayersScreen() {
                     strongLevel={strongLevel}
                     isLast={i === sortedPlayers.length - 1}
                     colors={colors}
-                    onPress={() => router.push(`/players/${player.id}` as any)}
+                    onPress={() => router.push(`/(tabs)/players/${player.id}` as any)}
                   />
                 ))}
               </>
@@ -260,7 +262,6 @@ export default function PlayersScreen() {
           </View>
         )}
 
-        <View style={{ height: 20 }} />
       </ScrollView>
 
       <PickerModal
@@ -535,8 +536,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
-    header: { height: 28, justifyContent: 'center', marginBottom: 4 },
+    content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
+    header: { minHeight: 32, justifyContent: 'center' },
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },

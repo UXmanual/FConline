@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  Animated,
   View,
   ScrollView,
   TouchableOpacity,
@@ -7,11 +8,13 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Easing,
   Modal,
   Platform,
 } from 'react-native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { CaretRight, X } from 'phosphor-react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
@@ -52,7 +55,8 @@ const TERMS_CONTENT = [
 ].join('\n\n')
 
 export default function MypageScreen() {
-  const { colors, isDark } = useTheme()
+  const { colors, isDark, toggleThemeMode } = useTheme()
+  const tabBarHeight = useBottomTabBarHeight()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [showTerms, setShowTerms] = useState(false)
@@ -60,8 +64,18 @@ export default function MypageScreen() {
   const [showNicknameEdit, setShowNicknameEdit] = useState(false)
   const [nicknameDraft, setNicknameDraft] = useState('')
   const [nicknameSubmitting, setNicknameSubmitting] = useState(false)
+  const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
 
   const s = styles(colors, isDark)
+
+  useEffect(() => {
+    Animated.timing(themeToggleTranslateX, {
+      toValue: isDark ? 24 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.circle),
+      useNativeDriver: true,
+    }).start()
+  }, [isDark, themeToggleTranslateX])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/mypage/profile`, { credentials: 'include' })
@@ -130,7 +144,7 @@ export default function MypageScreen() {
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 헤더 */}
@@ -180,11 +194,11 @@ export default function MypageScreen() {
               <View style={s.profileActions}>
                 <TouchableOpacity style={s.profileAction} onPress={handleNicknameEdit}>
                   <Text style={[s.profileActionText, { color: colors.bodyText }]}>닉네임 변경</Text>
-                  <CaretRight size={16} color={colors.mutedText} />
+                  <Feather name="chevron-right" size={16} color={colors.mutedText} />
                 </TouchableOpacity>
                 <TouchableOpacity style={s.profileAction} onPress={handleLogout}>
                   <Text style={[s.profileActionText, { color: colors.accentRed }]}>로그아웃</Text>
-                  <CaretRight size={16} color={colors.mutedText} />
+                  <Feather name="chevron-right" size={16} color={colors.mutedText} />
                 </TouchableOpacity>
               </View>
             </>
@@ -222,23 +236,55 @@ export default function MypageScreen() {
           <Text style={[s.sectionTitle, { color: colors.title }]}>앱 정보</Text>
           <View style={{ marginTop: 10 }}>
             <View style={s.settingRow}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <View style={s.settingTitleRow}>
+                  <Text style={[s.settingLabel, { color: colors.bodyText }]}>화면 테마</Text>
+                  <View style={[s.themeBadge, { backgroundColor: colors.actionBadgeBg }]}>
+                    <Text style={[s.themeBadgeText, { color: colors.actionBadgeFg }]}>
+                      {isDark ? '다크' : '라이트'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[s.settingCaption, { color: colors.mutedText }]}>
+                  네이티브 앱 화면 밝기를 전환해요
+                </Text>
+              </View>
+              <TouchableOpacity
+                accessibilityRole="switch"
+                accessibilityState={{ checked: isDark }}
+                activeOpacity={0.85}
+                onPress={toggleThemeMode}
+                style={[
+                  s.themeToggleTrack,
+                  { backgroundColor: isDark ? '#457ae5' : '#d5dbe3' },
+                ]}
+              >
+                <Animated.View
+                  style={[
+                    s.themeToggleThumb,
+                    { transform: [{ translateX: themeToggleTranslateX }] },
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+            <View style={[s.divider, { backgroundColor: colors.divider }]} />
+            <View style={s.settingRow}>
               <Text style={[s.settingLabel, { color: colors.bodyText }]}>버전</Text>
               <Text style={[s.settingValue, { color: colors.mutedText }]}>{APP_VERSION}</Text>
             </View>
             <View style={[s.divider, { backgroundColor: colors.divider }]} />
             <TouchableOpacity style={s.settingRow} onPress={() => setShowTerms(true)}>
               <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
-              <CaretRight size={16} color={colors.mutedText} />
+              <Feather name="chevron-right" size={16} color={colors.mutedText} />
             </TouchableOpacity>
             <View style={[s.divider, { backgroundColor: colors.divider }]} />
             <TouchableOpacity style={s.settingRow} onPress={() => setShowLicenses(true)}>
               <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
-              <CaretRight size={16} color={colors.mutedText} />
+              <Feather name="chevron-right" size={16} color={colors.mutedText} />
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* 이용약관 모달 */}
@@ -247,7 +293,7 @@ export default function MypageScreen() {
           <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
             <Text style={[s.modalTitle, { color: colors.title }]}>이용약관</Text>
             <TouchableOpacity onPress={() => setShowTerms(false)}>
-              <X size={22} color={colors.bodyText} />
+              <Feather name="x" size={22} color={colors.bodyText} />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -262,7 +308,7 @@ export default function MypageScreen() {
           <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
             <Text style={[s.modalTitle, { color: colors.title }]}>오픈소스 라이선스</Text>
             <TouchableOpacity onPress={() => setShowLicenses(false)}>
-              <X size={22} color={colors.bodyText} />
+              <Feather name="x" size={22} color={colors.bodyText} />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
@@ -287,7 +333,7 @@ export default function MypageScreen() {
           <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
             <Text style={[s.modalTitle, { color: colors.title }]}>닉네임 변경</Text>
             <TouchableOpacity onPress={() => setShowNicknameEdit(false)}>
-              <X size={22} color={colors.bodyText} />
+              <Feather name="x" size={22} color={colors.bodyText} />
             </TouchableOpacity>
           </View>
           <View style={{ padding: 20, gap: 12 }}>
@@ -323,8 +369,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
-    sectionHeader: { marginBottom: 4 },
+    content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
+    sectionHeader: { minHeight: 32, justifyContent: 'center' },
     pageTitle: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     card: {
       backgroundColor: c.cardBg,
@@ -364,8 +410,31 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     sectionTitle: { fontSize: 14, fontWeight: '600' },
     guideItem: { fontSize: 13, lineHeight: 20 },
     settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+    settingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
     settingLabel: { fontSize: 14, fontWeight: '500' },
+    settingCaption: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
     settingValue: { fontSize: 14, fontWeight: '500' },
+    themeBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+    themeBadgeText: { fontSize: 11, fontWeight: '700' },
+    themeToggleTrack: {
+      width: 64,
+      height: 28,
+      borderRadius: 999,
+      padding: 3,
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    themeToggleThumb: {
+      width: 34,
+      height: 22,
+      borderRadius: 999,
+      backgroundColor: '#ffffff',
+      shadowColor: '#0f172a',
+      shadowOpacity: 0.18,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
+    },
     modalSafe: { flex: 1 },
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
     modalTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 12 },

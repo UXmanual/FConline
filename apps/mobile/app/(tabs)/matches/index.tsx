@@ -7,9 +7,10 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { MagnifyingGlass, ArrowLeft } from 'phosphor-react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
@@ -96,6 +97,7 @@ function getMatchScore(match: MatchData, myOuid: string) {
 
 export default function MatchesScreen() {
   const { colors, isDark } = useTheme()
+  const tabBarHeight = useBottomTabBarHeight()
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('official1on1')
@@ -200,7 +202,7 @@ export default function MatchesScreen() {
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -208,7 +210,7 @@ export default function MatchesScreen() {
         <View style={s.header}>
           {hasResults ? (
             <TouchableOpacity style={s.backBtn} onPress={handleBack}>
-              <ArrowLeft size={18} color={colors.title} weight="bold" />
+              <Feather name="arrow-left" size={18} color={colors.title} />
               <Text style={s.backText} numberOfLines={1}>{candidate?.nickname || activeQuery || '분석 홈'}</Text>
             </TouchableOpacity>
           ) : (
@@ -245,7 +247,7 @@ export default function MatchesScreen() {
             {searching ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <MagnifyingGlass size={20} color="#fff" weight="bold" />
+              <Feather name="search" size={20} color="#fff" />
             )}
           </TouchableOpacity>
         </View>
@@ -273,13 +275,12 @@ export default function MatchesScreen() {
                 loading={matchLoading}
                 mode={mode}
                 colors={colors}
-                onPress={(matchId) => router.push(`/matches/${candidate.ouid}/${matchId}` as any)}
+                onPress={(matchId) => router.push(`/(tabs)/matches/${candidate.ouid}/${matchId}` as any)}
               />
             )}
           </View>
         )}
 
-        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   )
@@ -440,8 +441,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
-    header: { height: 28, justifyContent: 'center', marginBottom: 4 },
+    content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
+    header: { minHeight: 32, justifyContent: 'center' },
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '85%' },
     backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4, flex: 1 },

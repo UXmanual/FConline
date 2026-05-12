@@ -1,40 +1,47 @@
 import { Tabs } from 'expo-router'
-import { useColorScheme } from 'react-native'
-import { Colors } from '@/constants/Colors'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { HomeIcon, PlayerIcon, AnalysisIcon, CommunityIcon, MypageIcon } from '@/components/icons/NavIcons'
+import { getAppFontFamily } from '@/constants/fonts'
+import { useTheme } from '@/hooks/useTheme'
 
 export default function TabLayout() {
-  const scheme = useColorScheme()
-  const isDark = scheme === 'dark'
-  const c = isDark ? Colors.dark : Colors.light
+  const { colors: c } = useTheme()
+  const insets = useSafeAreaInsets()
+  const baseTabBarHeight = 70
+  const tabBarBottomPadding = Math.max(insets.bottom, 8)
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: true,
+        tabBarLabelPosition: 'below-icon',
         tabBarActiveTintColor: c.navActive,
-        tabBarInactiveTintColor: c.navIcon,
+        tabBarInactiveTintColor: c.navLabel,
         tabBarStyle: {
           backgroundColor: c.navBg,
           borderTopColor: c.navBorder,
           borderTopWidth: 1,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          height: 70,
+          height: baseTabBarHeight + tabBarBottomPadding,
           paddingTop: 0,
           paddingBottom: 0,
+          paddingHorizontal: 20,
           position: 'absolute',
         },
         tabBarItemStyle: {
-          paddingTop: 12,
-          paddingBottom: 12,
+          paddingTop: 10,
+          paddingBottom: tabBarBottomPadding + 2,
         },
         tabBarIconStyle: {
-          marginBottom: 8,
+          marginBottom: 4,
         },
         tabBarLabelStyle: {
+          fontFamily: getAppFontFamily('600'),
           fontSize: 11,
-          fontWeight: '600',
+          lineHeight: 14,
+          marginTop: 2,
         },
       }}
     >
@@ -42,35 +49,40 @@ export default function TabLayout() {
         name="home"
         options={{
           title: '홈',
-          tabBarIcon: ({ color }) => <HomeIcon size={22} color={color} />,
+          unmountOnBlur: true,
+          tabBarIcon: ({ focused }) => <HomeIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
       <Tabs.Screen
         name="players"
         options={{
           title: '선수',
-          tabBarIcon: ({ color }) => <PlayerIcon size={22} color={color} />,
+          unmountOnBlur: true,
+          tabBarIcon: ({ focused }) => <PlayerIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
       <Tabs.Screen
         name="matches"
         options={{
           title: '분석',
-          tabBarIcon: ({ color }) => <AnalysisIcon size={22} color={color} />,
+          unmountOnBlur: true,
+          tabBarIcon: ({ focused }) => <AnalysisIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
       <Tabs.Screen
         name="community"
         options={{
           title: '커뮤니티',
-          tabBarIcon: ({ color }) => <CommunityIcon size={22} color={color} />,
+          unmountOnBlur: true,
+          tabBarIcon: ({ focused }) => <CommunityIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
       <Tabs.Screen
         name="mypage"
         options={{
           title: '마이',
-          tabBarIcon: ({ color }) => <MypageIcon size={22} color={color} />,
+          unmountOnBlur: true,
+          tabBarIcon: ({ focused }) => <MypageIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
     </Tabs>

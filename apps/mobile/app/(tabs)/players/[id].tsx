@@ -10,7 +10,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ArrowLeft, CaretDown } from 'phosphor-react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
@@ -122,7 +122,7 @@ export default function PlayerDetailScreen() {
       >
         {/* 헤더 */}
         <TouchableOpacity style={s.backRow} onPress={() => router.back()}>
-          <ArrowLeft size={18} color={colors.title} weight="bold" />
+          <Feather name="arrow-left" size={18} color={colors.title} />
           <Text style={s.backText} numberOfLines={1}>{playerName || '선수 정보'}</Text>
         </TouchableOpacity>
 
@@ -170,7 +170,7 @@ export default function PlayerDetailScreen() {
               {/* 강화 레벨 선택 */}
               <TouchableOpacity style={[s.levelPicker, { backgroundColor: colors.surfaceSoft, borderColor: colors.cardBorder }]} onPress={() => setShowLevelPicker(true)} activeOpacity={0.8}>
                 <Text style={[s.levelPickerText, { color: colors.title }]}>{strongLevel}강</Text>
-                <CaretDown size={14} color={colors.bodyText} weight="bold" />
+                <Feather name="chevron-down" size={14} color={colors.bodyText} />
               </TouchableOpacity>
 
               {/* 기본 스탯 */}

@@ -10,8 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Heart, ChatCircle, PlusCircle, CaretLeft, CaretRight, X } from 'phosphor-react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
@@ -79,6 +80,7 @@ const badgeStyle = StyleSheet.create({
 
 export default function CommunityScreen() {
   const { colors, isDark } = useTheme()
+  const tabBarHeight = useBottomTabBarHeight()
   const [posts, setPosts] = useState<Post[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
@@ -195,14 +197,14 @@ export default function CommunityScreen() {
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 헤더 */}
         <View style={s.header}>
           <Text style={s.title}>와글와글 커뮤니티</Text>
           <TouchableOpacity style={s.writeBtn} onPress={() => setComposerOpen(true)}>
-            <PlusCircle size={22} color={colors.accentBlue} weight="fill" />
+            <Feather name="plus-circle" size={22} color={colors.accentBlue} />
             <Text style={[s.writeBtnText, { color: colors.accentBlue }]}>글쓰기</Text>
           </TouchableOpacity>
         </View>
@@ -213,7 +215,7 @@ export default function CommunityScreen() {
             <ActivityIndicator size="small" color={colors.accentBlue} />
           </View>
         ) : (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 12 }}>
             {posts.map((post) => (
               <TouchableOpacity
                 key={post.id}
@@ -242,11 +244,11 @@ export default function CommunityScreen() {
                 <Text style={[s.postContent, { color: colors.bodyText }]} numberOfLines={2}>{post.content}</Text>
                 <View style={s.postFooter}>
                   <TouchableOpacity style={s.footerAction} onPress={() => handleLike(post)}>
-                    <Heart size={14} color={post.isLiked ? '#e03131' : colors.mutedText} weight={post.isLiked ? 'fill' : 'regular'} />
+                    <Feather name="heart" size={14} color={post.isLiked ? '#e03131' : colors.mutedText} />
                     <Text style={[s.footerCount, { color: post.isLiked ? '#e03131' : colors.mutedText }]}>{post.likeCount}</Text>
                   </TouchableOpacity>
                   <View style={s.footerAction}>
-                    <ChatCircle size={14} color={colors.mutedText} />
+                    <Feather name="message-circle" size={14} color={colors.mutedText} />
                     <Text style={[s.footerCount, { color: '#457ae5' }]}>{post.commentCount}</Text>
                   </View>
                 </View>
@@ -263,7 +265,7 @@ export default function CommunityScreen() {
               disabled={currentPage <= 1}
               style={[s.pageBtn, currentPage <= 1 && { opacity: 0.3 }]}
             >
-              <CaretLeft size={16} color={colors.bodyText} weight="bold" />
+              <Feather name="chevron-left" size={16} color={colors.bodyText} />
             </TouchableOpacity>
             {visiblePages.map((page) => (
               <TouchableOpacity
@@ -281,12 +283,11 @@ export default function CommunityScreen() {
               disabled={currentPage >= totalPages}
               style={[s.pageBtn, currentPage >= totalPages && { opacity: 0.3 }]}
             >
-              <CaretRight size={16} color={colors.bodyText} weight="bold" />
+              <Feather name="chevron-right" size={16} color={colors.bodyText} />
             </TouchableOpacity>
           </View>
         )}
 
-        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* 게시글 상세 / 댓글 모달 */}
@@ -296,7 +297,7 @@ export default function CommunityScreen() {
             <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
               <Text style={[s.modalTitle, { color: colors.title }]} numberOfLines={1}>{activePost?.title}</Text>
               <TouchableOpacity onPress={handleClosePost}>
-                <X size={22} color={colors.bodyText} />
+                <Feather name="x" size={22} color={colors.bodyText} />
               </TouchableOpacity>
             </View>
 
@@ -395,7 +396,7 @@ export default function CommunityScreen() {
             <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
               <Text style={[s.modalTitle, { color: colors.title }]}>새 글 작성</Text>
               <TouchableOpacity onPress={() => setComposerOpen(false)}>
-                <X size={22} color={colors.bodyText} />
+                <Feather name="x" size={22} color={colors.bodyText} />
               </TouchableOpacity>
             </View>
 
@@ -443,8 +444,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 20, paddingTop: 16, gap: 8 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     writeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     writeBtnText: { fontSize: 14, fontWeight: '600' },

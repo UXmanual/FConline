@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Image,
+  Platform,
   useWindowDimensions,
-  FlatList,
 } from 'react-native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
@@ -27,6 +28,15 @@ const BANNERS = [
   { id: '04', imageUrl: `${API_BASE}/banners/home-main-banner04@3x.png`, href: null },
 ]
 
+// 무한 루프: [마지막 클론, ...원본, 첫번째 클론]
+const LOOP_DATA = [
+  { ...BANNERS[BANNERS.length - 1], _key: 'clone-last' },
+  ...BANNERS.map((b) => ({ ...b, _key: b.id })),
+  { ...BANNERS[0], _key: 'clone-first' },
+]
+const LOOP_REAL_FIRST = 1
+const LOOP_REAL_LAST = BANNERS.length
+
 type ControllerUsageItem = {
   label: string
   percentage: string
@@ -40,24 +50,19 @@ type HomeControllerUsage = {
   unavailable?: boolean
 }
 
+function getKstNow() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000)
+}
+
 function getKstToday() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const year = Number(parts.find((part) => part.type === 'year')?.value ?? 0)
-  const month = Number(parts.find((part) => part.type === 'month')?.value ?? 1)
-  const day = Number(parts.find((part) => part.type === 'day')?.value ?? 1)
-  return new Date(year, month - 1, day)
+  const kst = getKstNow()
+  return new Date(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate())
 }
 
 function getKoreaDateLabel() {
   const weekdays = ['일', '월', '화', '수', '목', '금', '토']
-  const now = new Date()
-  const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
-  return `${kst.getFullYear()}.${kst.getMonth() + 1}.${kst.getDate()} ${weekdays[kst.getDay()] ?? ''}`
+  const kst = getKstNow()
+  return `${kst.getUTCFullYear()}.${kst.getUTCMonth() + 1}.${kst.getUTCDate()} ${weekdays[kst.getUTCDay()] ?? ''}`
 }
 
 function addDays(date: Date, days: number) {
@@ -161,8 +166,25 @@ function CountdownNumber({ target, isUrgent }: { target: number; isUrgent: boole
   )
 }
 
+// 웹에서 CSS scroll-snap 애니메이션을 bypass해 즉시 점프
+function bannerScrollTo(ref: ScrollView | null, x: number) {
+  if (!ref) return
+  if (Platform.OS === 'web') {
+    const node = (ref as any).getScrollableNode?.() as HTMLElement | null
+    if (node) {
+      const prev = node.style.scrollBehavior
+      node.style.scrollBehavior = 'auto'
+      node.scrollLeft = x
+      requestAnimationFrame(() => { node.style.scrollBehavior = prev })
+      return
+    }
+  }
+  ref.scrollTo({ x, animated: false })
+}
+
 export default function HomeScreen() {
   const { colors, isDark } = useTheme()
+  const tabBarHeight = useBottomTabBarHeight()
   const router = useRouter()
   const { width: screenWidth } = useWindowDimensions()
   const { label, period, daysLeft } = getSeasonInfo(getKstToday())
@@ -170,26 +192,54 @@ export default function HomeScreen() {
   const s = styles(colors)
   const bannerWidth = screenWidth - 40
   const bannerHeight = bannerWidth / BANNER_ASPECT
-  const [bannerIndex, setBannerIndex] = useState(0)
   const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
-  const bannerRef = useRef<FlatList>(null)
+  const bannerRef = useRef<ScrollView>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loopIdxRef = useRef(LOOP_REAL_FIRST)
+  const bannerWidthRef = useRef(bannerWidth)
+  const counterSetterRef = useRef<((n: number) => void) | null>(null)
+  const handleCounterMount = useCallback((setter: (n: number) => void) => {
+    counterSetterRef.current = setter
+  }, [])
+  useEffect(() => { bannerWidthRef.current = bannerWidth }, [bannerWidth])
 
   useEffect(() => {
-    autoRef.current = setInterval(() => {
-      setBannerIndex((prev) => {
-        const next = (prev + 1) % BANNERS.length
-        bannerRef.current?.scrollToIndex({ index: next, animated: true })
-        return next
-      })
-    }, 4500)
-
-    return () => {
-      if (autoRef.current) {
-        clearInterval(autoRef.current)
-      }
-    }
+    const id = requestAnimationFrame(() => {
+      bannerScrollTo(bannerRef.current, bannerWidthRef.current * LOOP_REAL_FIRST)
+    })
+    return () => cancelAnimationFrame(id)
   }, [])
+
+  const jumpTo = useCallback((idx: number) => {
+    loopIdxRef.current = idx
+    bannerScrollTo(bannerRef.current, bannerWidthRef.current * idx)
+  }, [])
+
+  const startAutoPlay = useCallback(() => {
+    if (autoRef.current) clearInterval(autoRef.current)
+    autoRef.current = setInterval(() => {
+      const bw = bannerWidthRef.current
+      const next = loopIdxRef.current + 1
+      loopIdxRef.current = next
+      bannerRef.current?.scrollTo({ x: bw * next, animated: true })
+      counterSetterRef.current?.(next >= LOOP_DATA.length - 1 ? 0 : next - 1)
+      if (next === LOOP_DATA.length - 1) {
+        if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current)
+        jumpTimerRef.current = setTimeout(() => {
+          jumpTo(LOOP_REAL_FIRST)
+          counterSetterRef.current?.(0)
+        }, 350)
+      }
+    }, 4500)
+  }, [jumpTo])
+
+  useEffect(() => {
+    startAutoPlay()
+    return () => {
+      if (autoRef.current) clearInterval(autoRef.current)
+    }
+  }, [startAutoPlay])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/home/controller-usage`)
@@ -204,7 +254,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
-      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]} showsVerticalScrollIndicator={false}>
         <View style={s.header}>
           <View style={s.logoWrap}>
             <AppLogo isDark={isDark} />
@@ -253,48 +303,62 @@ export default function HomeScreen() {
           <LatestReviews colors={colors} router={router} />
 
           <View style={[s.bannerWrap, { height: bannerHeight }]}>
-            <FlatList
+            <ScrollView
               ref={bannerRef}
-              data={BANNERS}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id}
-              onMomentumScrollEnd={(event) => {
-                const index = Math.round(event.nativeEvent.contentOffset.x / bannerWidth)
-                setBannerIndex(index)
-
-                if (autoRef.current) {
-                  clearInterval(autoRef.current)
+              bounces={false}
+              overScrollMode="never"
+              onMomentumScrollEnd={(e) => {
+                if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current)
+                const bw = bannerWidthRef.current
+                const idx = Math.round(e.nativeEvent.contentOffset.x / bw)
+                if (idx === 0) {
+                  jumpTo(LOOP_REAL_LAST)
+                  counterSetterRef.current?.(BANNERS.length - 1)
+                } else if (idx === LOOP_DATA.length - 1) {
+                  jumpTo(LOOP_REAL_FIRST)
+                  counterSetterRef.current?.(0)
+                } else {
+                  loopIdxRef.current = idx
+                  counterSetterRef.current?.(idx - 1)
                 }
-
-                autoRef.current = setInterval(() => {
-                  setBannerIndex((prev) => {
-                    const next = (prev + 1) % BANNERS.length
-                    bannerRef.current?.scrollToIndex({ index: next, animated: true })
-                    return next
-                  })
-                }, 4500)
+                startAutoPlay()
               }}
-              renderItem={({ item }) => (
+              onScrollEndDrag={(e) => {
+                // web에서 momentum 없이 끝나는 경우 대응
+                if (Platform.OS !== 'web') return
+                const bw = bannerWidthRef.current
+                const idx = Math.round(e.nativeEvent.contentOffset.x / bw)
+                if (idx === 0) {
+                  jumpTo(LOOP_REAL_LAST)
+                  counterSetterRef.current?.(BANNERS.length - 1)
+                  startAutoPlay()
+                } else if (idx === LOOP_DATA.length - 1) {
+                  jumpTo(LOOP_REAL_FIRST)
+                  counterSetterRef.current?.(0)
+                  startAutoPlay()
+                }
+              }}
+            >
+              {LOOP_DATA.map((item) => (
                 <TouchableOpacity
-                  style={{
-                    width: bannerWidth,
-                    height: bannerHeight,
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                    backgroundColor: colors.surfaceSoft,
-                  }}
+                  key={item._key}
+                  style={{ width: bannerWidth, height: bannerHeight, backgroundColor: colors.surfaceSoft }}
                   onPress={() => item.href && router.push(item.href as any)}
                   activeOpacity={item.href ? 0.8 : 1}
                 >
                   <Image source={{ uri: item.imageUrl }} style={{ width: bannerWidth, height: bannerHeight }} resizeMode="cover" />
                 </TouchableOpacity>
-              )}
+              ))}
+            </ScrollView>
+            <BannerCounter
+              total={BANNERS.length}
+              onMount={handleCounterMount}
+              counterStyle={s.bannerCounter}
+              textStyle={s.bannerCounterText}
             />
-            <View style={s.bannerCounter}>
-              <Text style={s.bannerCounterText}>{bannerIndex + 1}/{BANNERS.length}</Text>
-            </View>
           </View>
 
           <HomeControllerUsageCard colors={colors} usage={controllerUsage} />
@@ -318,9 +382,28 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
+  )
+}
+
+function BannerCounter({
+  total,
+  onMount,
+  counterStyle,
+  textStyle,
+}: {
+  total: number
+  onMount: (setter: (n: number) => void) => void
+  counterStyle: any
+  textStyle: any
+}) {
+  const [idx, setIdx] = useState(0)
+  useEffect(() => { onMount(setIdx) }, [onMount])
+  return (
+    <View style={counterStyle}>
+      <Text style={textStyle}>{idx + 1}/{total}</Text>
+    </View>
   )
 }
 
@@ -426,7 +509,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
+    content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
     main: { gap: 12 },
 
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
@@ -465,8 +548,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
       justifyContent: 'space-between',
       gap: 12,
     },
-    quickText: { flex: 1 },
-    quickTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, lineHeight: 18 },
+    quickText: { flex: 1, gap: 4 },
+    quickTitle: { fontSize: 15, fontWeight: '500', letterSpacing: -0.3, lineHeight: 18 },
 
     reviewRow: { paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
     reviewThumb: { width: 48, height: 48, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },

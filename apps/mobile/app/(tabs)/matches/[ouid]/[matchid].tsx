@@ -8,7 +8,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { CaretLeft } from 'phosphor-react-native'
+import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
@@ -128,7 +128,7 @@ export default function MatchDetailScreen() {
         {/* 헤더 */}
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <CaretLeft size={20} color={colors.title} weight="bold" />
+            <Feather name="chevron-left" size={20} color={colors.title} />
           </TouchableOpacity>
           {match && (
             <View>
