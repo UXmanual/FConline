@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   ScrollView,
@@ -7,10 +7,13 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Keyboard,
+  TextInput as RNTextInput,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
@@ -54,12 +57,38 @@ function getSeasonId(spid: number) {
   return Math.floor(spid / 1000000)
 }
 
-function formatPrice(prices: Record<number, string>, level: number): string {
-  return prices[level] ?? '-'
+/**
+ * 원화 금액 문자열을 한국식 단위(경/조/억/만)로 축약합니다.
+ * @example "20000000000000000" → "2경"
+ * @example "2790000000000" → "2조 7900억"
+ * @example "150000000000" → "1500억"
+ */
+function abbreviateKRW(priceStr: string): string {
+  if (/[경조억만]/.test(priceStr)) return priceStr // 이미 축약된 값
+  const num = parseInt(priceStr.replace(/,/g, ''), 10)
+  if (isNaN(num) || num <= 0) return '-'
+  const gyeong = Math.floor(num / 10_000_000_000_000_000)
+  const jo = Math.floor((num % 10_000_000_000_000_000) / 1_000_000_000_000)
+  const eok = Math.floor((num % 1_000_000_000_000) / 100_000_000)
+  const man = Math.floor((num % 100_000_000) / 10_000)
+  const parts: string[] = []
+  if (gyeong > 0) parts.push(`${gyeong}경`)
+  if (jo > 0) parts.push(`${jo}조`)
+  if (eok > 0) parts.push(`${eok}억`)
+  if (parts.length === 0 && man > 0) parts.push(`${man}만`)
+  return parts.length > 0 ? parts.join(' ') : priceStr
 }
 
+/** 강화 레벨별 금액을 축약 단위로 반환합니다. */
+function formatPrice(prices: Record<number, string>, level: number): string {
+  const raw = prices[level]
+  if (!raw || raw === '-') return '-'
+  return abbreviateKRW(raw)
+}
+
+
 function getStrongPoint(level: number): number {
-  const table = [0, 0, 1, 2, 3, 5, 7, 10, 13, 17, 21, 25, 29, 33]
+  const table = [0, 3, 4, 5, 7, 9, 11, 14, 18, 20, 22, 24, 27, 30]
   return table[level] ?? 0
 }
 
@@ -86,8 +115,34 @@ export default function PlayersScreen() {
   const [popularLoading, setPopularLoading] = useState(true)
   const [showSortPicker, setShowSortPicker] = useState(false)
   const [showLevelPicker, setShowLevelPicker] = useState(false)
+  const [searchFocused, setSearchFocused] = useState(false)
 
   const s = styles(colors, isDark)
+  const scrollRef = useRef<ScrollView>(null)
+  const searchInputRef = useRef<RNTextInput>(null)
+  useScrollToTop(scrollRef)
+
+  const performSearch = useCallback((term: string) => {
+    setSearchQuery(term)
+    setLoading(true)
+    fetch(`${API_BASE}/api/nexon/players?q=${encodeURIComponent(term)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setPlayers(Array.isArray(data.players) ? data.players : [])
+        setSeasons(Array.isArray(data.seasons) ? data.seasons : [])
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+      searchInputRef.current?.blur()
+      Keyboard.dismiss()
+      setSearchFocused(false)
+    }, []),
+  )
 
   useEffect(() => {
     fetch(`${API_BASE}/api/nexon/popular-players`)
@@ -101,30 +156,19 @@ export default function PlayersScreen() {
       .finally(() => setPopularLoading(false))
   }, [])
 
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setPlayers([])
-      setSeasons([])
-      return
-    }
-    setLoading(true)
-    fetch(`${API_BASE}/api/nexon/players?q=${encodeURIComponent(searchQuery)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setPlayers(Array.isArray(data.players) ? data.players : [])
-        setSeasons(Array.isArray(data.seasons) ? data.seasons : [])
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [searchQuery])
-
   const handleSearch = () => {
     const trimmed = query.trim()
     if (!trimmed) return
-    setSearchQuery(trimmed)
+    searchInputRef.current?.blur()
+    Keyboard.dismiss()
+    setSearchFocused(false)
+    performSearch(trimmed)
   }
 
   const handleBack = () => {
+    searchInputRef.current?.blur()
+    Keyboard.dismiss()
+    setSearchFocused(false)
     setQuery('')
     setSearchQuery('')
     setPlayers([])
@@ -134,8 +178,21 @@ export default function PlayersScreen() {
   const handlePopularSelect = (name: string) => {
     const trimmed = name.trim()
     if (!trimmed) return
+    searchInputRef.current?.blur()
+    Keyboard.dismiss()
+    setSearchFocused(false)
     setQuery(trimmed)
-    setSearchQuery(trimmed)
+    performSearch(trimmed)
+  }
+
+  const handleOpenPlayerDetail = (playerId: number) => {
+    searchInputRef.current?.blur()
+    Keyboard.dismiss()
+    setSearchFocused(false)
+    router.push({
+      pathname: '/(tabs)/players/[id]',
+      params: { id: String(playerId), level: String(strongLevel) },
+    } as any)
   }
 
   const getSortedPlayers = (): Player[] => {
@@ -168,6 +225,7 @@ export default function PlayersScreen() {
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
@@ -186,18 +244,21 @@ export default function PlayersScreen() {
         </View>
 
         {/* 검색바 */}
-        <View style={s.searchRow}>
+        <View style={[s.searchBar, searchFocused && s.searchBarFocused]}>
           <TextInput
+            ref={searchInputRef}
             style={s.searchInput}
             value={query}
             onChangeText={setQuery}
-            placeholder="선수 이름 검색"
+            placeholder="선수 이름을 입력해주세요"
             placeholderTextColor={colors.inputPlaceholder}
             returnKeyType="search"
             onSubmitEditing={handleSearch}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
-          <TouchableOpacity style={s.searchBtn} onPress={handleSearch} activeOpacity={0.8}>
-            <Feather name="search" size={20} color="#fff" />
+          <TouchableOpacity style={s.searchIconBtn} onPress={handleSearch} activeOpacity={0.7} hitSlop={8}>
+            <Feather name="search" size={20} color={searchFocused ? '#457ae5' : colors.mutedText} />
           </TouchableOpacity>
         </View>
 
@@ -254,7 +315,7 @@ export default function PlayersScreen() {
                     strongLevel={strongLevel}
                     isLast={i === sortedPlayers.length - 1}
                     colors={colors}
-                    onPress={() => router.push(`/(tabs)/players/${player.id}` as any)}
+                    onPress={() => handleOpenPlayerDetail(player.id)}
                   />
                 ))}
               </>
@@ -304,8 +365,8 @@ function PositionCard({
     <View style={[cardStyle.card, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
       <View style={cardStyle.posHeader}>
         <Text style={cardStyle.posTitle}>
-          <Text style={{ color: badgeColors.fg }}>{badge}</Text>
-          <Text style={{ color: colors.title }}>{title.slice(badge.length)}</Text>
+          <Text style={[cardStyle.posTitlePart, { color: badgeColors.fg }]}>{badge}</Text>
+          <Text style={[cardStyle.posTitlePart, { color: colors.title }]}>{title.slice(badge.length)}</Text>
         </Text>
         <View style={[cardStyle.posBadge, { backgroundColor: badgeColors.bg }]}>
           <Text style={[cardStyle.posBadgeText, { color: badgeColors.fg }]}>{badge}</Text>
@@ -366,9 +427,10 @@ function PositionCard({
 }
 
 const cardStyle = StyleSheet.create({
-  card: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 16, borderWidth: 1 },
+  card: { borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, borderWidth: 1 },
   posHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  posTitle: { fontSize: 14, fontWeight: '600' },
+  posTitle: { fontSize: 14 },
+  posTitlePart: { fontSize: 14, fontWeight: '600' },
   posBadge: { height: 28, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   posBadgeText: { fontSize: 12, fontWeight: '600' },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
@@ -434,29 +496,48 @@ function PlayerRow({
 
         {detail && (
           <View style={playerRowStyle.stats}>
-            <Text style={{ fontSize: 11, color: colors.bodyText }}>{strongLevel}강</Text>
-            <Text style={{ fontSize: 11, color: colors.mutedText }}>|</Text>
-            <Text style={{ fontSize: 11, color: colors.bodyText }}>
-              {'포지션 '}
-              <Text style={{ color: '#f64f5e', fontWeight: '600' }}>{detail.position ?? '-'}</Text>
+            <Text style={[playerRowStyle.statVal]}>{strongLevel}강</Text>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
+              {'주포지션 '}
+              <Text style={playerRowStyle.statVal}>{detail.position ?? '-'}</Text>
             </Text>
-            <Text style={{ fontSize: 11, color: colors.mutedText }}>|</Text>
-            <Text style={{ fontSize: 11, color: colors.bodyText }}>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
               {'오버롤 '}
-              <Text style={{ color: '#f64f5e', fontWeight: '600' }}>{currentOverall ?? '-'}</Text>
+              <Text style={playerRowStyle.statVal}>{currentOverall ?? '-'}</Text>
             </Text>
-            <Text style={{ fontSize: 11, color: colors.mutedText }}>|</Text>
-            <Text style={{ fontSize: 11, color: colors.bodyText }}>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
               {'급여 '}
-              <Text style={{ color: '#f64f5e', fontWeight: '600' }}>{detail.pay ?? '-'}</Text>
+              <Text style={playerRowStyle.statVal}>{detail.pay ?? '-'}</Text>
             </Text>
-            <Text style={{ fontSize: 11, color: colors.mutedText }}>|</Text>
-            <Text style={{ fontSize: 11, color: colors.bodyText }}>
-              {'금액 '}
-              <Text style={{ color: '#f64f5e', fontWeight: '600' }}>{formatPrice(detail.prices, strongLevel)}</Text>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
+              {'현재 금액 '}
+              <Text style={playerRowStyle.statVal}>{formatPrice(detail.prices, strongLevel)}</Text>
             </Text>
-            <Text style={{ fontSize: 11, color: colors.mutedText }}>|</Text>
-            <Text style={{ fontSize: 11, color: colors.bodyText }}>체형 {normalizeBodyType(detail.bodyType)}</Text>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
+              {'키 '}
+              <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>{detail.height != null ? `${detail.height}cm` : '-'}</Text>
+            </Text>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
+              {'몸무게 '}
+              <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>{detail.weight != null ? `${detail.weight}kg` : '-'}</Text>
+            </Text>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
+              {'체형 '}{normalizeBodyType(detail.bodyType)}
+            </Text>
+            <Text style={[playerRowStyle.statSep, { color: colors.mutedText }]}>|</Text>
+            <Text style={[playerRowStyle.statItem, { color: colors.bodyText }]}>
+              {'왼발 '}
+              <Text style={playerRowStyle.statVal}>{detail.leftFoot ?? '-'}</Text>
+              {' 오른발 '}
+              <Text style={playerRowStyle.statVal}>{detail.rightFoot ?? '-'}</Text>
+            </Text>
           </View>
         )}
       </View>
@@ -472,6 +553,9 @@ const playerRowStyle = StyleSheet.create({
   name: { fontSize: 13, fontWeight: '600' },
   reviewCount: { fontSize: 11, fontWeight: '500' },
   stats: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  statItem: { fontSize: 11 },
+  statSep: { fontSize: 11 },
+  statVal: { fontSize: 11, fontWeight: '600', color: '#f64f5e' },
 })
 
 function PickerModal({
@@ -524,7 +608,7 @@ const pickerStyle = StyleSheet.create({
   sheet: {
     width: '100%',
     maxWidth: 320,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -541,30 +625,37 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
-    searchRow: { flexDirection: 'row', gap: 8 },
-    searchInput: {
-      flex: 1,
-      height: 44,
-      backgroundColor: c.inputBg,
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#fff',
       borderWidth: 1,
       borderColor: c.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 14,
+      borderRadius: 16,
+      paddingLeft: 16,
+      paddingRight: 6,
+      height: 52,
+    },
+    searchBarFocused: {
+      borderColor: '#457ae5',
+      borderWidth: 1.5,
+    },
+    searchInput: {
+      flex: 1,
       fontSize: 15,
       color: c.title,
+      height: '100%',
     },
-    searchBtn: {
-      width: 44,
-      height: 44,
-      backgroundColor: '#457ae5',
-      borderRadius: 10,
+    searchIconBtn: {
+      width: 40,
+      height: 40,
       alignItems: 'center',
       justifyContent: 'center',
     },
     guideText: { fontSize: 11, fontWeight: '500', color: c.mutedText },
     card: {
       backgroundColor: c.cardBg,
-      borderRadius: 10,
+      borderRadius: 16,
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderWidth: 1,

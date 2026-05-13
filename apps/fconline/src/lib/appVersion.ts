@@ -3,12 +3,17 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.1.5': '2026-05-13T10:15:00+09:00',
   '0.1.4': '2026-05-12T14:20:00+09:00',
   '0.1.3': '2026-05-11T22:30:00+09:00',
   '0.1.1': '2026-05-11T00:00:00+09:00',
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.1.5': [
+    '운영 홈에서 최신 선수평가 3건을 바로 노출할 수 있도록 /api/home/latest-player-reviews 응답 경로를 추가했습니다.',
+    '선수평가 홈 카드에서 선수 상세의 선수 평가 탭으로 바로 이동할 수 있게 최신 평가 메타데이터와 강화 단계 정보를 함께 제공하도록 정리했습니다.',
+  ],
   '0.1.4': [
     '모바일 홈의 컨트롤러 이용 비중이 운영 API에서 직접 데이터를 받을 수 있도록 전용 응답 경로를 추가했습니다.',
     '넥슨 데이터센터 파싱 결과를 재사용하는 /api/home/controller-usage 엔드포인트를 운영 서버 기준으로 제공하도록 정리했습니다.',

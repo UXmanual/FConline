@@ -11,6 +11,7 @@ import {
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import Svg, { Path } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
@@ -48,6 +49,19 @@ type HomeControllerUsage = {
   basisLabel: string
   sourceUrl: string
   unavailable?: boolean
+}
+
+type LatestPlayerReviewItem = {
+  id: string
+  playerId: string
+  playerName: string
+  nickname: string
+  seasonImg: string | null
+  title: string
+  trimmedTitle: string
+  cardLevel: number | null
+  createdAt: string
+  createdAtLabel: string
 }
 
 function getKstNow() {
@@ -193,17 +207,24 @@ export default function HomeScreen() {
   const bannerWidth = screenWidth - 40
   const bannerHeight = bannerWidth / BANNER_ASPECT
   const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
+  const [latestReviews, setLatestReviews] = useState<LatestPlayerReviewItem[]>([])
   const bannerRef = useRef<ScrollView>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loopIdxRef = useRef(LOOP_REAL_FIRST)
   const bannerWidthRef = useRef(bannerWidth)
   const counterSetterRef = useRef<((n: number) => void) | null>(null)
+  const scrollRef = useRef<ScrollView>(null)
+  useScrollToTop(scrollRef)
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+    }, []),
+  )
   const handleCounterMount = useCallback((setter: (n: number) => void) => {
     counterSetterRef.current = setter
   }, [])
   useEffect(() => { bannerWidthRef.current = bannerWidth }, [bannerWidth])
-
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       bannerScrollTo(bannerRef.current, bannerWidthRef.current * LOOP_REAL_FIRST)
@@ -252,9 +273,18 @@ export default function HomeScreen() {
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    fetch(`${API_BASE}/api/home/latest-player-reviews`)
+      .then((response) => response.json())
+      .then((data) => {
+        setLatestReviews(Array.isArray(data?.items) ? data.items : [])
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
-      <ScrollView style={s.scroll} contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={s.scroll} contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]} showsVerticalScrollIndicator={false}>
         <View style={s.header}>
           <View style={s.logoWrap}>
             <AppLogo isDark={isDark} />
@@ -300,7 +330,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <LatestReviews colors={colors} router={router} />
+          <LatestReviews colors={colors} router={router} reviews={latestReviews} />
 
           <View style={[s.bannerWrap, { height: bannerHeight }]}>
             <ScrollView
@@ -365,7 +395,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity style={s.card} onPress={() => router.push('/community')}>
             <View style={s.linkRow}>
-              <Text style={[s.cardTitle, { color: colors.title }]}>왁글왁글 커뮤니티 참여</Text>
+              <Text style={[s.cardTitle, { color: colors.title }]}>와글와글 커뮤니티 ⌨️</Text>
               <View style={[s.badge, { backgroundColor: colors.actionBadgeBg }]}>
                 <Text style={[s.badgeText, { color: colors.actionBadgeFg }]}>참여하기</Text>
               </View>
@@ -374,7 +404,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity style={s.card} onPress={() => router.push('/mypage')}>
             <View style={s.linkRow}>
-              <Text style={[s.cardTitle, { color: colors.title }]}>화면 설정 바로가기</Text>
+              <Text style={[s.cardTitle, { color: colors.title }]}>화면 설정 ⚙️</Text>
               <View style={[s.badge, { backgroundColor: colors.actionBadgeBg }]}>
                 <Text style={[s.badgeText, { color: colors.actionBadgeFg }]}>설정하기</Text>
               </View>
@@ -407,20 +437,71 @@ function BannerCounter({
   )
 }
 
-function LatestReviews({ colors, router }: { colors: ReturnType<typeof useTheme>['colors']; router: any }) {
+function LatestReviews({
+  colors,
+  router,
+  reviews,
+}: {
+  colors: ReturnType<typeof useTheme>['colors']
+  router: any
+  reviews: LatestPlayerReviewItem[]
+}) {
   const s = styles(colors)
 
   return (
     <View style={s.card}>
-      <TouchableOpacity style={s.reviewRow} onPress={() => router.push('/players' as any)}>
-        <View style={[s.reviewThumb, { backgroundColor: colors.surfaceStrong }]} />
-        <View style={s.reviewInfo}>
-          <Text style={[s.reviewPlayer, { color: '#457ae5' }]}>선수평가</Text>
-          <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={2}>
-            홈 최신 목록은 모바일 웹 테스트에서 제외하고, 선수 검색 후 상세 화면의 리뷰 탭에서 확인합니다.
-          </Text>
-        </View>
-      </TouchableOpacity>
+      {reviews.length > 0 ? (
+        reviews.map((review, index) => (
+          <TouchableOpacity
+            key={review.id}
+            style={[
+              s.reviewRow,
+              index < reviews.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+            ]}
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/players/[id]',
+                params: {
+                  id: String(review.playerId),
+                  tab: 'review',
+                  level: review.cardLevel ? String(review.cardLevel) : '1',
+                },
+              } as any)
+            }
+            activeOpacity={0.8}
+          >
+            <View style={[s.reviewThumb, { backgroundColor: colors.surfaceStrong }]}>
+              <Image
+                source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${review.playerId}.png` }}
+                style={{ width: 48, height: 48 }}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={s.reviewInfo}>
+              <View style={s.reviewNameRow}>
+                {review.seasonImg ? (
+                  <Image source={{ uri: review.seasonImg }} style={s.seasonBadge} resizeMode="contain" />
+                ) : null}
+                <Text style={[s.reviewPlayer, { color: '#457ae5' }]} numberOfLines={1}>
+                  {review.playerName}
+                </Text>
+                {review.cardLevel ? (
+                  <>
+                    <Text style={[s.reviewMetaDot, { color: colors.mutedText }]}>·</Text>
+                    <Text style={[s.cardLevelText, { color: colors.title }]}>{review.cardLevel}카</Text>
+                  </>
+                ) : null}
+              </View>
+              <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={1}>
+                {review.trimmedTitle}
+              </Text>
+            </View>
+            <Text style={[s.reviewTime, { color: colors.mutedText }]}>{review.createdAtLabel}</Text>
+          </TouchableOpacity>
+        ))
+      ) : (
+        <Text style={[s.emptyReviewText, { color: colors.bodyText }]}>아직 등록된 선수 평가가 없어요.</Text>
+      )}
     </View>
   )
 }
@@ -475,8 +556,7 @@ function HomeControllerUsageCard({
   return (
     <View style={s.card}>
       <View style={s.controllerHeader}>
-        <Text style={[s.controllerTitle, { color: colors.title }]}>컨트롤러 이용 비중</Text>
-        <Text style={[s.controllerSource, { color: colors.mutedText }]}>데이터센터</Text>
+        <Text style={[s.controllerTitle, { color: colors.title }]}>컨트롤러 이용 비중 🎮</Text>
       </View>
       <Text style={[s.controllerBasis, { color: colors.mutedText }]}>
         {usage?.basisLabel ?? '공식 경기 1 ON 1 | 매일 12시 업데이트 상위 1만명 기준'}
@@ -557,9 +637,11 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     reviewNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
     seasonBadge: { width: 20, height: 20 },
     reviewPlayer: { fontSize: 14, fontWeight: '600' },
+    reviewMetaDot: { fontSize: 13, fontWeight: '500' },
     cardLevelText: { fontSize: 14, fontWeight: '600' },
     reviewTitle: { marginTop: 4, fontSize: 13, fontWeight: '600', lineHeight: 20 },
     reviewTime: { fontSize: 11, fontWeight: '500', flexShrink: 0 },
+    emptyReviewText: { paddingTop: 8, fontSize: 14, fontWeight: '500' },
 
     bannerWrap: { borderRadius: 16, overflow: 'hidden', position: 'relative' },
     bannerCounter: {
