@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.1.6': '2026-05-13T16:35:00+09:00',
   '0.1.5': '2026-05-13T10:15:00+09:00',
   '0.1.4': '2026-05-12T14:20:00+09:00',
   '0.1.3': '2026-05-11T22:30:00+09:00',
@@ -10,6 +11,11 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.1.6': [
+    '모바일 선수 상세의 강화 단계, 총 능력치, 선수 평가 탭, 다크모드 간격과 토글 스타일을 현재 TWA 기준에 맞춰 정리했습니다.',
+    '모바일 홈과 마이페이지 카드 여백, 선수평가 목록 간격, 다크모드 및 정책/버전 카드 분리 등 화면 리듬을 일관되게 조정했습니다.',
+    '공유용 OG 이미지를 최신 시안으로 교체했습니다.',
+  ],
   '0.1.5': [
     '운영 홈에서 최신 선수평가 3건을 바로 노출할 수 있도록 /api/home/latest-player-reviews 응답 경로를 추가했습니다.',
     '선수평가 홈 카드에서 선수 상세의 선수 평가 탭으로 바로 이동할 수 있게 최신 평가 메타데이터와 강화 단계 정보를 함께 제공하도록 정리했습니다.',

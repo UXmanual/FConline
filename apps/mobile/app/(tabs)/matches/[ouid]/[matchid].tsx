@@ -232,7 +232,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   matchType: { fontSize: 12, fontWeight: '500' },
   matchDate: { fontSize: 12, fontWeight: '500', marginTop: 1 },
   loadingWrap: { paddingVertical: 48, alignItems: 'center', justifyContent: 'center' },
-  card: { backgroundColor: c.cardBg, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 16, borderWidth: 1, borderColor: c.cardBorder },
+  card: { backgroundColor: c.cardBg, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, borderWidth: 1, borderColor: c.cardBorder },
   scoreGrid: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   scoreTeam: { flex: 1, alignItems: 'center', gap: 4 },
   resultBadge: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 },

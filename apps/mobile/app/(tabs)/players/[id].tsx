@@ -124,12 +124,18 @@ function normalizeBodyType(v: string | null) {
 }
 
 /** 포지션에 따른 배지 색상 */
-function getPositionColors(position: string | null): { bg: string; fg: string } {
-  if (!position) return { bg: '#e8edf5', fg: '#456' }
-  if (['ST','CF','LF','RF','LW','RW'].includes(position)) return { bg: '#fdeaea', fg: '#f64f5e' }
-  if (['CAM','CM','CDM','LAM','RAM','LM','RM'].includes(position)) return { bg: '#e6f4ee', fg: '#2f8f57' }
-  if (['CB','LB','RB','LWB','RWB','SW'].includes(position)) return { bg: '#e8eef9', fg: '#256ef4' }
-  return { bg: '#f0f0f0', fg: '#666' }
+function getPositionColors(position: string | null, isDark: boolean): { bg: string; fg: string } {
+  if (!position) return isDark ? { bg: '#263142', fg: '#c6d0dc' } : { bg: '#e8edf5', fg: '#456' }
+  if (['ST','CF','LF','RF','LW','RW'].includes(position)) {
+    return isDark ? { bg: '#4a2930', fg: '#ff8f9c' } : { bg: '#fdeaea', fg: '#f64f5e' }
+  }
+  if (['CAM','CM','CDM','LAM','RAM','LM','RM'].includes(position)) {
+    return isDark ? { bg: '#223a31', fg: '#67d49a' } : { bg: '#e6f4ee', fg: '#2f8f57' }
+  }
+  if (['CB','LB','RB','LWB','RWB','SW'].includes(position)) {
+    return isDark ? { bg: '#22324d', fg: '#7eb2ff' } : { bg: '#e8eef9', fg: '#256ef4' }
+  }
+  return isDark ? { bg: '#323844', fg: '#c6d0dc' } : { bg: '#f0f0f0', fg: '#666' }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -419,7 +425,7 @@ export default function PlayerDetailScreen() {
     ? abbreviateKRW(detail.prices[strongLevel])
     : '-'
 
-  const posColors = getPositionColors(detail?.position ?? null)
+  const posColors = getPositionColors(detail?.position ?? null, isDark)
 
   /** 강화/적응도/팀컬러 부스트 계산 */
   const abilityBoost = getStrongPoint(strongLevel) - getStrongPoint(1)
@@ -675,7 +681,7 @@ export default function PlayerDetailScreen() {
                           s.levelPill,
                           strongLevel === level
                             ? s.levelPillActive
-                            : { backgroundColor: '#ffffff', borderColor: colors.cardBorder },
+                            : { backgroundColor: isDark ? colors.surfaceSoft : '#ffffff', borderColor: colors.cardBorder },
                         ]}
                       >
                         <Text style={[s.levelPillText, { color: strongLevel === level ? '#fff' : colors.bodyText }]}>
@@ -692,7 +698,7 @@ export default function PlayerDetailScreen() {
                   activeOpacity={0.85}
                   style={[s.controlRow, s.controlRowFirst, { backgroundColor: colors.surfaceSoft }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Text style={[s.controlLabel, { color: colors.title }]}>적응도</Text>
                     <Text style={[s.controlSub, { color: isChemistryApplied ? '#457ae5' : colors.mutedText }]}>
                       {isChemistryApplied ? '적용중' : '미적용'}
@@ -716,7 +722,7 @@ export default function PlayerDetailScreen() {
                   activeOpacity={0.85}
                   style={[s.controlRow, { backgroundColor: colors.surfaceSoft }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Text style={[s.controlLabel, { color: colors.title }]}>팀컬러</Text>
                     <Text style={[s.controlSub, { color: teamColorBoost > 0 ? '#457ae5' : colors.mutedText }]}>
                       {teamColorBoost > 0 ? '적용중' : '미적용'}
@@ -997,8 +1003,6 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     toggle: { width: 64, height: 28, borderRadius: 999, padding: 3, justifyContent: 'center', flexShrink: 0 },
     toggleThumb: {
       width: 34, height: 22, borderRadius: 999, backgroundColor: '#ffffff',
-      shadowColor: '#0f172a', shadowOpacity: 0.18, shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 }, elevation: 3,
     },
 
     /* 특성 블럭 */

@@ -298,7 +298,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={s.main}>
-          <View style={s.card}>
+          <View style={[s.card, s.controlCard, s.controlHeight]}>
             <View style={s.seasonRow}>
               <Text style={[s.seasonLabel, { color: '#457ae5' }]}>{label}</Text>
               <View style={s.seasonRight}>
@@ -449,13 +449,15 @@ function LatestReviews({
   const s = styles(colors)
 
   return (
-    <View style={s.card}>
+      <View style={[s.card, s.reviewCard]}>
       {reviews.length > 0 ? (
         reviews.map((review, index) => (
           <TouchableOpacity
             key={review.id}
             style={[
               s.reviewRow,
+              index === 0 && s.reviewRowFirst,
+              index === reviews.length - 1 && s.reviewRowLast,
               index < reviews.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
             ]}
             onPress={() =>
@@ -597,6 +599,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     dateLabel: { fontSize: 13, fontWeight: '500', color: c.bodyText },
     notifBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+    controlHeight: { height: 56 },
 
     card: {
       backgroundColor: c.cardBg,
@@ -606,6 +609,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
       borderWidth: 1,
       borderColor: c.cardBorder,
     },
+    reviewCard: { paddingVertical: 20 },
+    controlCard: { paddingVertical: 0, justifyContent: 'center' },
     seasonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
     seasonLabel: { fontSize: 18, fontWeight: '700', letterSpacing: -0.36 },
     seasonRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -631,7 +636,9 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     quickText: { flex: 1, gap: 4 },
     quickTitle: { fontSize: 15, fontWeight: '500', letterSpacing: -0.3, lineHeight: 18 },
 
-    reviewRow: { paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    reviewRow: { paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    reviewRowFirst: { paddingTop: 0 },
+    reviewRowLast: { paddingBottom: 0 },
     reviewThumb: { width: 48, height: 48, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },
     reviewInfo: { flex: 1, minWidth: 0 },
     reviewNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
@@ -640,7 +647,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     reviewMetaDot: { fontSize: 13, fontWeight: '500' },
     cardLevelText: { fontSize: 14, fontWeight: '600' },
     reviewTitle: { marginTop: 4, fontSize: 13, fontWeight: '600', lineHeight: 20 },
-    reviewTime: { fontSize: 11, fontWeight: '500', flexShrink: 0 },
+    reviewTime: { fontSize: 11, fontWeight: '500', flexShrink: 0, marginTop: 2, alignSelf: 'flex-start' },
     emptyReviewText: { paddingTop: 8, fontSize: 14, fontWeight: '500' },
 
     bannerWrap: { borderRadius: 16, overflow: 'hidden', position: 'relative' },

@@ -8,16 +8,14 @@ function createLoop(values: Animated.CompositeAnimation[]) {
 }
 
 export function PlayerActionIcon({ isDark }: { isDark: boolean }) {
-  const haloOpacity = useRef(new Animated.Value(0.16)).current
-  const haloScale = useRef(new Animated.Value(0.92)).current
+
   const baseOpacity = useRef(new Animated.Value(0.18)).current
   const baseScaleX = useRef(new Animated.Value(0.84)).current
   const bodyTranslateX = useRef(new Animated.Value(-1)).current
   const bodyTranslateY = useRef(new Animated.Value(0)).current
   const bodyRotate = useRef(new Animated.Value(0)).current
   const bodyScale = useRef(new Animated.Value(0.96)).current
-  const sweepTranslateX = useRef(new Animated.Value(-8)).current
-  const sweepOpacity = useRef(new Animated.Value(0)).current
+
 
   useEffect(() => {
     const slowLoop = createLoop([
@@ -29,14 +27,7 @@ export function PlayerActionIcon({ isDark }: { isDark: boolean }) {
         Animated.timing(baseScaleX, { toValue: 1.06, duration: 2400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         Animated.timing(baseScaleX, { toValue: 0.84, duration: 2400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
-      Animated.sequence([
-        Animated.timing(haloOpacity, { toValue: 0.32, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(haloOpacity, { toValue: 0.16, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-      Animated.sequence([
-        Animated.timing(haloScale, { toValue: 1.1, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(haloScale, { toValue: 0.92, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
+
     ])
 
     const bodyLoop = Animated.loop(
@@ -68,54 +59,19 @@ export function PlayerActionIcon({ isDark }: { isDark: boolean }) {
       ]),
     )
 
-    const sweepLoop = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(sweepTranslateX, {
-            toValue: 34,
-            duration: 1800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.timing(sweepOpacity, {
-              toValue: isDark ? 0.16 : 0.95,
-              duration: 520,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(sweepOpacity, {
-              toValue: 0,
-              duration: 1280,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-        Animated.parallel([
-          Animated.timing(sweepTranslateX, { toValue: -8, duration: 0, useNativeDriver: true }),
-          Animated.timing(sweepOpacity, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ]),
-        Animated.delay(260),
-      ]),
-    )
-
     slowLoop.start()
     bodyLoop.start()
-    sweepLoop.start()
 
     return () => {
       slowLoop.stop()
       bodyLoop.stop()
-      sweepLoop.stop()
     }
-  }, [baseOpacity, baseScaleX, bodyRotate, bodyScale, bodyTranslateX, bodyTranslateY, haloOpacity, haloScale, isDark, sweepOpacity, sweepTranslateX])
+  }, [baseOpacity, baseScaleX, bodyRotate, bodyScale, bodyTranslateX, bodyTranslateY, isDark])
 
   const iconColor = isDark ? '#ffd24f' : '#F3B400'
   const circleBg = isDark ? '#4f4318' : '#fff9d9'
   const glowBase = isDark ? 'rgba(255, 196, 64, 0.16)' : 'rgba(255, 196, 64, 0.24)'
-  const glowStrong = isDark ? 'rgba(255, 214, 102, 0.22)' : 'rgba(255, 224, 100, 0.55)'
-  const sweepColor = isDark ? 'rgba(255,228,168,0.16)' : 'rgba(255,255,255,0.95)'
+
 
   const rotateY = bodyRotate.interpolate({
     inputRange: [0, 0.5, 1],
@@ -134,27 +90,8 @@ export function PlayerActionIcon({ isDark }: { isDark: boolean }) {
           },
         ]}
       />
-      <Animated.View
-        style={[
-          s.halo,
-          {
-            backgroundColor: isDark ? '#7a6520' : '#FFE678',
-            opacity: haloOpacity,
-            transform: [{ scale: haloScale }],
-            shadowColor: glowStrong,
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          s.sweep,
-          {
-            backgroundColor: sweepColor,
-            opacity: sweepOpacity,
-            transform: [{ translateX: sweepTranslateX }],
-          },
-        ]}
-      />
+
+
       <Animated.View
         style={[
           s.circle,
@@ -180,7 +117,7 @@ export function AnalysisActionIcon({ isDark }: { isDark: boolean }) {
   const haloScale = useRef(new Animated.Value(0.94)).current
   const baseOpacity = useRef(new Animated.Value(0.14)).current
   const baseScaleX = useRef(new Animated.Value(0.86)).current
-  const bodyScale = useRef(new Animated.Value(1)).current
+  const bodyScale = useRef(new Animated.Value(1.0)).current
   const graphProgress = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
@@ -201,11 +138,18 @@ export function AnalysisActionIcon({ isDark }: { isDark: boolean }) {
         Animated.timing(haloScale, { toValue: 1.05, duration: 1900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         Animated.timing(haloScale, { toValue: 0.94, duration: 1900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
-      Animated.sequence([
-        Animated.timing(bodyScale, { toValue: 1.05, duration: 1900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(bodyScale, { toValue: 0.95, duration: 1900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
     ])
+
+    // bodyScale을 별도 루프로 분리: 1.0 → 1.05 → 1.0 → 0.95 → 1.0
+    // 시작값과 끝값이 동일(1.0)하여 루프 경계에서 끊김 없이 이어짐
+    const scaleLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bodyScale, { toValue: 1.05, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bodyScale, { toValue: 1.0, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bodyScale, { toValue: 0.95, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bodyScale, { toValue: 1.0, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    )
 
     const graphLoop = Animated.loop(
       Animated.sequence([
@@ -220,10 +164,12 @@ export function AnalysisActionIcon({ isDark }: { isDark: boolean }) {
     )
 
     glowLoop.start()
+    scaleLoop.start()
     graphLoop.start()
 
     return () => {
       glowLoop.stop()
+      scaleLoop.stop()
       graphLoop.stop()
     }
   }, [baseOpacity, baseScaleX, bodyScale, graphProgress, haloOpacity, haloScale])

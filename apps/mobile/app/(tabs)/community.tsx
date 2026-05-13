@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
@@ -96,6 +97,13 @@ export default function CommunityScreen() {
   const [submitCommentBusy, setSubmitCommentBusy] = useState(false)
 
   const s = styles(colors, isDark)
+  const scrollRef = useRef<ScrollView>(null)
+  useScrollToTop(scrollRef)
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+    }, []),
+  )
 
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
 
@@ -196,6 +204,7 @@ export default function CommunityScreen() {
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
@@ -450,7 +459,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     writeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     writeBtnText: { fontSize: 14, fontWeight: '600' },
     loadingWrap: { paddingVertical: 40, alignItems: 'center' },
-    postCard: { borderRadius: 10, padding: 16, borderWidth: 1, gap: 8 },
+    postCard: { borderRadius: 16, padding: 16, borderWidth: 1, gap: 8 },
     postAuthorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
     avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
     authorMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },

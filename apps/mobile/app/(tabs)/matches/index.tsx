@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
   ScrollView,
@@ -10,6 +10,7 @@ import {
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
@@ -110,6 +111,13 @@ export default function MatchesScreen() {
   const requestIdRef = useRef(0)
 
   const s = styles(colors, isDark)
+  const scrollRef = useRef<ScrollView>(null)
+  useScrollToTop(scrollRef)
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+    }, []),
+  )
 
   const loadMatches = async (ouid: string, searchMode: SearchMode) => {
     setMatchLoading(true)
@@ -201,6 +209,7 @@ export default function MatchesScreen() {
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
@@ -332,7 +341,7 @@ function CandidateCard({
 }
 
 const profileStyle = StyleSheet.create({
-  card: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 16, borderWidth: 1 },
+  card: { borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, borderWidth: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   emblem: { width: 48, height: 48, borderRadius: 8 },
   emblemPlaceholder: { width: 48, height: 48, borderRadius: 8 },
@@ -426,7 +435,7 @@ function MatchList({
 }
 
 const matchListStyle = StyleSheet.create({
-  card: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 4, borderWidth: 1 },
+  card: { borderRadius: 16, paddingHorizontal: 20, paddingVertical: 4, borderWidth: 1 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 16 },
   loadingText: { fontSize: 14 },
   emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 20 },
@@ -485,7 +494,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     },
     card: {
       backgroundColor: c.cardBg,
-      borderRadius: 10,
+      borderRadius: 16,
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderWidth: 1,

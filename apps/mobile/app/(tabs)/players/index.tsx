@@ -244,7 +244,7 @@ export default function PlayersScreen() {
         </View>
 
         {/* 검색바 */}
-        <View style={[s.searchBar, searchFocused && s.searchBarFocused]}>
+        <View style={[s.searchBar, s.controlHeight, searchFocused && s.searchBarFocused]}>
           <TextInput
             ref={searchInputRef}
             style={s.searchInput}
@@ -625,16 +625,16 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
+    controlHeight: { height: 56 },
     searchBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: _isDark ? c.inputBg : '#ffffff',
       borderWidth: 1,
       borderColor: c.inputBorder,
       borderRadius: 16,
       paddingLeft: 16,
       paddingRight: 6,
-      height: 52,
     },
     searchBarFocused: {
       borderColor: '#457ae5',
@@ -647,8 +647,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
       height: '100%',
     },
     searchIconBtn: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
     },

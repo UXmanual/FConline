@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Animated,
   View,
@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
@@ -44,7 +45,7 @@ function pickDefaultAvatar(id: string): string {
   return emojis[hash % emojis.length] ?? '😀'
 }
 
-const APP_VERSION = '0.1.1'
+const APP_VERSION = '0.1.6'
 
 const TERMS_CONTENT = [
   '최종 업데이트: 2026.04.20',
@@ -67,14 +68,16 @@ export default function MypageScreen() {
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
 
   const s = styles(colors, isDark)
+  const scrollRef = useRef<ScrollView>(null)
+  useScrollToTop(scrollRef)
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+    }, []),
+  )
 
   useEffect(() => {
-    Animated.timing(themeToggleTranslateX, {
-      toValue: isDark ? 24 : 0,
-      duration: 180,
-      easing: Easing.out(Easing.circle),
-      useNativeDriver: true,
-    }).start()
+    themeToggleTranslateX.setValue(isDark ? 24 : 0)
   }, [isDark, themeToggleTranslateX])
 
   useEffect(() => {
@@ -135,6 +138,16 @@ export default function MypageScreen() {
     }
   }
 
+  const handleThemeToggle = useCallback(() => {
+    Animated.timing(themeToggleTranslateX, {
+      toValue: isDark ? 0 : 24,
+      duration: 140,
+      easing: Easing.out(Easing.circle),
+      useNativeDriver: true,
+    }).start()
+    toggleThemeMode()
+  }, [isDark, themeToggleTranslateX, toggleThemeMode])
+
   const xpPercent =
     profile?.xp != null && profile?.xpForNextLevel
       ? Math.min(100, Math.round((profile.xp / profile.xpForNextLevel) * 100))
@@ -143,6 +156,7 @@ export default function MypageScreen() {
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
@@ -231,58 +245,59 @@ export default function MypageScreen() {
           </View>
         </View>
 
-        {/* 설정 */}
+        {/* 다크모드 */}
         <View style={s.card}>
-          <Text style={[s.sectionTitle, { color: colors.title }]}>앱 정보</Text>
-          <View style={{ marginTop: 10 }}>
-            <View style={s.settingRow}>
-              <View style={{ flex: 1, paddingRight: 12 }}>
-                <View style={s.settingTitleRow}>
-                  <Text style={[s.settingLabel, { color: colors.bodyText }]}>화면 테마</Text>
-                  <View style={[s.themeBadge, { backgroundColor: colors.actionBadgeBg }]}>
-                    <Text style={[s.themeBadgeText, { color: colors.actionBadgeFg }]}>
-                      {isDark ? '다크' : '라이트'}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[s.settingCaption, { color: colors.mutedText }]}>
-                  네이티브 앱 화면 밝기를 전환해요
+          <View style={s.settingRowCompact}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <View style={s.settingTitleRowCompact}>
+                <Text style={[s.settingLabel, { color: colors.title }]}>다크모드</Text>
+                <Text style={[s.darkModeStatus, { color: isDark ? colors.accentBlue : colors.mutedText }]}>
+                  {isDark ? '적용중' : '미적용'}
                 </Text>
               </View>
-              <TouchableOpacity
-                accessibilityRole="switch"
-                accessibilityState={{ checked: isDark }}
-                activeOpacity={0.85}
-                onPress={toggleThemeMode}
+            </View>
+            <TouchableOpacity
+              accessibilityRole="switch"
+              accessibilityState={{ checked: isDark }}
+              activeOpacity={0.85}
+              onPress={handleThemeToggle}
+              style={[
+                s.themeToggleTrack,
+                { backgroundColor: isDark ? '#457ae5' : '#d5dbe3' },
+              ]}
+            >
+              <Animated.View
                 style={[
-                  s.themeToggleTrack,
-                  { backgroundColor: isDark ? '#457ae5' : '#d5dbe3' },
+                  s.themeToggleThumb,
+                  { transform: [{ translateX: themeToggleTranslateX }] },
                 ]}
-              >
-                <Animated.View
-                  style={[
-                    s.themeToggleThumb,
-                    { transform: [{ translateX: themeToggleTranslateX }] },
-                  ]}
-                />
-              </TouchableOpacity>
-            </View>
-            <View style={[s.divider, { backgroundColor: colors.divider }]} />
-            <View style={s.settingRow}>
-              <Text style={[s.settingLabel, { color: colors.bodyText }]}>버전</Text>
-              <Text style={[s.settingValue, { color: colors.mutedText }]}>{APP_VERSION}</Text>
-            </View>
-            <View style={[s.divider, { backgroundColor: colors.divider }]} />
-            <TouchableOpacity style={s.settingRow} onPress={() => setShowTerms(true)}>
-              <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
-              <Feather name="chevron-right" size={16} color={colors.mutedText} />
-            </TouchableOpacity>
-            <View style={[s.divider, { backgroundColor: colors.divider }]} />
-            <TouchableOpacity style={s.settingRow} onPress={() => setShowLicenses(true)}>
-              <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
-              <Feather name="chevron-right" size={16} color={colors.mutedText} />
+              />
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* 버전 */}
+        <View style={s.card}>
+          <View style={s.settingRowCompact}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>버전</Text>
+            <Text style={[s.settingValue, { color: colors.mutedText }]}>{APP_VERSION}</Text>
+          </View>
+        </View>
+
+        {/* 이용약관 */}
+        <View style={s.card}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowTerms(true)}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 오픈소스 라이선스 */}
+        <View style={s.card}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowLicenses(true)}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -374,7 +389,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     pageTitle: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
     card: {
       backgroundColor: c.cardBg,
-      borderRadius: 10,
+      borderRadius: 16,
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderWidth: 1,
@@ -410,10 +425,13 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     sectionTitle: { fontSize: 14, fontWeight: '600' },
     guideItem: { fontSize: 13, lineHeight: 20 },
     settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+    settingRowCompact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
     settingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    settingTitleRowCompact: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     settingLabel: { fontSize: 14, fontWeight: '500' },
     settingCaption: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
     settingValue: { fontSize: 14, fontWeight: '500' },
+    darkModeStatus: { fontSize: 14, fontWeight: '600' },
     themeBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
     themeBadgeText: { fontSize: 11, fontWeight: '700' },
     themeToggleTrack: {
@@ -429,11 +447,6 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
       height: 22,
       borderRadius: 999,
       backgroundColor: '#ffffff',
-      shadowColor: '#0f172a',
-      shadowOpacity: 0.18,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 3,
     },
     modalSafe: { flex: 1 },
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
