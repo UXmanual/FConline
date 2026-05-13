@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.1.7': '2026-05-14T00:25:40+09:00',
   '0.1.6': '2026-05-13T16:35:00+09:00',
   '0.1.5': '2026-05-13T10:15:00+09:00',
   '0.1.4': '2026-05-12T14:20:00+09:00',
@@ -11,6 +12,11 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.1.7': [
+    '모바일 최근 경기 화면을 TWA 기준으로 다시 정리하고, 1:1 공식경기·볼타 라이브·감독모드의 최근 10경기 카드와 아코디언 상세 구성을 일관되게 맞췄습니다.',
+    '모바일 구단주 검색 결과에 대표팀/팀컬러 엠블럼 fallback을 보강해 랭크 배지 표시에 실패하던 오류를 줄였고, 최근 경기 상세의 한글 문구 깨짐과 표시 오류를 정리했습니다.',
+    '워크스페이스에 UTF-8/LF 저장 규칙을 추가해 문자 인코딩이 다시 깨질 가능성을 낮췄습니다.',
+  ],
   '0.1.6': [
     '모바일 선수 상세의 강화 단계, 총 능력치, 선수 평가 탭, 다크모드 간격과 토글 스타일을 현재 TWA 기준에 맞춰 정리했습니다.',
     '모바일 홈과 마이페이지 카드 여백, 선수평가 목록 간격, 다크모드 및 정책/버전 카드 분리 등 화면 리듬을 일관되게 조정했습니다.',

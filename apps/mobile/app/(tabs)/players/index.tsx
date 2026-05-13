@@ -235,7 +235,7 @@ export default function PlayersScreen() {
         <View style={s.header}>
           {showResults ? (
             <TouchableOpacity style={s.backBtn} onPress={handleBack}>
-              <Feather name="arrow-left" size={18} color={colors.title} />
+              <Feather name="chevron-left" size={22} color={colors.title} />
               <Text style={s.backText}>선수 홈</Text>
             </TouchableOpacity>
           ) : (
@@ -438,7 +438,7 @@ const cardStyle = StyleSheet.create({
   skeletonLine: { height: 10, borderRadius: 5 },
   popularRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   popularLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 },
-  popularThumb: { width: 48, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0 },
+  popularThumb: { width: 48, height: 48, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },
   popularRankBadge: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   popularRankText: { fontSize: 13, fontWeight: '700' },
   popularName: { fontSize: 14, fontWeight: '600' },
@@ -475,7 +475,7 @@ function PlayerRow({
       <View style={[playerRowStyle.thumb, { backgroundColor: colors.surfaceStrong }]}>
         <Image
           source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${player.id}.png` }}
-          style={{ width: 64, height: 64 }}
+          style={{ width: 72, height: 72 }}
           resizeMode="contain"
         />
       </View>
@@ -547,7 +547,7 @@ function PlayerRow({
 
 const playerRowStyle = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  thumb: { width: 64, height: 64, borderRadius: 8, overflow: 'hidden', flexShrink: 0 },
+  thumb: { width: 72, height: 72, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
   seasonBadge: { width: 22, height: 16, marginRight: -2 },
   name: { fontSize: 13, fontWeight: '600' },
@@ -622,7 +622,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     scroll: { flex: 1 },
     content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
     header: { minHeight: 32, justifyContent: 'center' },
-    title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
+    title: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
     controlHeight: { height: 56 },
@@ -671,7 +671,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
       gap: 6,
       height: 40,
       paddingHorizontal: 12,
-      backgroundColor: c.inputBg,
+      backgroundColor: c.cardBg,
       borderWidth: 1,
       borderColor: c.inputBorder,
       borderRadius: 10,

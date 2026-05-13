@@ -486,7 +486,7 @@ export default function PlayerDetailScreen() {
       >
         {/* 헤더 뒤로가기 */}
         <TouchableOpacity style={s.backRow} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={18} color={colors.title} />
+          <Feather name="chevron-left" size={22} color={colors.title} />
           <Text style={s.backText} numberOfLines={1}>{playerName || '선수 정보'}</Text>
         </TouchableOpacity>
 
@@ -934,7 +934,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
       borderColor: c.cardBorder,
     },
     playerRow: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
-    thumbWrap: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', flexShrink: 0 },
+    thumbWrap: { width: 96, height: 96, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },
     playerInfo: { flex: 1, minWidth: 0 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
     seasonBadge: { width: 24, height: 17 },

@@ -386,7 +386,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     scroll: { flex: 1 },
     content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
     sectionHeader: { minHeight: 32, justifyContent: 'center' },
-    pageTitle: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
+    pageTitle: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
     card: {
       backgroundColor: c.cardBg,
       borderRadius: 16,

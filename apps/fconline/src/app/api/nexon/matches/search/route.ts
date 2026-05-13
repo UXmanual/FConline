@@ -148,6 +148,7 @@ function createEmptyCandidate(nickname: string, nexonSn: string, source: 'exact'
     nexonSn,
     ouid: null,
     representativeTeamEmblemUrl: null,
+    teamColorEmblemUrl: null,
     level: null,
     rank: null,
     elo: null,
@@ -728,6 +729,10 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
       : { formation: null, teamColors: [] as string[] }
     const recentOfficialFormation = await fetchRecentOfficialFormation(exactData?.ouid)
     const resolvedOfficialFormation = representativeSquadSummary.formation ?? recentOfficialFormation
+    const firstTeamColor = representativeSquadSummary.teamColors[0] ?? null
+    const teamColorEmblemUrl = firstTeamColor
+      ? ((await getTeamEmblemMap()).get(normalizeTeamName(firstTeamColor)) ?? null)
+      : null
     let exactCandidate: MatchSearchCandidate | null = null
     const rankResults = await Promise.all(
       SEARCH_MODES.map(async (mode) => {
@@ -765,6 +770,7 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
         formation: resolvedOfficialFormation,
         officialFormation: resolvedOfficialFormation,
         officialTeamColors: representativeSquadSummary.teamColors,
+        teamColorEmblemUrl,
       }
     } else if (voltaCandidate) {
       exactCandidate = {
@@ -778,6 +784,7 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
         formation: resolvedOfficialFormation,
         officialFormation: resolvedOfficialFormation,
         officialTeamColors: representativeSquadSummary.teamColors,
+        teamColorEmblemUrl,
       }
     }
 

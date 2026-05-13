@@ -29,6 +29,7 @@ export interface MatchSearchCandidate {
   ownerSince?: string | null
   representativeTeam?: string | null
   representativeTeamEmblemUrl?: string | null
+  teamColorEmblemUrl?: string | null
   level: number | null
   rank: number | null
   elo: number | null

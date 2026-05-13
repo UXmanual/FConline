@@ -455,7 +455,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     scroll: { flex: 1 },
     content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
-    title: { fontSize: 18, fontWeight: '800', color: c.title, letterSpacing: -0.4 },
+    title: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
     writeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     writeBtnText: { fontSize: 14, fontWeight: '600' },
     loadingWrap: { paddingVertical: 40, alignItems: 'center' },
