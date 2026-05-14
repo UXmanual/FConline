@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
+import * as ImagePicker from 'expo-image-picker'
+import * as Linking from 'expo-linking'
 import Svg, { Path } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
 import { Text, TextInput } from '@/components/Themed'
@@ -29,14 +31,90 @@ export default function ProfileEditScreen() {
   const { colors, isDark } = useTheme()
   const params = useLocalSearchParams<{ nickname?: string; avatarUrl?: string; userId?: string }>()
   const [nickname, setNickname] = useState(params.nickname ?? '')
-  const [avatarUri, setAvatarUri] = useState<string | null>(params.avatarUrl ?? null)
+  const [avatarUri, setAvatarUri] = useState<string | null>(params.avatarUrl || null)
   const [submitting, setSubmitting] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const s = styles(colors, isDark)
-  const canSubmit = nickname.trim().length > 0 && !submitting
+  const canSubmit = nickname.trim().length > 0 && !submitting && !uploading
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert(
+        '권한 필요',
+        '사진 접근 권한이 필요해요.',
+        [
+          { text: '설정 열기', onPress: () => Linking.openSettings() },
+          { text: '취소', style: 'cancel' },
+        ],
+      )
+      return
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    })
+
+    if (result.canceled || !result.assets[0]) return
+
+    setUploading(true)
+    try {
+      const asset = result.assets[0]
+      const formData = new FormData()
+      formData.append('avatar', {
+        uri: asset.uri,
+        type: 'image/jpeg',
+        name: 'avatar.jpg',
+      } as unknown as Blob)
+
+      const res = await apiFetch('/api/mypage/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setAvatarUri(data.avatarUrl)
+      } else {
+        const data = await res.json().catch(() => null)
+        Alert.alert('오류', data?.message ?? '프로필 사진을 저장하지 못했어요.')
+      }
+    } catch {
+      Alert.alert('오류', '프로필 사진을 저장하지 못했어요.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDeleteAvatar = async () => {
+    setUploading(true)
+    try {
+      const res = await apiFetch('/api/mypage/avatar', { method: 'DELETE' })
+      if (res.ok) {
+        setAvatarUri(null)
+      } else {
+        Alert.alert('오류', '기본 이미지로 변경하지 못했어요.')
+      }
+    } catch {
+      Alert.alert('오류', '기본 이미지로 변경하지 못했어요.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleAvatarPress = () => {
-    Alert.alert('프로필 사진', '앱 업데이트 후 이용할 수 있어요.')
+    const buttons: Parameters<typeof Alert.alert>[2] = [
+      { text: '앨범에서 선택', onPress: handlePickImage },
+    ]
+    if (avatarUri) {
+      buttons.push({ text: '기본 이미지로 변경', style: 'destructive', onPress: handleDeleteAvatar })
+    }
+    buttons.push({ text: '취소', style: 'cancel' })
+    Alert.alert('프로필 사진', '', buttons)
   }
 
   const handleSubmit = async () => {
@@ -92,9 +170,11 @@ export default function ProfileEditScreen() {
         >
           {/* 프로필 이미지 */}
           <View style={s.avatarSection}>
-            <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.85}>
+            <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.85} disabled={uploading}>
               <View style={[s.avatarWrap, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
-                {avatarUri ? (
+                {uploading ? (
+                  <ActivityIndicator size="large" color={colors.accentBlue} />
+                ) : avatarUri ? (
                   <Image source={{ uri: avatarUri }} style={s.avatarImg} />
                 ) : (
                   <Text style={s.avatarEmoji}>{params.userId ? pickDefaultAvatar(params.userId) : '😀'}</Text>

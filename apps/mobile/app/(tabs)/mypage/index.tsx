@@ -14,7 +14,6 @@ import {
   Platform,
   UIManager,
 } from 'react-native'
-
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
 }
@@ -93,6 +92,9 @@ export default function MypageScreen() {
   const [xpGuideOpen, setXpGuideOpen] = useState(false)
   const [xpBarWidth, setXpBarWidth] = useState(0)
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
+  const [notifGranted, setNotifGranted] = useState(false)
+  const [notifPending, setNotifPending] = useState(false)
+  const notifToggleTranslateX = useRef(new Animated.Value(0)).current
 
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
@@ -101,6 +103,68 @@ export default function MypageScreen() {
   useEffect(() => {
     themeToggleTranslateX.setValue(isDark ? 24 : 0)
   }, [isDark, themeToggleTranslateX])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Notifs = require('expo-notifications') as typeof import('expo-notifications')
+        const { status } = await Notifs.getPermissionsAsync()
+        if (!cancelled) {
+          const granted = status === 'granted'
+          setNotifGranted(granted)
+          notifToggleTranslateX.setValue(granted ? 24 : 0)
+        }
+      } catch {}
+    })()
+    return () => { cancelled = true }
+  }, [notifToggleTranslateX])
+
+  const handleNotifToggle = async () => {
+    if (notifPending) return
+    setNotifPending(true)
+    try {
+      if (notifGranted) {
+        Alert.alert(
+          '앱 알림 해제',
+          '알림을 끄려면 기기 설정에서 변경해 주세요.',
+          [
+            { text: '설정 열기', onPress: () => Linking.openSettings() },
+            { text: '취소', style: 'cancel' },
+          ],
+        )
+        return
+      }
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const Notifs = require('expo-notifications') as typeof import('expo-notifications')
+        const { status } = await Notifs.requestPermissionsAsync()
+        const granted = status === 'granted'
+        setNotifGranted(granted)
+        Animated.timing(notifToggleTranslateX, {
+          toValue: granted ? 24 : 0,
+          duration: 140,
+          easing: Easing.out(Easing.circle),
+          useNativeDriver: true,
+        }).start()
+        if (!granted) {
+          Alert.alert(
+            '앱 알림 허용 필요',
+            '기기 설정에서 알림을 허용해 주세요.',
+            [
+              { text: '설정 열기', onPress: () => Linking.openSettings() },
+              { text: '취소', style: 'cancel' },
+            ],
+          )
+        }
+      } catch {
+        Linking.openSettings()
+      }
+    } finally {
+      setNotifPending(false)
+    }
+  }
 
   const fetchProfile = useCallback(async () => {
     setProfileLoading(true)
@@ -310,6 +374,32 @@ export default function MypageScreen() {
               ))}
             </View>
           )}
+        </View>
+
+        {/* 앱 알림 */}
+        <View style={[s.card, notifPending && { opacity: 0.76 }]}>
+          <View style={s.settingRowCompact}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <View style={s.settingTitleRowCompact}>
+                <Text style={[s.settingLabel, { color: colors.title }]}>앱 알림</Text>
+                <Text style={[s.darkModeStatus, { color: notifGranted ? colors.accentBlue : colors.mutedText }]}>
+                  {notifGranted ? '허용됨' : '미허용'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="switch"
+              accessibilityState={{ checked: notifGranted }}
+              activeOpacity={0.85}
+              onPress={handleNotifToggle}
+              disabled={notifPending}
+              style={[s.themeToggleTrack, { backgroundColor: notifGranted ? '#457ae5' : '#d5dbe3' }]}
+            >
+              <Animated.View
+                style={[s.themeToggleThumb, { transform: [{ translateX: notifToggleTranslateX }] }]}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 다크모드 */}
