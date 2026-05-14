@@ -7,6 +7,7 @@ import {
 } from '@/lib/community'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { getAuthUserFromRequest } from '@/lib/supabase/getAuthUser'
 import { getUserLevelProfile } from '@/lib/userLevel.server'
 
 async function isDuplicateCommunityNickname(targetNickname: string, currentUserId: string) {
@@ -48,10 +49,7 @@ async function isDuplicateCommunityNickname(targetNickname: string, currentUserI
 
 export async function POST(request: NextRequest) {
   try {
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
+    const user = await getAuthUserFromRequest(request)
 
     if (!user) {
       return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })
@@ -96,13 +94,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const t0 = Date.now()
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
+    const user = await getAuthUserFromRequest(request)
     console.log(`[perf] nickname GET auth ${Date.now() - t0}ms`)
 
     if (!user) {
@@ -120,6 +115,50 @@ export async function GET() {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : '닉네임을 불러오지 못했습니다.'
+    return Response.json({ message }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getAuthUserFromRequest(request)
+
+    if (!user) {
+      return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })
+    }
+
+    const body = await request.json().catch(() => null)
+    const nickname = normalizeCommunityNickname(String(body?.nickname ?? ''))
+    const validationMessage = validateCommunityNickname(nickname, user.email)
+
+    if (validationMessage) {
+      return Response.json({ message: validationMessage }, { status: 400 })
+    }
+
+    if (!canBypassCommunityNicknamePolicy(user.email)) {
+      const duplicated = await isDuplicateCommunityNickname(nickname, user.id)
+      if (duplicated) {
+        return Response.json({ message: '이미 사용 중인 닉네임입니다.' }, { status: 409 })
+      }
+    }
+
+    const adminSupabase = createSupabaseAdminClient()
+    const { data, error } = await adminSupabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
+        community_nickname: nickname,
+      },
+    })
+
+    if (error) throw error
+
+    return Response.json({
+      nickname,
+      user: data.user,
+      levelProfile: await getUserLevelProfile(user.id),
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '닉네임을 저장하지 못했습니다.'
     return Response.json({ message }, { status: 500 })
   }
 }
