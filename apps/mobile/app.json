@@ -85,10 +85,18 @@
             ]
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fcbf4efe-5968-40ab-b8d9-af3518374baa"
+      }
+    },
+    "owner": "uxx"
   }
 }

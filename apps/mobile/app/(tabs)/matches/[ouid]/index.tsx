@@ -99,6 +99,14 @@ type MatchPlayerInfo = {
     seasonName?: string | null
   }
   player?: Array<{
+    spId?: number | null
+    spGrade?: number | null
+    spPosition?: number | null
+    cardInfo?: {
+      playerName?: string | null
+      enhancement?: number | null
+      seasonName?: string | null
+    }
     status?: {
       shoot?: number | null
       effectiveShoot?: number | null
@@ -557,6 +565,78 @@ function buildMatchInsight(
   return lines.slice(0, 4)
 }
 
+// ??? TOP 5 ?꾩슜 ???뺣낫 ????????????????????????????????????????????????????
+
+type OfficialRecentPlayerLeader = {
+  key: string
+  spId: number
+  spPosition: number | null
+  enhancement: number | null
+  playerName: string | null
+  seasonName: string | null
+  appearances: number
+  goals: number
+  assists: number
+  effectiveShots: number
+  shots: number
+  averageRating: number
+}
+
+const FC_POSITION_LABELS: Record<number, string> = {
+  0: 'GK', 1: 'SW', 2: 'RWB', 3: 'RB', 4: 'RCB', 5: 'CB', 6: 'LCB',
+  7: 'LB', 8: 'LWB', 9: 'RDM', 10: 'CDM', 11: 'LDM', 12: 'RM', 13: 'RCM',
+  14: 'CM', 15: 'LCM', 16: 'LM', 17: 'RAM', 18: 'CAM', 19: 'LAM',
+  20: 'RF', 21: 'CF', 22: 'LF', 23: 'RW', 24: 'RS', 25: 'ST', 26: 'LS', 27: 'LW',
+}
+
+function buildOfficialRecentPlayerLeaders(matches: MatchData[], ouid: string): OfficialRecentPlayerLeader[] {
+  const playerMap = new Map<string, OfficialRecentPlayerLeader>()
+
+  for (const match of matches) {
+    const teams = buildOfficialTeams(match, ouid)
+    const squad = teams?.me.player
+    if (!teams || !Array.isArray(squad)) continue
+
+    for (const squadPlayer of squad) {
+      const spId = typeof squadPlayer?.spId === 'number' ? squadPlayer.spId : null
+      if (!spId) continue
+
+      const enhancement =
+        typeof squadPlayer?.spGrade === 'number' && Number.isFinite(squadPlayer.spGrade)
+          ? squadPlayer.spGrade
+          : null
+      const key = `${spId}:${enhancement ?? 0}`
+      const status = squadPlayer.status
+      const prev = playerMap.get(key)
+
+      playerMap.set(key, {
+        key,
+        spId,
+        spPosition: typeof squadPlayer?.spPosition === 'number' ? squadPlayer.spPosition : (prev?.spPosition ?? null),
+        enhancement,
+        playerName: squadPlayer.cardInfo?.playerName ?? prev?.playerName ?? null,
+        seasonName: squadPlayer.cardInfo?.seasonName ?? prev?.seasonName ?? null,
+        appearances: (prev?.appearances ?? 0) + 1,
+        goals: (prev?.goals ?? 0) + (status?.goal ?? 0),
+        assists: (prev?.assists ?? 0) + (status?.assist ?? 0),
+        effectiveShots: (prev?.effectiveShots ?? 0) + (status?.effectiveShoot ?? 0),
+        shots: (prev?.shots ?? 0) + (status?.shoot ?? 0),
+        averageRating: (prev?.averageRating ?? 0) + (status?.spRating ?? 0),
+      })
+    }
+  }
+
+  return [...playerMap.values()]
+    .map((p) => ({ ...p, averageRating: p.appearances > 0 ? p.averageRating / p.appearances : 0 }))
+    .sort((a, b) => {
+      if (b.goals !== a.goals) return b.goals - a.goals
+      if (b.assists !== a.assists) return b.assists - a.assists
+      if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating
+      return b.effectiveShots - a.effectiveShots
+    })
+    .slice(0, 5)
+}
+
 function buildOfficialTeams(match: MatchData, myOuid: string) {
   const players = Array.isArray(match.matchInfo) ? match.matchInfo : []
   const me = players.find((p) => p.ouid === myOuid)
@@ -576,66 +656,105 @@ function buildOfficialMatchInsight(
 ): string[] {
   const meMetrics = getOfficialPlayerMetrics(teams.me)
   const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
+  const lines: Array<{ priority: number; text: string }> = []
+  const seen = new Set<string>()
+
+  const addLine = (priority: number, text: string) => {
+    if (seen.has(text)) return
+    seen.add(text)
+    lines.push({ priority, text })
+  }
+
   const shotGap = meMetrics.shots - opponentMetrics.shots
   const effectiveShotGap = meMetrics.effectiveShots - opponentMetrics.effectiveShots
   const possessionGap = meMetrics.possession - opponentMetrics.possession
+  const passGap =
+    meMetrics.passRate != null && opponentMetrics.passRate != null
+      ? meMetrics.passRate - opponentMetrics.passRate
+      : null
   const myConversion = meMetrics.shots > 0 ? (meMetrics.goals / meMetrics.shots) * 100 : 0
   const opponentConversion = opponentMetrics.shots > 0 ? (opponentMetrics.goals / opponentMetrics.shots) * 100 : 0
   const myDefensiveStops = (meMetrics.tackleSuccess ?? 0) + (meMetrics.blockSuccess ?? 0)
+  const opponentDefensiveStops = (opponentMetrics.tackleSuccess ?? 0) + (opponentMetrics.blockSuccess ?? 0)
   const ratingGap = meMetrics.rating - opponentMetrics.rating
   const isWin = teams.myScore > teams.opponentScore
   const isLoss = teams.myScore < teams.opponentScore
-  const lines: string[] = []
+  const isDraw = teams.myScore === teams.opponentScore
 
   if (isWin) {
-    lines.push(`${teams.myScore}:${teams.opponentScore} 승리 경기였습니다. 결과 면에서 주도권을 가져왔고, 승부처에서 더 정확한 마무리가 나왔습니다.`)
-  } else if (isLoss) {
-    lines.push(`${teams.myScore}:${teams.opponentScore} 패배 경기였습니다. 전체 흐름이 크게 밀린 경기라기보다 결정적인 장면 처리에서 차이가 났습니다.`)
-  } else {
-    lines.push(`${teams.myScore}:${teams.opponentScore} 무승부 경기였습니다. 큰 차이는 없었고 한 번의 선택이 결과를 바꿀 수 있었던 경기였습니다.`)
-  }
-
-  if (shotGap > 0 || effectiveShotGap > 0) {
-    lines.push(`공격 지표는 슈팅 ${formatMetricNum(meMetrics.shots)}:${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}:${formatMetricNum(opponentMetrics.effectiveShots)}였습니다. 찬스 생산 자체는 나쁘지 않았습니다.`)
-  } else if (shotGap < 0 || effectiveShotGap < 0) {
-    lines.push(`공격 지표는 슈팅 ${formatMetricNum(meMetrics.shots)}:${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}:${formatMetricNum(opponentMetrics.effectiveShots)}였습니다. 박스 근처 진입과 슈팅 연결 빈도를 더 늘릴 필요가 있습니다.`)
-  }
-
-  if (myConversion === 0 && meMetrics.shots >= 4) {
-    lines.push(`슈팅 수에 비해 득점 전환이 없었습니다. 마무리 정확도와 슈팅 타이밍 조절이 다음 경기의 핵심 포인트로 보입니다.`)
-  } else if (myConversion > opponentConversion && meMetrics.goals > 0) {
-    lines.push(`슈팅 대비 득점 전환 효율은 상대보다 좋았습니다. 같은 찬스 수에서도 더 날카롭게 마무리한 경기였습니다.`)
-  } else if (myConversion + 15 < opponentConversion && opponentMetrics.goals > 0) {
-    lines.push(`득점 전환 효율은 상대가 더 좋았습니다. 수비 실수 이후 허용한 결정적 장면이 결과 차이로 이어졌습니다.`)
-  }
-
-  if (Math.abs(possessionGap) >= 8) {
-    if (possessionGap > 0) {
-      lines.push(`점유율은 ${formatMetricNum(meMetrics.possession)}%로 앞섰지만, 점유 우위를 유효한 찬스로 연결하는 과정은 조금 더 다듬을 여지가 있습니다.`)
+    if (effectiveShotGap >= 2) {
+      addLine(120, `스코어는 ${teams.myScore}:${teams.opponentScore} 승리였고, 유효슛이 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)}로 분명히 앞섰습니다. 이 경기는 단순히 운이 아니라 찬스 질 자체에서 우위를 만든 승리였습니다.`)
+    } else if (shotGap < 0) {
+      addLine(118, `슈팅 수는 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}로 밀렸는데도 ${teams.myScore}:${teams.opponentScore}로 이겼습니다. 볼을 오래 잡거나 많이 때린 경기라기보다, 적은 기회를 더 정확하게 끝낸 효율 승리에 가깝습니다.`)
     } else {
-      lines.push(`점유율은 ${formatMetricNum(opponentMetrics.possession)}% 쪽으로 기울었습니다. 공을 되찾은 뒤 전개를 더 빠르게 연결하면 흐름을 바꿀 수 있습니다.`)
+      addLine(116, `스코어 ${teams.myScore}:${teams.opponentScore} 승리입니다. 지표 전체를 압도한 경기까지는 아니어도, 적어도 결정적인 순간의 선택과 마무리는 상대보다 낫게 가져갔습니다.`)
+    }
+  } else if (isLoss) {
+    if (shotGap >= 0 && effectiveShotGap >= 0) {
+      addLine(120, `슈팅 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)}로 기회 수는 밀리지 않았는데 ${teams.myScore}:${teams.opponentScore}로 패했습니다. 이 경기는 전개보다 마무리 효율과 박스 안 결정력이 결과를 망친 쪽에 가깝습니다.`)
+    } else if (shotGap <= -3 || effectiveShotGap <= -2) {
+      addLine(118, `패배 원인이 비교적 명확합니다. 슈팅이 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}, 유효슛이 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)}로 밀려 공격 장면 자체를 덜 만들었습니다. 이번 경기는 마무리 이전에 진입 횟수부터 부족했습니다.`)
+    } else {
+      addLine(116, `스코어는 ${teams.myScore}:${teams.opponentScore} 패배입니다. 전체 흐름이 완전히 한쪽으로 기운 경기는 아니었지만, 결정적 장면 한두 번에서 상대보다 덜 날카로웠고 그 차이가 그대로 점수 차로 남았습니다.`)
+    }
+  } else if (shotGap !== 0 || effectiveShotGap !== 0) {
+    addLine(112, `무승부지만 내용은 완전히 대등하지 않았습니다. 슈팅 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)} 흐름을 보면, 먼저 한 골을 넣을 쪽이 누구였는지 힌트는 남은 경기였습니다.`)
+  } else {
+    addLine(108, `무승부 경기였습니다. 스코어뿐 아니라 주요 공격 지표도 비슷해서, 세부 운영 완성도 하나가 승부를 갈랐을 법한 팽팽한 흐름이었습니다.`)
+  }
+
+  if (shotGap >= 3 && effectiveShotGap <= 0) {
+    addLine(110, `슈팅은 더 많이 가져갔는데 유효슛 우위로 이어지지 않았습니다. 숫자만 보면 공격 시도는 있었지만, 박스 안에서 급하게 끝내거나 각도가 없는 슛이 많았다는 뜻입니다. 같은 점유를 가져가더라도 '언제 때리느냐'를 더 까다롭게 골라야 합니다.`)
+  } else if (shotGap <= -3 && effectiveShotGap >= 0) {
+    addLine(106, `슈팅 총량은 적었지만 유효슛 격차는 크지 않았습니다. 많은 장면을 만드는 팀은 아니었지만, 들어간 공격은 비교적 날카로웠다는 뜻입니다. 다만 이 패턴은 한두 번만 막혀도 바로 득점력이 끊겨서, 공격 볼륨을 조금 더 늘릴 필요가 있습니다.`)
+  }
+
+  if (myConversion === 0 && meMetrics.shots >= 5) {
+    addLine(114, `슈팅을 ${formatMetricNum(meMetrics.shots)}개 만들고도 무득점이었습니다. 공격이 안 풀렸다기보다, 마무리 선택이 계속 빗나간 경기로 보는 편이 더 정확합니다. 골문 정면으로 끝낸 슛이 적었다면 박스 안 첫 터치와 슈팅 타이밍부터 다시 봐야 합니다.`)
+  } else if (myConversion + 18 < opponentConversion && opponentMetrics.goals > 0) {
+    addLine(112, `결정력 차이가 컸습니다. 내 슈팅 대비 득점 전환율은 ${fmtPct(myConversion)}인데 상대는 ${fmtPct(opponentConversion)}였습니다. 같은 몇 번의 찬스라도 상대가 더 값비싸게 쓴 셈이라, 이 경기는 수비보다 마무리 쪽 손실이 더 크게 보입니다.`)
+  } else if (myConversion >= 30 && meMetrics.goals > 0) {
+    addLine(98, `득점 전환율이 ${fmtPct(myConversion)}로 높았습니다. 슛 수가 아주 많지 않아도 유효한 장면을 골로 바꾸는 효율은 괜찮았고, 이 감각을 유지한 채 공격 볼륨만 늘리면 결과가 더 안정될 수 있습니다.`)
+  }
+
+  if (possessionGap >= 8 && effectiveShotGap <= 0) {
+    addLine(111, `점유율은 ${formatMetricNum(meMetrics.possession)}%로 우위였지만, 그 점유가 유효슛 우위로는 연결되지 않았습니다. 볼은 오래 들고 있었는데 상대 수비를 더 아프게 찌르지는 못한, 소유형 정체 구간이 있었다고 보는 게 맞습니다.`)
+  } else if (possessionGap <= -8 && effectiveShotGap >= 0) {
+    addLine(103, `점유율은 내줬지만 유효슛 내용은 크게 밀리지 않았습니다. 볼을 오래 쥐는 운영보다 탈취 후 빠르게 전진하는 패턴이 더 잘 먹힌 경기였고, 괜히 점유를 맞추려 하기보다 전환 속도를 살리는 편이 더 맞는 흐름이었습니다.`)
+  } else if (possessionGap <= -10 && isLoss) {
+    addLine(109, `점유율이 ${formatMetricNum(opponentMetrics.possession)}%까지 넘어가며 흐름을 너무 오래 상대에게 줬습니다. 수비 숫자를 맞춰도 결국 다시 공을 뺏기면 계속 눌리기 때문에, 첫 번째 전진 패스 성공률을 끌어올리는 게 우선입니다.`)
+  }
+
+  if (passGap != null) {
+    const myPassRate = meMetrics.passRate ?? 0
+    if (passGap <= -6) {
+      addLine(110, `패스 성공률이 ${fmtPct(myPassRate)}로 상대보다 낮았습니다. 공격 템포를 올리려는 의도는 있었겠지만, 실제론 전개 안정성을 잃어버려 흐름을 오래 못 잡았습니다. 이번 경기는 무리한 직선 패스보다 한 번 더 풀어가는 선택이 필요했습니다.`)
+    } else if (passGap >= 6 && (isLoss || isDraw) && effectiveShotGap <= 0) {
+      addLine(102, `패스 성공률은 ${fmtPct(myPassRate)}로 더 좋았는데 결과 이득은 크지 않았습니다. 전개 안정성은 있었지만 상대 박스 앞에서 속도 변화나 침투 타이밍이 부족해서, 안전한 소유가 위협으로 전환되지 못했습니다.`)
     }
   }
 
-  if (meMetrics.passRate != null && opponentMetrics.passRate != null) {
-    lines.push(`패스 성공률은 ${fmtPct(meMetrics.passRate)}:${fmtPct(opponentMetrics.passRate)}였습니다. 전개 안정감과 템포 조절은 이 수치에서 확인됩니다.`)
+  if (opponentMetrics.effectiveShots >= 4 && myDefensiveStops <= opponentDefensiveStops && isLoss) {
+    addLine(108, `상대 유효슛이 ${formatMetricNum(opponentMetrics.effectiveShots)}개까지 나왔는데, 태클/차단 성공 합계는 ${formatMetricNum(myDefensiveStops)}회에 그쳤습니다. 최종 수비 구간에서 슛을 너무 편하게 허용한 경기였고, 박스 앞 압박 강도를 더 높여야 합니다.`)
+  } else if (myDefensiveStops >= 6 && (isLoss || isDraw)) {
+    addLine(96, `태클/차단 성공이 합계 ${formatMetricNum(myDefensiveStops)}회로 수비 개입은 적지 않았습니다. 버티는 힘은 있었지만, 끊어낸 뒤 바로 다시 내주는 장면이 반복되면 결국 수비 지표가 좋아도 경기 주도권은 가져오기 어렵습니다.`)
   }
 
-  if (myDefensiveStops >= 5) {
-    lines.push(`태클과 차단 성공 합계가 ${formatMetricNum(myDefensiveStops)}회였습니다. 수비 전환에서 버텨낸 장면이 분명히 있었습니다.`)
+  if (meMetrics.offsides >= 3) {
+    addLine(100, `오프사이드가 ${formatMetricNum(meMetrics.offsides)}회면 침투 타이밍이 계속 한 박자 빨랐다는 뜻입니다. 지금은 공격 의도는 좋지만, 상대 라인을 흔들기 전에 먼저 뛰어나가면서 좋은 장면을 스스로 끊고 있습니다.`)
   }
 
   if (meMetrics.fouls >= 3 || meMetrics.yellowCards > 0 || meMetrics.redCards > 0) {
-    lines.push(`파울 ${formatMetricNum(meMetrics.fouls)}회${meMetrics.yellowCards > 0 ? `, 경고 ${formatMetricNum(meMetrics.yellowCards)}회` : ''}${meMetrics.redCards > 0 ? `, 퇴장 ${formatMetricNum(meMetrics.redCards)}회` : ''}로 수비 동작은 다소 급했습니다. 수비 선택을 조금 더 차분하게 가져갈 필요가 있습니다.`)
+    addLine(94, `파울 ${formatMetricNum(meMetrics.fouls)}회${meMetrics.yellowCards > 0 ? `, 경고 ${formatMetricNum(meMetrics.yellowCards)}회` : ''}${meMetrics.redCards > 0 ? `, 퇴장 ${formatMetricNum(meMetrics.redCards)}회` : ''}로 수비 대응이 다소 급했습니다. 한 번 늦은 압박을 몸으로 끊는 장면이 많아지면, 이후 수비 선택지가 급격히 줄어듭니다.`)
   }
 
-  if (ratingGap <= -0.5 && (isLoss || teams.myScore === teams.opponentScore)) {
-    lines.push(`평점은 ${formatMetricNum(meMetrics.rating, 2)}:${formatMetricNum(opponentMetrics.rating, 2)}로 상대가 조금 더 앞섰습니다. 세부 장면 완성도가 승부에 영향을 준 경기였습니다.`)
-  } else if (ratingGap >= 0.5) {
-    lines.push(`평점은 ${formatMetricNum(meMetrics.rating, 2)}:${formatMetricNum(opponentMetrics.rating, 2)}로 우세했습니다. 전반적인 경기 영향력 자체는 나쁘지 않았습니다.`)
+  if (ratingGap <= -0.5 && (isLoss || isDraw)) {
+    addLine(101, `평점도 ${formatMetricNum(meMetrics.rating, 2)}대${formatMetricNum(opponentMetrics.rating, 2)}로 밀렸습니다. 특정 지표 하나만의 문제가 아니라, 공격 마무리와 수비 대응 전체에서 상대가 조금씩 더 나았다는 뜻입니다.`)
+  } else if (ratingGap >= 0.5 && isLoss) {
+    addLine(95, `평점은 ${formatMetricNum(meMetrics.rating, 2)}대${formatMetricNum(opponentMetrics.rating, 2)}로 크게 밀리지 않았는데 결과는 패배였습니다. 내용 전체가 나빴다기보다, 실점 장면 몇 번과 마무리 실패가 지나치게 치명적이었던 경기로 보는 편이 맞습니다.`)
   }
 
-  return lines.slice(0, 4)
+  return lines.sort((a, b) => b.priority - a.priority).map(({ text }) => text)
 }
 
 // ??? Match list helpers ????????????????????????????????????????????????
@@ -653,6 +772,126 @@ function formatMatchDate(dateStr: string) {
 
 function getMatchResult(match: MatchData, myOuid: string) {
   return match.matchInfo?.find((p) => p.ouid === myOuid)?.matchDetail.matchResult ?? null
+}
+
+function buildManagerMatchInsight(
+  teams: NonNullable<ReturnType<typeof buildOfficialTeams>>,
+): string[] {
+  const meMetrics = getOfficialPlayerMetrics(teams.me)
+  const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
+  const lines: Array<{ priority: number; text: string }> = []
+  const seen = new Set<string>()
+
+  const addLine = (priority: number, text: string) => {
+    if (seen.has(text)) return
+    seen.add(text)
+    lines.push({ priority, text })
+  }
+
+  const shotGap = meMetrics.shots - opponentMetrics.shots
+  const effectiveShotGap = meMetrics.effectiveShots - opponentMetrics.effectiveShots
+  const possessionGap = meMetrics.possession - opponentMetrics.possession
+  const cornerGap = meMetrics.corners - opponentMetrics.corners
+  const passGap =
+    meMetrics.passRate != null && opponentMetrics.passRate != null
+      ? meMetrics.passRate - opponentMetrics.passRate
+      : null
+  const myConversion = meMetrics.shots > 0 ? (meMetrics.goals / meMetrics.shots) * 100 : 0
+  const opponentConversion = opponentMetrics.shots > 0 ? (opponentMetrics.goals / opponentMetrics.shots) * 100 : 0
+  const myDefensiveStops = (meMetrics.tackleSuccess ?? 0) + (meMetrics.blockSuccess ?? 0)
+  const opponentDefensiveStops = (opponentMetrics.tackleSuccess ?? 0) + (opponentMetrics.blockSuccess ?? 0)
+  const ratingGap = meMetrics.rating - opponentMetrics.rating
+  const isWin = teams.myScore > teams.opponentScore
+  const isLoss = teams.myScore < teams.opponentScore
+  const isDraw = teams.myScore === teams.opponentScore
+
+  // 결과 요약
+  if (isWin) {
+    if (effectiveShotGap >= 3) {
+      addLine(120, `${teams.myScore}:${teams.opponentScore} 승리였습니다. 유효슛이 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)}로 확실히 앞섰고, 전술적으로 더 많은 위협적 장면을 만들어낸 경기였습니다.`)
+    } else if (shotGap < 0 && effectiveShotGap >= 0) {
+      addLine(118, `슈팅 총량은 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}로 적었지만 ${teams.myScore}:${teams.opponentScore} 승리를 거뒀습니다. 볼 점유보다 빠른 역습과 세트피스 활용이 결과를 만들어낸 경기로 보입니다.`)
+    } else if (shotGap >= 5) {
+      addLine(116, `슈팅을 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}로 압도했고 ${teams.myScore}:${teams.opponentScore} 승리까지 이어졌습니다. 지배적인 공격 전개로 상대를 꾸준히 압박한 경기였습니다.`)
+    } else {
+      addLine(114, `${teams.myScore}:${teams.opponentScore} 승리입니다. 수치 전체를 압도하진 않았더라도 득점 장면에서의 전술 실행이 더 날카로웠습니다.`)
+    }
+  } else if (isLoss) {
+    if (shotGap >= 2 && effectiveShotGap >= 0) {
+      addLine(120, `슈팅 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)}로 공격 기회는 더 많이 만들었는데도 ${teams.myScore}:${teams.opponentScore}로 패했습니다. 마무리 효율과 실점 장면의 수비 집중력이 이 경기의 핵심 패인이었습니다.`)
+    } else if (shotGap <= -4 || effectiveShotGap <= -3) {
+      addLine(118, `슈팅 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)}로 공격 전개 자체가 눌렸습니다. ${teams.myScore}:${teams.opponentScore} 패배는 마무리 이전에 상대 진영 진입 횟수부터 부족했던 결과입니다.`)
+    } else {
+      addLine(116, `${teams.myScore}:${teams.opponentScore} 패배입니다. 전체 지표가 크게 기운 경기는 아니었지만, 실점 장면 한두 번에서 수비 조직이 흔들렸고 그 차이가 결과로 이어졌습니다.`)
+    }
+  } else if (shotGap !== 0 || effectiveShotGap !== 0) {
+    addLine(110, `무승부지만 내용은 완전히 대등하지 않았습니다. 슈팅 ${formatMetricNum(meMetrics.shots)}대${formatMetricNum(opponentMetrics.shots)}, 유효슛 ${formatMetricNum(meMetrics.effectiveShots)}대${formatMetricNum(opponentMetrics.effectiveShots)} 흐름을 보면 어느 쪽이 먼저 균형을 깼을지 힌트가 보이는 경기였습니다.`)
+  } else {
+    addLine(106, `무승부 경기였습니다. 양 팀 주요 공격 지표가 비슷하게 맞선 만큼, 세트피스 하나 혹은 전술 교체 타이밍이 경기를 갈랐을 가능성이 높습니다.`)
+  }
+
+  // 슈팅 품질 괴리 분석
+  if (shotGap >= 5 && effectiveShotGap <= 1) {
+    addLine(112, `슈팅은 많이 가져갔는데 유효슛으로 연결되지 않았습니다. 박스 외곽이나 불리한 각도에서 무리하게 때린 슛이 많았다는 의미로, 빌드업 마지막 단계에서 진입 위치를 더 까다롭게 골라야 합니다.`)
+  } else if (shotGap <= -4 && effectiveShotGap >= 0) {
+    addLine(108, `슈팅 총량은 적었지만 유효슛 격차는 크지 않았습니다. 공격 장면 수는 부족했어도 만들어낸 기회의 질은 나쁘지 않았다는 뜻입니다. 공격 빈도를 끌어올리는 게 다음 경기 포인트입니다.`)
+  }
+
+  // 득점 전환율
+  if (myConversion === 0 && meMetrics.shots >= 6) {
+    addLine(114, `슈팅을 ${formatMetricNum(meMetrics.shots)}개 만들고도 무득점이었습니다. 공격 전개보다 마무리 선택이 문제였을 가능성이 높으며, 세트피스 연계나 박스 안 침투 위치를 다시 점검할 필요가 있습니다.`)
+  } else if (myConversion + 15 < opponentConversion && opponentMetrics.goals > 0) {
+    addLine(112, `득점 전환율 차이가 컸습니다. 내 전환율 ${fmtPct(myConversion)}에 비해 상대는 ${fmtPct(opponentConversion)}였습니다. 같은 유효슛이라도 상대가 더 위협적인 상황에서 슛을 끌어낸 경기로 볼 수 있습니다.`)
+  } else if (myConversion >= 25 && meMetrics.goals > 0) {
+    addLine(96, `득점 전환율이 ${fmtPct(myConversion)}로 준수했습니다. 많은 찬스를 요구하지 않고도 실점으로 마무리한 효율은 좋은 편이었습니다.`)
+  }
+
+  // 점유율 - 전술 효율 연계
+  if (possessionGap >= 10 && effectiveShotGap <= 0) {
+    addLine(111, `점유율은 ${formatMetricNum(meMetrics.possession)}%로 앞섰지만 유효슛으로 이어지지 않았습니다. 11명 운영에서 볼 보유 시간이 길어도 공격 전환 속도나 침투 타이밍이 늦으면 유효한 찬스로 연결되지 않습니다.`)
+  } else if (possessionGap <= -10 && isLoss) {
+    addLine(109, `점유율이 ${formatMetricNum(opponentMetrics.possession)}%까지 넘어갔습니다. 진형이 눌린 상태에서 볼을 되찾더라도 조직적인 전진이 어렵기 때문에, 미드필드 압박 개시 위치를 높이는 전술 조정이 필요합니다.`)
+  } else if (possessionGap <= -10 && effectiveShotGap >= 0) {
+    addLine(100, `점유율을 내줬는데도 유효슛 내용은 크게 밀리지 않았습니다. 볼 없는 상태에서도 카운터어택으로 위협을 만든 흐름이었고, 이 패턴은 상대 전술에 따라 계속 유효할 수 있습니다.`)
+  }
+
+  // 패스 성공률
+  if (passGap != null) {
+    const myPassRate = meMetrics.passRate ?? 0
+    if (passGap <= -8) {
+      addLine(108, `패스 성공률이 ${fmtPct(myPassRate)}로 상대보다 낮았습니다. 감독모드에서 패스 안정성이 떨어지면 미드필드 연결이 끊겨 공격 전개 속도가 크게 줄어듭니다. 짧은 패스 연계로 볼 흐름을 안정시킬 필요가 있습니다.`)
+    } else if (passGap >= 8 && (isLoss || isDraw) && effectiveShotGap <= 0) {
+      addLine(100, `패스 성공률은 ${fmtPct(myPassRate)}로 더 좋았는데 유효슛 우위로는 이어지지 않았습니다. 안전한 패스 빌드업이 상대 수비를 흔드는 수직 전개나 침투로 연결되지 못하고 있을 가능성이 있습니다.`)
+    }
+  }
+
+  // 수비 지표
+  if (opponentMetrics.effectiveShots >= 5 && myDefensiveStops <= opponentDefensiveStops && isLoss) {
+    addLine(107, `상대 유효슛이 ${formatMetricNum(opponentMetrics.effectiveShots)}개 나왔는데 태클·차단 합계는 ${formatMetricNum(myDefensiveStops)}회에 그쳤습니다. 최종 수비 구간에서 슛을 자유롭게 허용했고, 수비 블록 조직을 더 촘촘하게 가져가야 합니다.`)
+  } else if (myDefensiveStops >= 8 && (isLoss || isDraw)) {
+    addLine(95, `태클·차단 성공이 ${formatMetricNum(myDefensiveStops)}회로 수비 개입은 많았습니다. 다만 개인 수비 횟수가 많다는 건 조직 압박이 무너진 뒤 개인 대응으로 수비한 장면이 많았다는 뜻이기도 합니다.`)
+  }
+
+  // 코너킥 세트피스
+  if (cornerGap >= 4 && meMetrics.corners >= 5) {
+    addLine(98, `코너킥을 ${formatMetricNum(meMetrics.corners)}회 가져갔습니다. 감독모드에서 코너킥은 득점 기회로 직결될 수 있는데, 이 찬스를 유효슛으로 얼마나 전환했는지가 다음 세트피스 전략의 척도가 됩니다.`)
+  } else if (cornerGap <= -4 && opponentMetrics.corners >= 5 && isLoss) {
+    addLine(104, `상대 코너킥이 ${formatMetricNum(opponentMetrics.corners)}회로 많았습니다. 세트피스 수비 조직이 지속적으로 압박을 받은 경기였고, 코너킥 수비 포지셔닝을 점검할 필요가 있습니다.`)
+  }
+
+  // 파울·카드
+  if (meMetrics.fouls >= 4 || meMetrics.yellowCards > 0 || meMetrics.redCards > 0) {
+    addLine(93, `파울 ${formatMetricNum(meMetrics.fouls)}회${meMetrics.yellowCards > 0 ? `, 경고 ${formatMetricNum(meMetrics.yellowCards)}회` : ''}${meMetrics.redCards > 0 ? `, 퇴장 ${formatMetricNum(meMetrics.redCards)}회` : ''}로 수비 대응이 다소 거칠었습니다. 감독모드에서 파울이 누적되면 프리킥 기회를 자주 내줘 세트피스 실점 위험이 높아집니다.`)
+  }
+
+  // 평점
+  if (ratingGap <= -0.5 && (isLoss || isDraw)) {
+    addLine(101, `평점도 ${formatMetricNum(meMetrics.rating, 2)}대${formatMetricNum(opponentMetrics.rating, 2)}로 밀렸습니다. 개별 장면 완성도 전반에서 상대가 조금씩 앞선 경기였고, 특정 포지션보다 팀 전체 전술 실행력 차이가 평점 격차로 이어졌을 가능성이 높습니다.`)
+  } else if (ratingGap >= 0.5 && isLoss) {
+    addLine(94, `평점은 ${formatMetricNum(meMetrics.rating, 2)}대${formatMetricNum(opponentMetrics.rating, 2)}로 앞섰는데도 패배였습니다. 전반적 내용은 나쁘지 않았지만 실점 장면 처리가 지나치게 치명적이었습니다.`)
+  }
+
+  return lines.sort((a, b) => b.priority - a.priority).map(({ text }) => text)
 }
 
 function getMatchScore(match: MatchData, myOuid: string) {
@@ -768,6 +1007,7 @@ export default function OwnerDetailScreen() {
           <VoltaDetailCard candidate={candidate} colors={colors} />
         )}
 
+
         {/* ?먮윭 */}
         {error ? (
           <View style={s.card}>
@@ -786,10 +1026,216 @@ export default function OwnerDetailScreen() {
             onPress={(matchId) => router.push(`/(tabs)/matches/${ouid}/${matchId}` as any)}
           />
         )}
+
+        {/* 최근 10경기 주요 선수 TOP 5 */}
+        {mode !== 'voltaLive' && matches.length > 0 && ouid && (
+          <TopPlayersBlock matches={matches} ouid={ouid} mode={mode} colors={colors} />
+        )}
       </ScrollView>
     </SafeAreaView>
   )
 }
+
+// ─── TOP 5 선수 블록 ──────────────────────────────────────────────────────────
+
+function PlayerImageWithFallback({ spId, size, colors }: { spId: number; size: number; colors: ReturnType<typeof useTheme>['colors'] }) {
+  const urls = [
+    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${spId}.png`,
+    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${spId % 1000000}.png`,
+    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/players/p${spId}.png`,
+    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/players/p${spId % 1000000}.png`,
+  ]
+  const [urlIndex, setUrlIndex] = useState(0)
+  const failed = urlIndex >= urls.length
+
+  if (failed) {
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 22 }}>⚽</Text>
+      </View>
+    )
+  }
+
+  return (
+    <Image
+      source={{ uri: urls[urlIndex] }}
+      style={{ width: size, height: size }}
+      resizeMode="contain"
+      onError={() => setUrlIndex((i) => i + 1)}
+    />
+  )
+}
+
+const POSITION_GROUP_COLORS: Record<string, { bg: string; fg: string }> = {
+  GK: { bg: 'rgba(234,179,8,0.15)', fg: '#ca8a04' },
+  DF: { bg: 'rgba(59,130,246,0.13)', fg: '#2563eb' },
+  MF: { bg: 'rgba(34,197,94,0.13)', fg: '#16a34a' },
+  FW: { bg: 'rgba(239,68,68,0.13)', fg: '#dc2626' },
+}
+
+function getPositionGroup(pos: string | null | undefined): 'GK' | 'DF' | 'MF' | 'FW' {
+  if (!pos) return 'MF'
+  if (pos === 'GK' || pos === 'SW') return 'GK'
+  if (['RWB','RB','RCB','CB','LCB','LB','LWB'].includes(pos)) return 'DF'
+  if (['RDM','CDM','LDM','RM','RCM','CM','LCM','LM','RAM','CAM','LAM'].includes(pos)) return 'MF'
+  return 'FW'
+}
+
+function TopPlayersBlock({
+  matches, ouid, mode, colors,
+}: {
+  matches: MatchData[]
+  ouid: string
+  mode: SearchMode
+  colors: ReturnType<typeof useTheme>['colors']
+}) {
+  const accentColor = getModeAccent(mode)
+  const topPlayers = buildOfficialRecentPlayerLeaders(matches, ouid)
+  if (topPlayers.length === 0) return null
+
+  return (
+    <View style={[tp.card, { backgroundColor: colors.cardBg, borderColor: colors.divider }]}>
+      <View style={tp.titleRow}>
+        <Text style={[tp.titleMain, { color: colors.title }]}>최근 10경기 주요 선수 </Text>
+        <Text style={[tp.titleAccent, { color: accentColor }]}>TOP 5</Text>
+      </View>
+
+      <View style={{ marginTop: 4 }}>
+        {topPlayers.map((player, i) => {
+          const posLabel = player.spPosition != null
+            ? (FC_POSITION_LABELS[player.spPosition] ?? null)
+            : null
+          const group = getPositionGroup(posLabel)
+          const posColor = POSITION_GROUP_COLORS[group]
+
+          return (
+            <View key={player.key} style={[tp.row, i < topPlayers.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
+              <View style={[tp.imgBox, { backgroundColor: colors.surfaceStrong }]}>
+                <PlayerImageWithFallback spId={player.spId} size={52} colors={colors} />
+              </View>
+
+              <View style={tp.infoCol}>
+                <View style={tp.nameRow}>
+                  {posLabel ? (
+                    <View style={[tp.posBadge, { backgroundColor: posColor.bg }]}>
+                      <Text style={[tp.posBadgeText, { color: posColor.fg }]}>{posLabel}</Text>
+                    </View>
+                  ) : null}
+                  <Text style={[tp.playerName, { color: colors.title }]} numberOfLines={1}>
+                    {player.playerName ?? '선수 정보 없음'}
+                  </Text>
+                </View>
+
+                {(player.enhancement != null || player.seasonName) ? (
+                  <Text style={[tp.subtitle, { color: colors.mutedText }]}>
+                    {[
+                      player.enhancement != null ? `${player.enhancement}강` : null,
+                      player.seasonName || null,
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                ) : null}
+
+                <View style={tp.statsRow}>
+                  <Text style={[tp.stat, { color: colors.bodyText }]}>{player.appearances}경기</Text>
+                  <Text style={[tp.dot, { color: colors.mutedText }]}>·</Text>
+                  <Text style={[tp.stat, { color: colors.bodyText }]}>평점 {player.averageRating.toFixed(2)}</Text>
+                  <Text style={[tp.dot, { color: colors.mutedText }]}>·</Text>
+                  <Text style={[tp.stat, { color: accentColor }]}>{player.goals}골 {player.assists}도움</Text>
+                  <Text style={[tp.dot, { color: colors.mutedText }]}>·</Text>
+                  <Text style={[tp.stat, { color: colors.bodyText }]}>유효슛 {player.effectiveShots}</Text>
+                </View>
+              </View>
+            </View>
+          )
+        })}
+      </View>
+    </View>
+  )
+}
+
+const tp = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 6,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  titleMain: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  titleAccent: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+  },
+  imgBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  infoCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  posBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  posBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
+  playerName: {
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  subtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 3,
+    marginTop: 2,
+  },
+  stat: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  dot: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+})
 
 // ??? 援щ떒二??곸꽭 ?뺣낫 移대뱶 ?????????????????????????????????????????????
 
@@ -1222,7 +1668,9 @@ function OfficialMatchItem({
 
   const meMetrics = teams ? getOfficialPlayerMetrics(teams.me) : null
   const opponentMetrics = teams ? getOfficialPlayerMetrics(teams.opponent) : null
-  const insight = (teams && expanded) ? buildOfficialMatchInsight(teams) : []
+  const insight = (teams && expanded)
+    ? (mode === 'manager' ? buildManagerMatchInsight(teams) : buildOfficialMatchInsight(teams))
+    : []
 
   return (
     <TouchableOpacity

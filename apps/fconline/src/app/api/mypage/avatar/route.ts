@@ -2,16 +2,13 @@ import { NextRequest } from 'next/server'
 import { getKoreaTimestampString } from '@/lib/community'
 import { appendAvatarVersion } from '@/lib/avatar'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
-import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
+import { getAuthUserFromRequest } from '@/lib/supabase/getAuthUser'
 
 const BUCKET = 'fconlineground'
 
 export async function POST(request: NextRequest) {
   try {
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
+    const user = await getAuthUserFromRequest(request)
 
     if (!user) {
       return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })
@@ -62,12 +59,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
+    const user = await getAuthUserFromRequest(request)
 
     if (!user) {
       return Response.json({ message: '로그인 후 이용해 주세요.' }, { status: 401 })

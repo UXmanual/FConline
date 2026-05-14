@@ -10,15 +10,37 @@ import {
   Alert,
   Easing,
   Modal,
+  LayoutAnimation,
   Platform,
+  UIManager,
 } from 'react-native'
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true)
+}
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
+import { router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
+import * as WebBrowser from 'expo-web-browser'
+import * as Linking from 'expo-linking'
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
-import { API_BASE } from '@/constants/api'
-import { Text, TextInput } from '@/components/Themed'
+import { supabase } from '@/lib/supabase'
+import { apiFetch } from '@/lib/apiFetch'
+import { Text } from '@/components/Themed'
+
+function GoogleIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 18 18">
+      <Path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.56 2.68-3.86 2.68-6.62Z" />
+      <Path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z" />
+      <Path fill="#FBBC05" d="M3.97 10.71A5.41 5.41 0 0 1 3.69 9c0-.59.1-1.16.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33Z" />
+      <Path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.36l2.58-2.58C13.46.9 11.42 0 9 0A9 9 0 0 0 .96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z" />
+    </Svg>
+  )
+}
 
 type UserProfile = {
   id: string
@@ -31,11 +53,17 @@ type UserProfile = {
 }
 
 function getLevelColor(level?: number | null): string {
-  if (!level || level < 5) return '#9aa3af'
-  if (level < 10) return '#4ade80'
-  if (level < 20) return '#60a5fa'
-  if (level < 30) return '#c084fc'
-  return '#fbbf24'
+  if (!level || !Number.isFinite(level)) return '#9aa3af'
+  if (level <= 10) return '#9aa3af'
+  if (level <= 20) return '#457ae5'
+  if (level <= 30) return '#0f9f8c'
+  if (level <= 40) return '#18a957'
+  if (level <= 50) return '#65b32e'
+  if (level <= 60) return '#d4a017'
+  if (level <= 70) return '#d97904'
+  if (level <= 80) return '#d94f3d'
+  if (level <= 90) return '#c43d6b'
+  return '#8b5cf6'
 }
 
 function pickDefaultAvatar(id: string): string {
@@ -62,36 +90,61 @@ export default function MypageScreen() {
   const [profileLoading, setProfileLoading] = useState(true)
   const [showTerms, setShowTerms] = useState(false)
   const [showLicenses, setShowLicenses] = useState(false)
-  const [showNicknameEdit, setShowNicknameEdit] = useState(false)
-  const [nicknameDraft, setNicknameDraft] = useState('')
-  const [nicknameSubmitting, setNicknameSubmitting] = useState(false)
+  const [xpGuideOpen, setXpGuideOpen] = useState(false)
+  const [xpBarWidth, setXpBarWidth] = useState(0)
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
 
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
   useScrollToTop(scrollRef)
-  useFocusEffect(
-    useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false })
-    }, []),
-  )
 
   useEffect(() => {
     themeToggleTranslateX.setValue(isDark ? 24 : 0)
   }, [isDark, themeToggleTranslateX])
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/mypage/profile`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.id) setProfile(data)
-      })
-      .catch(() => {})
-      .finally(() => setProfileLoading(false))
+  const fetchProfile = useCallback(async () => {
+    setProfileLoading(true)
+    try {
+      const res = await apiFetch('/api/mypage/profile')
+      const data = await res.json().catch(() => null)
+      if (data?.id) setProfile(data)
+      else setProfile(null)
+    } catch {}
+    finally { setProfileLoading(false) }
   }, [])
 
-  const handleLogin = () => {
-    Alert.alert('로그인', '웹 브라우저에서 Google 로그인을 진행하세요.\n\nfconlineground.com')
+  useEffect(() => { void fetchProfile() }, [fetchProfile])
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+      void fetchProfile()
+    }, [fetchProfile]),
+  )
+
+  const handleLogin = async () => {
+    try {
+      const redirectTo = Linking.createURL('auth/callback')
+      if (Platform.OS === 'android') await WebBrowser.warmUpAsync().catch(() => null)
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: 'select_account' },
+        },
+      })
+      if (error || !data.url) return Alert.alert('오류', '로그인 URL을 가져오지 못했습니다.')
+      if (!data.url.startsWith('https://')) return Alert.alert('오류', '잘못된 로그인 URL입니다.')
+
+      await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+      if (Platform.OS === 'android') await WebBrowser.coolDownAsync().catch(() => null)
+
+      await fetchProfile()
+    } catch {
+      Alert.alert('오류', '로그인 중 문제가 발생했습니다.')
+    }
   }
 
   const handleLogout = async () => {
@@ -100,42 +153,13 @@ export default function MypageScreen() {
       {
         text: '로그아웃', style: 'destructive', onPress: async () => {
           try {
-            await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' })
+            await supabase.auth.signOut()
+            await apiFetch('/api/auth/logout', { method: 'POST' })
           } catch {}
           setProfile(null)
         }
       },
     ])
-  }
-
-  const handleNicknameEdit = () => {
-    setNicknameDraft(profile?.nickname ?? '')
-    setShowNicknameEdit(true)
-  }
-
-  const handleNicknameSubmit = async () => {
-    const trimmed = nicknameDraft.trim()
-    if (!trimmed || nicknameSubmitting) return
-    setNicknameSubmitting(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/mypage/nickname`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ nickname: trimmed }),
-      })
-      if (res.ok) {
-        setProfile((prev) => prev ? { ...prev, nickname: trimmed } : prev)
-        setShowNicknameEdit(false)
-      } else {
-        const data = await res.json().catch(() => null)
-        Alert.alert('오류', data?.message ?? '닉네임 변경에 실패했어요.')
-      }
-    } catch {
-      Alert.alert('오류', '닉네임 변경에 실패했어요.')
-    } finally {
-      setNicknameSubmitting(false)
-    }
   }
 
   const handleThemeToggle = useCallback(() => {
@@ -166,83 +190,126 @@ export default function MypageScreen() {
           <Text style={s.pageTitle}>마이페이지</Text>
         </View>
 
-        {/* 프로필 카드 */}
+        {/* 구글 로그인 카드 */}
         <View style={s.card}>
-          {profileLoading ? (
-            <View style={s.loadingWrap}>
-              <ActivityIndicator size="small" color={colors.accentBlue} />
+          <View style={s.loginStatusRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[s.settingLabel, { color: colors.title }]}>구글 로그인</Text>
+              {profileLoading ? (
+                <ActivityIndicator size="small" color={colors.accentBlue} />
+              ) : profile ? (
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#457ae5' }}>연결 중</Text>
+              ) : (
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.mutedText }}>연결 전</Text>
+              )}
             </View>
-          ) : profile ? (
-            <>
-              <View style={s.profileRow}>
-                <View style={[s.avatarWrap, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
-                  {profile.avatarUrl ? (
-                    <Image source={{ uri: profile.avatarUrl }} style={{ width: 60, height: 60 }} />
-                  ) : (
-                    <Text style={{ fontSize: 26 }}>{pickDefaultAvatar(profile.id)}</Text>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={s.nicknameRow}>
-                    <Text style={[s.nickname, { color: colors.title }]} numberOfLines={1}>{profile.nickname}</Text>
-                    {profile.level != null && (
-                      <View style={[s.levelBadge, { backgroundColor: colors.surfaceStrong }]}>
-                        <Text style={[s.levelText, { color: getLevelColor(profile.level) }]}>Lv.{profile.level}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[s.email, { color: colors.mutedText }]} numberOfLines={1}>{profile.email}</Text>
-                  {xpPercent !== null && (
-                    <View style={{ marginTop: 8 }}>
-                      <View style={[s.xpBar, { backgroundColor: colors.surfaceStrong }]}>
-                        <View style={[s.xpFill, { width: `${xpPercent}%` }]} />
-                      </View>
-                      <Text style={[s.xpLabel, { color: colors.mutedText }]}>XP {profile.xp} / {profile.xpForNextLevel}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              <View style={[s.divider, { backgroundColor: colors.divider }]} />
-
-              <View style={s.profileActions}>
-                <TouchableOpacity style={s.profileAction} onPress={handleNicknameEdit}>
-                  <Text style={[s.profileActionText, { color: colors.bodyText }]}>닉네임 변경</Text>
-                  <Feather name="chevron-right" size={16} color={colors.mutedText} />
-                </TouchableOpacity>
-                <TouchableOpacity style={s.profileAction} onPress={handleLogout}>
-                  <Text style={[s.profileActionText, { color: colors.accentRed }]}>로그아웃</Text>
-                  <Feather name="chevron-right" size={16} color={colors.mutedText} />
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <View style={s.loginPrompt}>
-              <Text style={[s.loginTitle, { color: colors.title }]}>로그인이 필요해요</Text>
-              <Text style={[s.loginDesc, { color: colors.bodyText }]}>커뮤니티 글쓰기, 선수 즐겨찾기 등을 이용하려면 로그인하세요.</Text>
-              <TouchableOpacity style={s.loginBtn} onPress={handleLogin}>
-                <Text style={s.loginBtnText}>Google로 로그인</Text>
+            {!profileLoading && profile && (
+              <TouchableOpacity onPress={handleLogout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '500', color: colors.mutedText }}>로그아웃</Text>
               </TouchableOpacity>
-            </View>
+            )}
+          </View>
+          {!profileLoading && !profile && (
+            <>
+              <Text style={[s.loginDesc, { color: colors.mutedText, marginTop: 8 }]}>
+                구글 로그인하고 커뮤니티와 선수평가에 참여해요
+              </Text>
+              <TouchableOpacity style={[s.googleBtn, { borderColor: isDark ? '#3c4043' : '#dadce0' }]} onPress={handleLogin} activeOpacity={0.8}>
+                <View style={s.googleBtnInner}>
+                  <View style={s.googleBtnIconWrap}>
+                    <GoogleIcon />
+                  </View>
+                  <Text style={[s.googleBtnText, { color: colors.title }]}>Google 계정으로 로그인</Text>
+                </View>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
+        {/* 프로필 카드 (로그인 시) */}
+        {profile && (
+          <View style={s.card}>
+            <View style={s.profileRow}>
+              <View style={[s.avatarWrap, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
+                {profile.avatarUrl ? (
+                  <Image source={{ uri: profile.avatarUrl }} style={{ width: 60, height: 60 }} />
+                ) : (
+                  <Text style={{ fontSize: 26 }}>{pickDefaultAvatar(profile.id)}</Text>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.nickname, { color: colors.title }]} numberOfLines={1}>
+                  {profile.level != null && (
+                    <Text style={{ color: getLevelColor(profile.level), fontWeight: '600' }}>{`Lv.${profile.level} `}</Text>
+                  )}
+                  {profile.nickname}
+                </Text>
+                <Text style={[s.email, { color: colors.mutedText }]} numberOfLines={1}>{profile.email}</Text>
+                {xpPercent !== null && (
+                  <View style={{ marginTop: 4 }}>
+                    <View
+                      style={[s.xpBar, { backgroundColor: colors.surfaceStrong }]}
+                      onLayout={(e) => setXpBarWidth(e.nativeEvent.layout.width)}
+                    >
+                      {xpBarWidth > 0 && (
+                        <Svg width={xpBarWidth} height={6} style={{ position: 'absolute', top: 0, left: 0 }}>
+                          <Defs>
+                            <SvgLinearGradient id="xpGrad" x1="0" y1="0" x2="1" y2="0">
+                              <Stop offset="0" stopColor="#457ae5" />
+                              <Stop offset="0.5" stopColor="#a855f7" />
+                              <Stop offset="1" stopColor="#ec4899" />
+                            </SvgLinearGradient>
+                          </Defs>
+                          <Rect x={0} y={0} width={(xpBarWidth * xpPercent) / 100} height={6} rx={3} fill="url(#xpGrad)" />
+                        </Svg>
+                      )}
+                    </View>
+                    <Text style={[s.xpLabel, { color: colors.mutedText }]}>XP {profile.xp} / {profile.xpForNextLevel}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <View style={[s.divider, { backgroundColor: colors.divider }]} />
+            <View style={s.profileActions}>
+              <TouchableOpacity
+                style={s.profileAction}
+                onPress={() => router.push({ pathname: '/(tabs)/mypage/edit', params: { nickname: profile.nickname, avatarUrl: profile.avatarUrl ?? '', userId: profile.id } })}
+              >
+                <Text style={[s.profileActionText, { color: colors.bodyText }]}>프로필 편집</Text>
+                <Feather name="chevron-right" size={16} color={colors.mutedText} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* 레벨 가이드 */}
         <View style={s.card}>
-          <Text style={[s.sectionTitle, { color: colors.title }]}>경험치 획득 방법</Text>
-          <View style={{ gap: 6, marginTop: 10 }}>
-            {[
-              '하루 첫 로그인: +5 XP',
-              '커뮤니티 글 작성: +12 XP',
-              '선수평가 글 작성: +10 XP',
-              '커뮤니티 댓글 작성: +4 XP',
-              '선수평가 댓글 작성: +4 XP',
-              '하루 첫 글 보너스: +5 XP',
-              '하루 첫 댓글 보너스: +3 XP',
-            ].map((item, i) => (
-              <Text key={i} style={[s.guideItem, { color: colors.bodyText }]}>· {item}</Text>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={s.settingRowCompact}
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+              setXpGuideOpen(prev => !prev)
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.settingLabel, { color: colors.title }]}>경험치 획득 방법</Text>
+            <Feather name={xpGuideOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+          {xpGuideOpen && (
+            <View style={{ gap: 6, marginTop: 12 }}>
+              {[
+                '하루 첫 로그인: +5 XP',
+                '커뮤니티 글 작성: +12 XP',
+                '선수평가 글 작성: +10 XP',
+                '커뮤니티 댓글 작성: +4 XP',
+                '선수평가 댓글 작성: +4 XP',
+                '하루 첫 글 보너스: +5 XP',
+                '하루 첫 댓글 보너스: +3 XP',
+              ].map((item, i) => (
+                <Text key={i} style={[s.guideItem, { color: colors.bodyText }]}>· {item}</Text>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* 다크모드 */}
@@ -261,16 +328,10 @@ export default function MypageScreen() {
               accessibilityState={{ checked: isDark }}
               activeOpacity={0.85}
               onPress={handleThemeToggle}
-              style={[
-                s.themeToggleTrack,
-                { backgroundColor: isDark ? '#457ae5' : '#d5dbe3' },
-              ]}
+              style={[s.themeToggleTrack, { backgroundColor: isDark ? '#457ae5' : '#d5dbe3' }]}
             >
               <Animated.View
-                style={[
-                  s.themeToggleThumb,
-                  { transform: [{ translateX: themeToggleTranslateX }] },
-                ]}
+                style={[s.themeToggleThumb, { transform: [{ translateX: themeToggleTranslateX }] }]}
               />
             </TouchableOpacity>
           </View>
@@ -299,7 +360,6 @@ export default function MypageScreen() {
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
           </TouchableOpacity>
         </View>
-
       </ScrollView>
 
       {/* 이용약관 모달 */}
@@ -341,46 +401,11 @@ export default function MypageScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-
-      {/* 닉네임 변경 모달 */}
-      <Modal visible={showNicknameEdit} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setShowNicknameEdit(false)}>
-        <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
-          <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
-            <Text style={[s.modalTitle, { color: colors.title }]}>닉네임 변경</Text>
-            <TouchableOpacity onPress={() => setShowNicknameEdit(false)}>
-              <Feather name="x" size={22} color={colors.bodyText} />
-            </TouchableOpacity>
-          </View>
-          <View style={{ padding: 20, gap: 12 }}>
-            <TextInput
-              style={[s.nicknameInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.title }]}
-              value={nicknameDraft}
-              onChangeText={setNicknameDraft}
-              placeholder="새 닉네임 입력"
-              placeholderTextColor={colors.inputPlaceholder}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleNicknameSubmit}
-            />
-            <TouchableOpacity
-              style={[s.submitBtn, (!nicknameDraft.trim() || nicknameSubmitting) && { opacity: 0.5 }]}
-              onPress={handleNicknameSubmit}
-              disabled={!nicknameDraft.trim() || nicknameSubmitting}
-            >
-              {nicknameSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={s.submitBtnText}>변경하기</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   )
 }
 
-const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
+const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
@@ -395,45 +420,49 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
       borderWidth: 1,
       borderColor: c.cardBorder,
     },
-    loadingWrap: { paddingVertical: 24, alignItems: 'center' },
     profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
     avatarWrap: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-    nicknameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-    nickname: { fontSize: 17, fontWeight: '700', letterSpacing: -0.3 },
-    levelBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-    levelText: { fontSize: 11, fontWeight: '700' },
+    nickname: { fontSize: 17, fontWeight: '600', letterSpacing: -0.3 },
     email: { fontSize: 12, fontWeight: '500' },
     xpBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 6 },
-    xpFill: { height: '100%', backgroundColor: '#457ae5', borderRadius: 3 },
     xpLabel: { fontSize: 11, fontWeight: '500', marginTop: 4 },
     divider: { height: 1, marginVertical: 12 },
     profileActions: { gap: 4 },
     profileAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
     profileActionText: { fontSize: 14, fontWeight: '500' },
-    loginPrompt: { gap: 10 },
-    loginTitle: { fontSize: 16, fontWeight: '700' },
-    loginDesc: { fontSize: 13, lineHeight: 20 },
-    loginBtn: {
-      marginTop: 6,
-      height: 48,
-      backgroundColor: '#457ae5',
-      borderRadius: 12,
+    loginStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    connectedBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+    connectedBadgeText: { fontSize: 12, fontWeight: '600' },
+    loginDesc: { fontSize: 13, lineHeight: 20, fontWeight: '400' },
+    googleBtn: {
+      marginTop: 12,
+      height: 46,
+      borderRadius: 999,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    googleBtnInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    googleBtnIconWrap: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'center',
     },
-    loginBtnText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    googleBtnText: { fontSize: 14, fontWeight: '600' },
     sectionTitle: { fontSize: 14, fontWeight: '600' },
-    guideItem: { fontSize: 13, lineHeight: 20 },
-    settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+    guideItem: { fontSize: 13, lineHeight: 20, fontWeight: '400' },
     settingRowCompact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
-    settingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
     settingTitleRowCompact: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     settingLabel: { fontSize: 14, fontWeight: '500' },
-    settingCaption: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
     settingValue: { fontSize: 14, fontWeight: '500' },
     darkModeStatus: { fontSize: 14, fontWeight: '600' },
-    themeBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-    themeBadgeText: { fontSize: 11, fontWeight: '700' },
     themeToggleTrack: {
       width: 64,
       height: 28,
@@ -451,10 +480,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     modalSafe: { flex: 1 },
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
     modalTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 12 },
-    termsText: { fontSize: 14, lineHeight: 22 },
+    termsText: { fontSize: 14, lineHeight: 22, fontWeight: '400' },
     licenseTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
-    licenseDesc: { fontSize: 13 },
-    nicknameInput: { height: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, fontSize: 15 },
-    submitBtn: { height: 48, backgroundColor: '#457ae5', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    submitBtnText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    licenseDesc: { fontSize: 13, fontWeight: '400' },
   })

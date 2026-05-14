@@ -197,8 +197,8 @@ export default function MatchesScreen() {
     }, []),
   )
 
-  const handleSearch = async () => {
-    const trimmed = query.trim()
+  const searchNickname = async (nickname: string) => {
+    const trimmed = nickname.trim()
     if (!trimmed || searching) return
 
     const reqId = ++requestIdRef.current
@@ -241,6 +241,8 @@ export default function MatchesScreen() {
       if (reqId === requestIdRef.current) setSearching(false)
     }
   }
+
+  const handleSearch = () => searchNickname(query)
 
   const placeholder =
     mode === 'official1on1' ? '1:1 공식경기 구단주명 입력'
@@ -316,7 +318,7 @@ export default function MatchesScreen() {
             {/* 랭킹 TOP 5 */}
             <HomeBlock titleAccent="1:1 공식경기" titleRest=" 랭킹 TOP 5" badge="공식경기" loading={topRanksLoading} colors={colors}>
               {topRanks.map((item, i) => (
-                <View key={item.rank} style={[hb.row, i < topRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
+                <TouchableOpacity key={item.rank} style={[hb.row, i < topRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => searchNickname(item.nickname)} activeOpacity={0.7}>
                   <View style={hb.iconBox}>
                     {item.rankIconUrl
                       ? <Image source={{ uri: item.rankIconUrl }} style={hb.iconImg} resizeMode="contain" />
@@ -333,7 +335,7 @@ export default function MatchesScreen() {
                     <Text style={hb.accentSm}>{item.rank}위</Text>
                     {item.rankPoint != null && <Text style={[hb.sub, { color: colors.mutedText }]}>{item.rankPoint.toLocaleString()}pt</Text>}
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </HomeBlock>
 
@@ -402,7 +404,7 @@ export default function MatchesScreen() {
             {/* 볼타 랭킹 TOP 5 */}
             <HomeBlock titleAccent="볼타" titleRest=" 랭킹 TOP 5" badge="VOLTA" accentColor={VOLTA_ACCENT} loading={voltaTopLoading} colors={colors}>
               {voltaTopRanks.map((item, i) => (
-                <View key={item.rank} style={[hb.row, i < voltaTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
+                <TouchableOpacity key={item.rank} style={[hb.row, i < voltaTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => searchNickname(item.nickname)} activeOpacity={0.7}>
                   <View style={hb.iconBox}>
                     {item.rankIconUrl
                       ? <Image source={{ uri: item.rankIconUrl }} style={hb.iconImgSm} resizeMode="contain" />
@@ -426,7 +428,7 @@ export default function MatchesScreen() {
                     <Text style={[hb.accentSm, { color: VOLTA_ACCENT }]}>{item.rankPoint != null ? item.rankPoint.toLocaleString() : '-'}</Text>
                     <Text style={[hb.sub, { color: colors.mutedText }]}>랭킹 포인트</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </HomeBlock>
 
@@ -451,7 +453,7 @@ export default function MatchesScreen() {
             {/* 감독모드 랭킹 TOP 5 */}
             <HomeBlock titleAccent="감독모드" titleRest=" 랭킹 TOP 5" badge="감독모드" accentColor={MANAGER_ACCENT} loading={managerTopLoading} colors={colors}>
               {managerTopRanks.map((item, i) => (
-                <View key={item.rank} style={[hb.row, i < managerTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
+                <TouchableOpacity key={item.rank} style={[hb.row, i < managerTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => searchNickname(item.nickname)} activeOpacity={0.7}>
                   <View style={hb.iconBox}>
                     {item.rankIconUrl
                       ? <Image source={{ uri: item.rankIconUrl }} style={hb.iconImg} resizeMode="contain" />
@@ -468,7 +470,7 @@ export default function MatchesScreen() {
                     <Text style={[hb.accentSm, { color: MANAGER_ACCENT }]}>{item.rank}위</Text>
                     {item.rankPoint != null && <Text style={[hb.sub, { color: colors.mutedText }]}>{item.rankPoint.toLocaleString()}pt</Text>}
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </HomeBlock>
 
