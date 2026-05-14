@@ -104,6 +104,12 @@
         "projectId": "fcbf4efe-5968-40ab-b8d9-af3518374baa"
       }
     },
-    "owner": "uxx"
+    "owner": "uxx",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/fcbf4efe-5968-40ab-b8d9-af3518374baa"
+    }
   }
 }
