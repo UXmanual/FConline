@@ -233,7 +233,8 @@ export async function POST(request: NextRequest) {
     for (let index = 0; index < insertAttempts.length; index += 1) {
       response = await supabase
         .from('community_comments')
-        .insert(insertAttempts[index])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(insertAttempts[index] as any)
         .select(selectAttempts[index])
         .single()
 
