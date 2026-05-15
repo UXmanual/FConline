@@ -87,13 +87,7 @@
         }
       ],
       "expo-secure-store",
-      "expo-image-picker",
-      [
-        "expo-notifications",
-        {
-          "androidMode": "default"
-        }
-      ]
+      "expo-image-picker"
     ],
     "experiments": {
       "typedRoutes": true

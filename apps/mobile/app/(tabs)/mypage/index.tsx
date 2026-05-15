@@ -13,6 +13,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  PermissionsAndroid,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -109,11 +110,11 @@ export default function MypageScreen() {
     let cancelled = false
     ;(async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const Notifs = require('expo-notifications') as typeof import('expo-notifications')
-        const { status } = await Notifs.getPermissionsAsync()
+        if (Platform.OS !== 'android') return
+        const granted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS ?? ('android.permission.POST_NOTIFICATIONS' as never),
+        )
         if (!cancelled) {
-          const granted = status === 'granted'
           setNotifGranted(granted)
           notifToggleTranslateX.setValue(granted ? 24 : 0)
         }
@@ -131,17 +132,18 @@ export default function MypageScreen() {
           '앱 알림 해제',
           '알림을 끄려면 기기 설정에서 변경해 주세요.',
           [
-            { text: '설정 열기', onPress: () => Linking.openSettings() },
+            { text: '설정 열기', onPress: () => void Linking.openSettings() },
             { text: '취소', style: 'cancel' },
           ],
         )
         return
       }
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const Notifs = require('expo-notifications') as typeof import('expo-notifications')
-        const { status } = await Notifs.requestPermissionsAsync()
-        const granted = status === 'granted'
+        if (Platform.OS !== 'android') return
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS ?? ('android.permission.POST_NOTIFICATIONS' as never),
+        )
+        const granted = result === PermissionsAndroid.RESULTS.GRANTED
         setNotifGranted(granted)
         Animated.timing(notifToggleTranslateX, {
           toValue: granted ? 24 : 0,
@@ -154,13 +156,13 @@ export default function MypageScreen() {
             '앱 알림 허용 필요',
             '기기 설정에서 알림을 허용해 주세요.',
             [
-              { text: '설정 열기', onPress: () => Linking.openSettings() },
+              { text: '설정 열기', onPress: () => void Linking.openSettings() },
               { text: '취소', style: 'cancel' },
             ],
           )
         }
       } catch {
-        Linking.openSettings()
+        void Linking.openSettings()
       }
     } finally {
       setNotifPending(false)
