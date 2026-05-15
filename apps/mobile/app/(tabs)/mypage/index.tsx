@@ -14,9 +14,6 @@ import {
   Platform,
   UIManager,
 } from 'react-native'
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true)
-}
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
@@ -28,6 +25,10 @@ import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from
 import { useTheme } from '@/hooks/useTheme'
 import { supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true)
+}
 import { Text } from '@/components/Themed'
 
 function GoogleIcon() {
