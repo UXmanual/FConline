@@ -122,7 +122,7 @@ export default function CommunityScreen() {
   }
 
   const handleOpenPost = (post: Post) => {
-    router.push({ pathname: '/(tabs)/community/[id]/', params: { id: post.id, data: JSON.stringify(post) } })
+    router.push({ pathname: '/(tabs)/community/[id]', params: { id: post.id } })
   }
 
   const pageWindowStart = Math.max(1, Math.min(currentPage - 2, totalPages - 4))

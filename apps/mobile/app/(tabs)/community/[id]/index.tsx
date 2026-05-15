@@ -103,6 +103,20 @@ export default function PostDetailScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
   const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const { id } = useLocalSearchParams<{ id: string }>()
+
+  const [post, setPost] = useState<Post | null>(null)
+  const [postLoading, setPostLoading] = useState(true)
+
+  const [comments, setComments] = useState<Comment[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(true)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [submitBusy, setSubmitBusy] = useState(false)
+  const [commentCount, setCommentCount] = useState(0)
+  const [isLiked, setIsLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+
+  const s = styles(colors, isDark)
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
@@ -111,32 +125,38 @@ export default function PostDetailScreen() {
     const hide = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false))
     return () => { show.remove(); hide.remove() }
   }, [])
-  const { data } = useLocalSearchParams<{ id: string; data: string }>()
 
-  const post: Post | null = (() => {
-    try { return data ? (JSON.parse(data) as Post) : null } catch { return null }
-  })()
-
-  const [comments, setComments] = useState<Comment[]>([])
-  const [commentsLoading, setCommentsLoading] = useState(true)
-  const [commentDraft, setCommentDraft] = useState('')
-  const [submitBusy, setSubmitBusy] = useState(false)
-  const [commentCount, setCommentCount] = useState(post?.commentCount ?? 0)
-  const [isLiked, setIsLiked] = useState(post?.isLiked ?? false)
-  const [likeCount, setLikeCount] = useState(post?.likeCount ?? 0)
-
-  const s = styles(colors, isDark)
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    setPostLoading(true)
+    fetch(`${API_BASE}/api/community/posts/${id}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return
+        if (json?.item) {
+          const p = json.item as Post
+          setPost(p)
+          setCommentCount(p.commentCount)
+          setIsLiked(p.isLiked ?? false)
+          setLikeCount(p.likeCount)
+        }
+      })
+      .catch(() => null)
+      .finally(() => { if (!cancelled) setPostLoading(false) })
+    return () => { cancelled = true }
+  }, [id])
 
   const loadComments = useCallback(async () => {
-    if (!post) return
+    if (!id) return
     setCommentsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/community/comments?postId=${post.id}&page=1&pageSize=50`)
+      const res = await fetch(`${API_BASE}/api/community/comments?postId=${id}&page=1&pageSize=50`)
       const json = await res.json().catch(() => null)
       if (Array.isArray(json?.items)) setComments(json.items)
     } catch {}
     finally { setCommentsLoading(false) }
-  }, [post?.id])
+  }, [id])
 
   useEffect(() => { void loadComments() }, [loadComments])
 
@@ -165,6 +185,21 @@ export default function PostDetailScreen() {
       }
     } catch {}
     finally { setSubmitBusy(false) }
+  }
+
+  if (postLoading) {
+    return (
+      <SafeAreaView style={s.safeArea} edges={['top']}>
+        <View style={s.navHeader}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="chevron-left" size={24} color={colors.title} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="small" color={colors.accentBlue} />
+        </View>
+      </SafeAreaView>
+    )
   }
 
   if (!post) {

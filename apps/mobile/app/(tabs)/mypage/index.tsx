@@ -26,11 +26,11 @@ import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from
 import { useTheme } from '@/hooks/useTheme'
 import { supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
+import { Text } from '@/components/Themed'
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
 }
-import { Text } from '@/components/Themed'
 
 function GoogleIcon() {
   return (
