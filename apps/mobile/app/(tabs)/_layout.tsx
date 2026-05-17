@@ -43,8 +43,8 @@ function AnimatedTabBarButton({ children, onPress, onLongPress, style, accessibi
 export default function TabLayout() {
   const { colors: c } = useTheme()
   const insets = useSafeAreaInsets()
-  const baseTabBarHeight = 70
-  const tabBarBottomPadding = Math.max(insets.bottom, 8)
+  const baseTabBarHeight = 68
+  const tabBarBottomPadding = Math.max(insets.bottom, 6)
 
   return (
     <Tabs
@@ -69,8 +69,8 @@ export default function TabLayout() {
           elevation: 0,
         },
         tabBarItemStyle: {
-          paddingTop: 10,
-          paddingBottom: tabBarBottomPadding + 2,
+          paddingTop: 12,
+          paddingBottom: tabBarBottomPadding + 12,
           alignItems: 'center',
         },
         tabBarIconStyle: {

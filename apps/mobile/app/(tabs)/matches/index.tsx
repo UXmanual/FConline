@@ -17,6 +17,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easi
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
+import { SkeletonRankRow } from '@/components/Skeleton'
 
 type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
 
@@ -585,8 +586,8 @@ function HomeBlock({
         </View>
       </View>
       {loading ? (
-        <View style={hb.loadingWrap}>
-          <ActivityIndicator size="small" color={accentColor} />
+        <View>
+          {[0, 1, 2, 3, 4].map((i) => <SkeletonRankRow key={i} colors={colors} isDark={false} />)}
         </View>
       ) : children}
     </View>
@@ -602,7 +603,6 @@ const hb = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
   accentTitle: { fontSize: 14, fontWeight: '600' },
   titleRest: { fontSize: 14, fontWeight: '600' },
-  loadingWrap: { paddingVertical: 20, alignItems: 'center' as const },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   formationRow: { paddingVertical: 8 },
   formationInner: { flexDirection: 'row', alignItems: 'center', gap: 10 },

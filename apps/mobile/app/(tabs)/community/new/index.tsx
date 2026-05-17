@@ -45,10 +45,12 @@ export default function CommunityNewScreen() {
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <View style={s.navHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 16, bottom: 16, left: 16, right: 24 }}>
           <Feather name="chevron-left" size={24} color={colors.title} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.title }]}>글쓰기</Text>
+        <View style={s.headerTitleWrap} pointerEvents="none">
+          <Text style={[s.headerTitle, { color: colors.title }]}>글쓰기</Text>
+        </View>
         <TouchableOpacity
           style={[s.submitBtn, !canSubmit && { opacity: 0.4 }]}
           onPress={handleSubmit}
@@ -113,8 +115,9 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3, position: 'absolute', left: 0, right: 0, textAlign: 'center' },
+    backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+    headerTitleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+    headerTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3, textAlign: 'center' },
     submitBtn: { paddingHorizontal: 12, height: 40, alignItems: 'center', justifyContent: 'center' },
     submitBtnText: { fontSize: 15, fontWeight: '700', color: '#457ae5' },
     categoryRow: {

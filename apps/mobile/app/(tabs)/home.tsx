@@ -18,6 +18,7 @@ import { API_BASE } from '@/constants/api'
 import { AppLogo } from '@/components/icons/AppLogo'
 import { PlayerActionIcon, AnalysisActionIcon } from '@/components/icons/QuickActionIcons'
 import { Text } from '@/components/Themed'
+import { SkeletonBox } from '@/components/Skeleton'
 
 const RECURRING_SEASON_DAYS = 70
 const BANNER_ASPECT = 440 / 112
@@ -204,10 +205,11 @@ export default function HomeScreen() {
   const { label, period, daysLeft } = getSeasonInfo(getKstToday())
   const dateLabel = getKoreaDateLabel()
   const s = styles(colors)
-  const bannerWidth = screenWidth - 40
-  const bannerHeight = bannerWidth / BANNER_ASPECT
+  const bannerWidth = Math.floor(screenWidth - 40)
+  const bannerHeight = Math.floor(bannerWidth / BANNER_ASPECT)
   const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
   const [latestReviews, setLatestReviews] = useState<LatestPlayerReviewItem[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
   const bannerRef = useRef<ScrollView>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -280,6 +282,7 @@ export default function HomeScreen() {
         setLatestReviews(Array.isArray(data?.items) ? data.items : [])
       })
       .catch(() => {})
+      .finally(() => setReviewsLoading(false))
   }, [])
 
   return (
@@ -330,7 +333,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <LatestReviews colors={colors} router={router} reviews={latestReviews} />
+          <LatestReviews colors={colors} router={router} reviews={latestReviews} loading={reviewsLoading} />
 
           <View style={[s.bannerWrap, { height: bannerHeight }]}>
             <ScrollView
@@ -441,12 +444,42 @@ function LatestReviews({
   colors,
   router,
   reviews,
+  loading,
 }: {
   colors: ReturnType<typeof useTheme>['colors']
   router: any
   reviews: LatestPlayerReviewItem[]
+  loading: boolean
 }) {
   const s = styles(colors)
+
+  if (loading) {
+    return (
+      <View style={[s.card, s.reviewCard]}>
+        {[0, 1, 2].map((i) => (
+          <View
+            key={i}
+            style={[
+              s.reviewRow,
+              i === 0 && s.reviewRowFirst,
+              i === 2 && s.reviewRowLast,
+              i < 2 && { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+            ]}
+          >
+            <SkeletonBox width={48} height={48} radius={10} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <SkeletonBox width={24} height={12} radius={4} />
+                <SkeletonBox width={60} height={12} radius={4} />
+              </View>
+              <SkeletonBox width="80%" height={13} radius={4} />
+            </View>
+            <SkeletonBox width={36} height={11} radius={4} />
+          </View>
+        ))}
+      </View>
+    )
+  }
 
   return (
       <View style={[s.card, s.reviewCard]}>

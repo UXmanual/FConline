@@ -24,28 +24,20 @@ export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
   const [themeMode, setThemeMode] = useState<ThemeMode>('light')
 
   useEffect(() => {
-    if (!canUseWebStorage()) {
-      return
-    }
-
+    if (!canUseWebStorage()) return
     const storedThemeMode = window.localStorage.getItem(STORAGE_KEY)
-
     if (storedThemeMode === 'light' || storedThemeMode === 'dark') {
       setThemeMode(storedThemeMode)
     }
   }, [])
 
   useEffect(() => {
-    if (!canUseWebStorage()) {
-      return
-    }
-
+    if (!canUseWebStorage()) return
     window.localStorage.setItem(STORAGE_KEY, themeMode)
   }, [themeMode])
 
   const value = useMemo<ThemePreferenceContextValue>(() => {
     const isDark = themeMode === 'dark'
-
     return {
       colors: isDark ? Colors.dark : Colors.light,
       isDark,
@@ -60,10 +52,6 @@ export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
 
 export function useThemePreference() {
   const context = useContext(ThemePreferenceContext)
-
-  if (!context) {
-    throw new Error('useThemePreference must be used within ThemePreferenceProvider')
-  }
-
+  if (!context) throw new Error('useThemePreference must be used within ThemePreferenceProvider')
   return context
 }

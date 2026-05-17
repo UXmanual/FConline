@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Alert,
   Easing,
   Modal,
@@ -16,7 +15,7 @@ import {
   PermissionsAndroid,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import { router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
@@ -27,6 +26,8 @@ import { useTheme } from '@/hooks/useTheme'
 import { supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
 import { Text } from '@/components/Themed'
+import { SkeletonBox } from '@/components/Skeleton'
+import { TERMS_CONTENT, PRIVACY_CONTENT, PRIVACY_EMAIL, PRIVACY_DATA_URL } from '@/constants/legalContent'
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
@@ -74,15 +75,7 @@ function pickDefaultAvatar(id: string): string {
   return emojis[hash % emojis.length] ?? '😀'
 }
 
-const APP_VERSION = '0.1.6'
-
-const TERMS_CONTENT = [
-  '최종 업데이트: 2026.04.20',
-  'FConline Ground는 FC Online 관련 정보 탐색을 지원하는 앱입니다.',
-  '서비스는 경기 기록 조회, 선수 검색, 커뮤니티 이용, 설정 및 안내 정보 제공 기능 등을 포함합니다.',
-  '이용자가 서비스 내에 작성한 게시물, 댓글 등 콘텐츠에 대한 책임은 작성한 이용자에게 있습니다.',
-  '운영자는 서비스의 전부 또는 일부 기능을 추가, 수정 또는 중단할 수 있습니다.',
-].join('\n\n')
+const APP_VERSION = '0.1.8'
 
 export default function MypageScreen() {
   const { colors, isDark, toggleThemeMode } = useTheme()
@@ -90,21 +83,23 @@ export default function MypageScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [showTerms, setShowTerms] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [showLicenses, setShowLicenses] = useState(false)
   const [xpGuideOpen, setXpGuideOpen] = useState(false)
   const [xpBarWidth, setXpBarWidth] = useState(0)
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
-  const [notifGranted, setNotifGranted] = useState(false)
-  const [notifPending, setNotifPending] = useState(false)
-  const notifToggleTranslateX = useRef(new Animated.Value(0)).current
-
-  const s = styles(colors, isDark)
-  const scrollRef = useRef<ScrollView>(null)
-  useScrollToTop(scrollRef)
 
   useEffect(() => {
     themeToggleTranslateX.setValue(isDark ? 24 : 0)
   }, [isDark, themeToggleTranslateX])
+  const [notifGranted, setNotifGranted] = useState(false)
+  const [notifPending, setNotifPending] = useState(false)
+  const notifToggleTranslateX = useRef(new Animated.Value(0)).current
+
+  const insets = useSafeAreaInsets()
+  const s = styles(colors, isDark)
+  const scrollRef = useRef<ScrollView>(null)
+  useScrollToTop(scrollRef)
 
   useEffect(() => {
     let cancelled = false
@@ -151,15 +146,8 @@ export default function MypageScreen() {
           easing: Easing.out(Easing.circle),
           useNativeDriver: true,
         }).start()
-        if (!granted) {
-          Alert.alert(
-            '앱 알림 허용 필요',
-            '기기 설정에서 알림을 허용해 주세요.',
-            [
-              { text: '설정 열기', onPress: () => void Linking.openSettings() },
-              { text: '취소', style: 'cancel' },
-            ],
-          )
+        if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+          void Linking.openSettings()
         }
       } catch {
         void Linking.openSettings()
@@ -263,7 +251,7 @@ export default function MypageScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[s.settingLabel, { color: colors.title }]}>구글 로그인</Text>
               {profileLoading ? (
-                <ActivityIndicator size="small" color={colors.accentBlue} />
+                <SkeletonBox width={56} height={14} radius={4} />
               ) : profile ? (
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#457ae5' }}>연결 중</Text>
               ) : (
@@ -293,6 +281,20 @@ export default function MypageScreen() {
           )}
         </View>
 
+        {/* 프로필 카드 - 스켈레톤 */}
+        {profileLoading && !profile && (
+          <View style={s.card}>
+            <View style={s.profileRow}>
+              <SkeletonBox width={60} height={60} radius={999} />
+              <View style={{ flex: 1, gap: 10 }}>
+                <SkeletonBox width="55%" height={15} radius={5} />
+                <SkeletonBox width="75%" height={12} radius={4} />
+                <SkeletonBox width="100%" height={6} radius={3} />
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* 프로필 카드 (로그인 시) */}
         {profile && (
           <View style={s.card}>
@@ -305,12 +307,16 @@ export default function MypageScreen() {
                 )}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[s.nickname, { color: colors.title }]} numberOfLines={1}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
                   {profile.level != null && (
-                    <Text style={{ color: getLevelColor(profile.level), fontWeight: '600' }}>{`Lv.${profile.level} `}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: getLevelColor(profile.level) }}>
+                      Lv.{profile.level}
+                    </Text>
                   )}
-                  {profile.nickname}
-                </Text>
+                  <Text style={[s.nickname, { color: colors.title }]} numberOfLines={1}>
+                    {profile.nickname}
+                  </Text>
+                </View>
                 <Text style={[s.email, { color: colors.mutedText }]} numberOfLines={1}>{profile.email}</Text>
                 {xpPercent !== null && (
                   <View style={{ marginTop: 4 }}>
@@ -438,10 +444,15 @@ export default function MypageScreen() {
           </View>
         </View>
 
-        {/* 이용약관 */}
+        {/* 이용약관 / 개인정보처리방침 */}
         <View style={s.card}>
           <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowTerms(true)}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+          <View style={[s.divider, { backgroundColor: colors.divider }]} />
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowPrivacy(true)}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>개인정보처리방침</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
           </TouchableOpacity>
         </View>
@@ -458,28 +469,55 @@ export default function MypageScreen() {
       {/* 이용약관 모달 */}
       <Modal visible={showTerms} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowTerms(false)}>
         <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
-          <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
+          <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
+            <Text style={[s.termsText, { color: colors.bodyText }]}>{TERMS_CONTENT}</Text>
+          </ScrollView>
+          <View style={[s.modalHeader, { top: insets.top, backgroundColor: isDark ? 'rgba(18,19,24,0.88)' : 'rgba(240,243,245,0.88)', borderBottomColor: colors.divider }]}>
             <Text style={[s.modalTitle, { color: colors.title }]}>이용약관</Text>
             <TouchableOpacity onPress={() => setShowTerms(false)}>
               <Feather name="x" size={22} color={colors.bodyText} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
-            <Text style={[s.termsText, { color: colors.bodyText }]}>{TERMS_CONTENT}</Text>
+        </SafeAreaView>
+      </Modal>
+
+      {/* 개인정보처리방침 모달 */}
+      <Modal visible={showPrivacy} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPrivacy(false)}>
+        <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
+          <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
+            {(() => {
+              const emailMarker = PRIVACY_EMAIL
+              const urlMarker = PRIVACY_DATA_URL
+              const [beforeEmail, afterEmail] = PRIVACY_CONTENT.split(emailMarker)
+              const [betweenLinks, afterUrl] = (afterEmail ?? '').split(urlMarker)
+              return (
+                <Text style={[s.termsText, { color: colors.bodyText }]}>
+                  {beforeEmail}
+                  <Text style={{ color: '#457ae5' }} onPress={() => Linking.openURL(`mailto:${emailMarker}`)}>
+                    {emailMarker}
+                  </Text>
+                  {betweenLinks}
+                  <Text style={{ color: '#457ae5' }} onPress={() => Linking.openURL(urlMarker)}>
+                    {urlMarker}
+                  </Text>
+                  {afterUrl}
+                </Text>
+              )
+            })()}
           </ScrollView>
+          <View style={[s.modalHeader, { top: insets.top, backgroundColor: isDark ? 'rgba(18,19,24,0.88)' : 'rgba(240,243,245,0.88)', borderBottomColor: colors.divider }]}>
+            <Text style={[s.modalTitle, { color: colors.title }]}>개인정보처리방침</Text>
+            <TouchableOpacity onPress={() => setShowPrivacy(false)}>
+              <Feather name="x" size={22} color={colors.bodyText} />
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
       </Modal>
 
       {/* 오픈소스 모달 */}
       <Modal visible={showLicenses} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLicenses(false)}>
         <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
-          <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
-            <Text style={[s.modalTitle, { color: colors.title }]}>오픈소스 라이선스</Text>
-            <TouchableOpacity onPress={() => setShowLicenses(false)}>
-              <Feather name="x" size={22} color={colors.bodyText} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+          <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, gap: 16 }}>
             {[
               { name: '여기어때 잘난체', desc: '여기어때컴퍼니 폰트 라이선스' },
               { name: '넥슨 Open API', desc: 'FC Online 데이터 제공 · openapi.nexon.com' },
@@ -492,6 +530,12 @@ export default function MypageScreen() {
               </View>
             ))}
           </ScrollView>
+          <View style={[s.modalHeader, { top: insets.top, backgroundColor: isDark ? 'rgba(18,19,24,0.88)' : 'rgba(240,243,245,0.88)', borderBottomColor: colors.divider }]}>
+            <Text style={[s.modalTitle, { color: colors.title }]}>오픈소스 라이선스</Text>
+            <TouchableOpacity onPress={() => setShowLicenses(false)}>
+              <Feather name="x" size={22} color={colors.bodyText} />
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -515,7 +559,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     },
     profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
     avatarWrap: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-    nickname: { fontSize: 17, fontWeight: '600', letterSpacing: -0.3 },
+    nickname: { fontSize: 16, fontWeight: '500', letterSpacing: -0.3 },
     email: { fontSize: 12, fontWeight: '500' },
     xpBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 6 },
     xpLabel: { fontSize: 11, fontWeight: '500', marginTop: 4 },
@@ -571,7 +615,18 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
       backgroundColor: '#ffffff',
     },
     modalSafe: { flex: 1 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
+    modalHeader: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      zIndex: 10,
+    },
     modalTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 12 },
     termsText: { fontSize: 14, lineHeight: 22, fontWeight: '400' },
     licenseTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },

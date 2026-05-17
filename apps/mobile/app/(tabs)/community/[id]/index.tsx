@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Keyboard,
   Platform,
   Linking,
@@ -102,11 +101,12 @@ function LinkifiedText({ text, style }: { text: string; style?: object }) {
 export default function PostDetailScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
-  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const { id } = useLocalSearchParams<{ id: string }>()
 
   const [post, setPost] = useState<Post | null>(null)
   const [postLoading, setPostLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<{ id: string; avatarUrl?: string | null } | null>(null)
 
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoading, setCommentsLoading] = useState(true)
@@ -121,9 +121,15 @@ export default function PostDetailScreen() {
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const show = Keyboard.addListener(showEvent, () => setKeyboardVisible(true))
-    const hide = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false))
+    const show = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height))
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
+  }, [])
+
+  useEffect(() => {
+    apiFetch('/api/mypage/profile').then(r => r.json()).then(data => {
+      if (data?.id) setCurrentUser({ id: data.id, avatarUrl: data.avatarUrl ?? null })
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -181,6 +187,7 @@ export default function PostDetailScreen() {
       if (res.ok) {
         setCommentDraft('')
         setCommentCount((n) => n + 1)
+        Keyboard.dismiss()
         await loadComments()
       }
     } catch {}
@@ -226,7 +233,7 @@ export default function PostDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={s.content}
@@ -246,9 +253,8 @@ export default function PostDetailScreen() {
               <View style={s.authorMeta}>
                 <LevelBadge level={post.level} />
                 <Text style={[s.authorName, { color: colors.bodyText }]}>{post.nickname}</Text>
-                <Text style={[s.dot, { color: colors.mutedText }]}>·</Text>
-                <Text style={[s.timeText, { color: colors.mutedText }]}>{post.createdAtLabel}</Text>
               </View>
+              <Text style={[s.timeText, { color: colors.mutedText, marginTop: 2 }]}>{post.createdAtLabel}</Text>
             </View>
           </View>
 
@@ -258,11 +264,17 @@ export default function PostDetailScreen() {
           {/* 본문 */}
           <LinkifiedText text={post.content} style={[s.postContent, { color: colors.bodyText }]} />
 
-          {/* 하트 */}
-          <TouchableOpacity style={s.likeBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
-            <Text style={[s.likeCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
-          </TouchableOpacity>
+          {/* 하트 + 댓글 수 */}
+          <View style={s.postActions}>
+            <TouchableOpacity style={s.likeBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
+              <Text style={[s.likeCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
+            </TouchableOpacity>
+            <View style={s.likeBtn}>
+              <Feather name="message-circle" size={18} color={colors.mutedText} />
+              <Text style={[s.likeCount, { color: colors.mutedText }]}>{commentCount}</Text>
+            </View>
+          </View>
 
           {/* 섹션 구분 */}
           <View style={[s.sectionDivider, { backgroundColor: colors.pageBg }]} />
@@ -306,9 +318,13 @@ export default function PostDetailScreen() {
         </ScrollView>
 
         {/* 댓글 입력 */}
-        <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: keyboardVisible ? 14 : Math.max(insets.bottom, 12) }]}>
+        <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: insets.bottom + 14 }]}>
           <View style={[s.inputAvatar, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
-            <Text style={{ fontSize: 20 }}>😀</Text>
+            {currentUser?.avatarUrl ? (
+              <Image source={{ uri: currentUser.avatarUrl }} style={{ width: 46, height: 46 }} />
+            ) : currentUser ? (
+              <Text style={{ fontSize: 20 }}>{pickDefaultAvatar(currentUser.id)}</Text>
+            ) : null}
           </View>
           <TextInput
             style={[s.commentInput, { backgroundColor: isDark ? '#2a2f3d' : colors.surfaceSoft, color: colors.title }]}
@@ -317,6 +333,9 @@ export default function PostDetailScreen() {
             placeholder="댓글로 의견을 남겨보세요"
             placeholderTextColor={colors.inputPlaceholder}
             keyboardAppearance={isDark ? 'dark' : 'light'}
+            underlineColorAndroid="transparent"
+            autoCorrect={false}
+            spellCheck={false}
             multiline
           />
           <TouchableOpacity
@@ -331,12 +350,12 @@ export default function PostDetailScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   )
 }
 
-const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
+const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.cardBg },
     navHeader: { paddingHorizontal: 8, height: 44, justifyContent: 'center' },
@@ -350,7 +369,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     timeText: { fontSize: 12, fontWeight: '500' },
     postTitle: { fontSize: 17, fontWeight: '700', letterSpacing: -0.4, lineHeight: 26, marginBottom: 14 },
     postContent: { fontSize: 14, lineHeight: 24 },
-    likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 8, marginTop: 16 },
+    postActions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 16 },
+    likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
     likeCount: { fontSize: 14, fontWeight: '600' },
     sectionDivider: { height: 16, marginHorizontal: -20, marginTop: 16 },
     commentHeader: { fontSize: 15, fontWeight: '700', marginTop: 24, marginBottom: 16 },

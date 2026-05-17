@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  ActivityIndicator,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -17,6 +16,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { consumeCommunityRefresh } from '@/lib/communityRefresh'
+import { SkeletonPostCard } from '@/components/Skeleton'
 
 const POSTS_PER_PAGE = 5
 
@@ -145,7 +145,7 @@ export default function CommunityScreen() {
           <Text style={[s.desc, { color: colors.mutedText }]}>{'여기는 누구나 쓸 수 있는 공간이에요\n서로를 배려해서 글을 작성해주세요'}</Text>
           <View style={s.boardRow}>
             <TouchableOpacity style={[s.boardTab, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]} activeOpacity={0.8}>
-              <Text style={[s.boardTabText, { color: colors.title }]}>자유게시판</Text>
+              <Text style={[s.boardTabText, { color: colors.title }]}>자유</Text>
               <Text style={s.countText}>{totalCount}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.writeBtn} onPress={() => router.push('/(tabs)/community/new/')} activeOpacity={0.85}>
@@ -156,8 +156,8 @@ export default function CommunityScreen() {
 
         {/* 게시글 목록 */}
         {loading ? (
-          <View style={s.loadingWrap}>
-            <ActivityIndicator size="small" color={colors.accentBlue} />
+          <View style={{ gap: 12 }}>
+            {[0, 1, 2].map((i) => <SkeletonPostCard key={i} colors={colors} isDark={isDark} />)}
           </View>
         ) : (
           <View style={{ gap: 12 }}>
@@ -185,21 +185,21 @@ export default function CommunityScreen() {
                     </View>
                     <Text style={[s.postTitle, { color: colors.title }]} numberOfLines={2}>{post.title}</Text>
                     <Text style={[s.postContent, { color: colors.bodyText }]} numberOfLines={2} ellipsizeMode="tail">{clampLines(post.content, 2)}</Text>
+                    <View style={s.postFooter}>
+                      <TouchableOpacity style={s.footerAction} onPress={() => handleOpenPost(post)}>
+                        <Feather name="message-circle" size={14} color={colors.mutedText} />
+                        <Text style={[s.footerCount, { color: colors.mutedText }]}>{post.commentCount}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={s.footerAction}
+                        onPress={() => handleLike(post)}
+                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      >
+                        <FontAwesome name={post.isLiked ? 'heart' : 'heart-o'} size={14} color={post.isLiked ? '#e03131' : colors.mutedText} />
+                        <Text style={[s.footerCount, { color: post.isLiked ? '#e03131' : colors.mutedText }]}>{post.likeCount}</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-                <View style={s.postFooter}>
-                  <TouchableOpacity style={s.footerAction} onPress={() => handleOpenPost(post)}>
-                    <Text style={[s.footerLabel, { color: colors.title }]}>댓글</Text>
-                    <Text style={[s.footerCount, { color: '#457ae5' }]}>{post.commentCount}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={s.footerAction}
-                    onPress={() => handleLike(post)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  >
-                    <FontAwesome name={post.isLiked ? 'heart' : 'heart-o'} size={14} color={post.isLiked ? '#e03131' : colors.mutedText} />
-                    <Text style={[s.footerCount, { color: post.isLiked ? '#e03131' : colors.mutedText }]}>{post.likeCount}</Text>
-                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             ))}
@@ -255,21 +255,21 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     desc: { fontSize: 13, lineHeight: 19 },
     boardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
     boardTab: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 36, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1 },
-    boardTabText: { fontSize: 14, fontWeight: '600' },
+    boardTabText: { fontSize: 13, fontWeight: '600' },
     countText: { fontSize: 14, fontWeight: '600', color: '#457ae5' },
     writeBtn: { backgroundColor: '#457ae5', borderRadius: 999, height: 36, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
     writeBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-    loadingWrap: { paddingVertical: 40, alignItems: 'center' },
+
     postCard: { borderRadius: 16, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, borderWidth: 1 },
     postTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     avatar: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
-    authorMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+    authorMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 4 },
     authorName: { fontSize: 12, fontWeight: '600' },
     dot: { fontSize: 12 },
     timeText: { fontSize: 12, fontWeight: '500' },
-    postTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, lineHeight: 22, marginTop: 12 },
+    postTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, lineHeight: 22, marginTop: 6 },
     postContent: { fontSize: 14, lineHeight: 20, marginTop: 8 },
-    postFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+    postFooter: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10 },
     footerAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     footerLabel: { fontSize: 12, fontWeight: '500' },
     footerCount: { fontSize: 12, fontWeight: '600' },
