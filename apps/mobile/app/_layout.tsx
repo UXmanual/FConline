@@ -1,3 +1,4 @@
+import { enableScreens } from 'react-native-screens'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useFonts } from 'expo-font'
@@ -7,6 +8,8 @@ import 'react-native-reanimated'
 import { ThemePreferenceProvider } from '@/contexts/ThemePreferenceContext'
 import { useTheme } from '@/hooks/useTheme'
 import { APP_FONT_STACK } from '@/constants/fonts'
+
+enableScreens(true)
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

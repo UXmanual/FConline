@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import {
   View,
   ScrollView,
@@ -16,10 +16,12 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
+import { apiFetch } from '@/lib/apiFetch'
 
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, i) => i + 1)
 const STRONG_POINT_TABLE = [0, 3, 4, 5, 7, 9, 11, 14, 18, 20, 22, 24, 27, 30]
@@ -52,6 +54,93 @@ const ABILITY_GROUPS = [
   ['태클', '가로채기'], ['대인 수비', '슬라이딩 태클'], ['몸싸움', '스태미너'],
   ['점프', '키퍼 다이빙'], ['키퍼 핸들링', '키퍼 킥'], ['키퍼 반응속도', '키퍼 위치 선정'],
 ] as const
+const ABILITY_ORDER = ABILITY_GROUPS.flat() as string[]
+
+const FW_POSITIONS = new Set(['ST','CF','LF','RF','LW','RW'])
+const MF_POSITIONS = new Set(['CAM','CM','CDM','LAM','RAM','LM','RM'])
+const DF_POSITIONS = new Set(['CB','LB','RB','LWB','RWB','SW'])
+
+const POSITIVE_TRAIT_HINTS = [
+  { keyword: '예리한 감아차기', text: ' 특성상 감아차기 각이 열릴 때 마무리 기대치도 높은 편입니다.' },
+  { keyword: '스피드 드리블러', text: ' 특성 덕분에 치고 나가는 드리블 체감도 함께 기대해볼 만합니다.' },
+  { keyword: '파워 헤더', text: ' 특성상 크로스 상황이나 세트피스에서 존재감이 살아날 수 있어요.' },
+  { keyword: '플레어', text: ' 플레어 성향이 있어 좁은 구간에서 예측 못한 터치가 장점으로 이어질 수 있습니다.' },
+  { keyword: '롱 패서', text: ' 롱 패서 특성까지 있어 전개 길게 찔러주는 장면도 잘 어울립니다.' },
+  { keyword: '얼리 크로스', text: ' 얼리 크로스 성향까지 겹치면 빠른 타이밍의 측면 전개도 잘 받습니다.' },
+  { keyword: '긴 패스 선호', text: ' 긴 패스 선호 특성 덕분에 시원하게 방향 전환하는 장면도 기대해볼 만해요.' },
+  { keyword: '테크니컬 드리블러', text: ' 테크니컬 드리블러 특성 덕분에 볼 간수와 탈압박 체감도 보완됩니다.' },
+  { keyword: '중거리 슛 선호', text: ' 중거리 슛 성향이 있어 박스 앞 선택지까지 넓게 가져갈 수 있습니다.' },
+  { keyword: '세트피스 스페셜리스트', text: ' 세트피스 상황에서 한 방 옵션이 있다는 점도 분명한 장점이에요.' },
+]
+const CAUTION_TRAIT_HINTS = [
+  { keyword: '얼리 크로스', positions: ['ST','CF'], text: ' 다만 중앙 침투 위주로만 쓰면 얼리 크로스 성향은 덜 체감될 수 있어요.' },
+  { keyword: '롱 스로어', positions: ['ST','CF','CAM','CM'], text: ' 다만 롱 스로어 특성은 주 포지션 활용에선 체감 포인트가 제한적일 수 있습니다.' },
+]
+const AI_REVIEW_TEMPLATES: Array<(a: { strongLevel:number; positionGroup:string; topAbilitySummary:string; playStyle:string; traitContext:string; levelTone:string; gradeTone:string }) => string> = [
+  (a) => `${a.strongLevel}카 기준 ${a.positionGroup} ${a.topAbilitySummary} 수치가 두드러져 ${a.playStyle}에서 ${a.levelTone} ${a.gradeTone} 카드예요.${a.traitContext}`,
+  (a) => `${a.strongLevel}카로 보면 ${a.positionGroup} ${a.topAbilitySummary} 쪽이 확실히 살아 있어 ${a.playStyle}에서 ${a.levelTone} ${a.gradeTone} 카드에 가깝습니다.${a.traitContext}`,
+  (a) => `${a.strongLevel}카 시점에서는 ${a.positionGroup} ${a.topAbilitySummary} 조합이 좋아서 ${a.playStyle}을 노릴 때 ${a.levelTone} ${a.gradeTone} 카드로 읽혀요.${a.traitContext}`,
+  (a) => `${a.strongLevel}카 기준 한줄로 정리하면, ${a.positionGroup} ${a.topAbilitySummary}가 강점이라 ${a.playStyle}에서 ${a.levelTone} ${a.gradeTone} 카드입니다.${a.traitContext}`,
+  (a) => `${a.strongLevel}카에서는 ${a.positionGroup} ${a.topAbilitySummary} 수치가 먼저 눈에 들어오고, 실제로도 ${a.playStyle} 구간에서 ${a.levelTone} ${a.gradeTone} 카드예요.${a.traitContext}`,
+  (a) => `${a.strongLevel}카만 놓고 보면 ${a.positionGroup} ${a.topAbilitySummary}가 좋아 ${a.playStyle}에 강점이 몰린 ${a.levelTone} ${a.gradeTone} 카드라고 볼 수 있어요.${a.traitContext}`,
+  (a) => `${a.strongLevel}카 평가로는 ${a.positionGroup} ${a.topAbilitySummary} 쪽 완성도가 괜찮아서 ${a.playStyle}에서 ${a.levelTone} ${a.gradeTone} 카드로 보입니다.${a.traitContext}`,
+  (a) => `${a.strongLevel}카 단계에선 ${a.positionGroup} ${a.topAbilitySummary} 수치가 받쳐줘서 ${a.playStyle} 체감 쪽으로 ${a.levelTone} ${a.gradeTone} 카드예요.${a.traitContext}`,
+  (a) => `${a.strongLevel}카 기준으로 해석하면 ${a.positionGroup} ${a.topAbilitySummary}가 핵심이고, 그래서 ${a.playStyle}에서 ${a.levelTone} ${a.gradeTone} 카드라는 인상이 강합니다.${a.traitContext}`,
+  (a) => `${a.strongLevel}카 기준 현재 수치만 봐도 ${a.positionGroup} ${a.topAbilitySummary}가 좋아 ${a.playStyle} 활용도 면에서 ${a.levelTone} ${a.gradeTone} 카드로 정리됩니다.${a.traitContext}`,
+]
+function hashReviewSeed(value: string) {
+  let hash = 0
+  for (const char of value) { hash = (hash * 31 + char.charCodeAt(0)) >>> 0 }
+  return hash
+}
+function formatAbilitySummary(labels: Array<{ name: string; value: number }>) {
+  if (labels.length === 0) return '핵심 능력치'
+  if (labels.length === 1) return `${labels[0].name} ${labels[0].value}`
+  if (labels.length === 2) return `${labels[0].name} ${labels[0].value}, ${labels[1].name} ${labels[1].value}`
+  return `${labels[0].name} ${labels[0].value}, ${labels[1].name} ${labels[1].value}, ${labels[2].name} ${labels[2].value}`
+}
+function getTraitContextSummary(traits: Array<{ name: string }>, position: string | null) {
+  if (traits.length === 0) return ''
+  const names = traits.map((t) => t.name)
+  const upper = position?.toUpperCase() ?? null
+  const pos = POSITIVE_TRAIT_HINTS.find((h) => names.some((n) => n.includes(h.keyword)))
+  const cau = CAUTION_TRAIT_HINTS.find((h) => names.some((n) => n.includes(h.keyword)) && !!upper && h.positions.includes(upper))
+  if (pos && cau) return `${pos.text}${cau.text}`
+  if (pos) return pos.text
+  if (cau) return cau.text
+  return ` ${names.slice(0, 2).join(', ')} 특성도 함께 달려 있어 실제 체감 방향을 잡을 때 참고할 만합니다.`
+}
+function getPositionGroupLabel(position: string | null) {
+  const u = position?.toUpperCase()
+  if (u && FW_POSITIONS.has(u)) return '공격수 자원으로 보면'
+  if (u && MF_POSITIONS.has(u)) return '미드필더 자원으로 보면'
+  if (u === 'GK') return '골키퍼 자원으로 보면'
+  if (u && DF_POSITIONS.has(u)) return '수비수 자원으로 보면'
+  return '포지션 수치만 놓고 보면'
+}
+function getPlayStyleLabel(position: string | null) {
+  const u = position?.toUpperCase()
+  if (u && FW_POSITIONS.has(u)) return '침투와 마무리'
+  if (u && MF_POSITIONS.has(u)) return '연계와 전진 전개'
+  if (u === 'GK') return '선방과 안정감'
+  if (u && DF_POSITIONS.has(u)) return '대인 수비와 커버'
+  return '실전 활용'
+}
+function buildAiReviewSummary({ playerName: pName, abilities, traits, position, overall, strongLevel: sl }: {
+  playerName: string; abilities: Array<{ name: string; value: number }>; traits: Array<{ name: string }>; position: string | null; overall: number | null; strongLevel: number
+}) {
+  if (abilities.length === 0) return `${sl}카 기준 현재 시즌 카드 수치를 종합하면 직접 체감과 활용 포지션을 비교해볼 만한 카드예요.`
+  const top3 = abilities.slice().sort((a, b) => b.value - a.value).slice(0, 3)
+  const topAbilitySummary = formatAbilitySummary(top3)
+  const positionGroup = getPositionGroupLabel(position)
+  const playStyle = getPlayStyleLabel(position)
+  const traitContext = getTraitContextSummary(traits, position)
+  const gradeTone = overall == null ? '완성도가 괜찮은' : overall >= 130 ? '최상위권으로 볼 수 있는' : overall >= 120 ? '상위권으로 볼 수 있는' : overall >= 110 ? '준수한' : '무난한'
+  const levelTone = sl >= 10 ? '확실히 체감이 살아나는' : sl >= 7 ? '실사용 메리트가 분명한' : sl >= 5 ? '밸런스가 더 안정되는' : '기본 장점이 드러나는'
+  const seed = `${pName}|${position ?? 'NA'}|${sl}|${overall ?? 'NA'}|${topAbilitySummary}`
+  const idx = hashReviewSeed(seed) % AI_REVIEW_TEMPLATES.length
+  return AI_REVIEW_TEMPLATES[idx]!({ strongLevel: sl, positionGroup, topAbilitySummary, playStyle, traitContext, levelTone, gradeTone })
+}
 
 type AbilityStat = { name: string; value: number }
 
@@ -61,11 +150,15 @@ type Trait = { name: string; iconSrc: string | null }
 type PlayerReviewItem = {
   id: string
   nickname: string
+  level?: number | null
+  avatarUrl?: string | null
+  authorId?: string | null
   title: string
   content: string
   createdAtLabel: string
   commentCount: number
   likeCount: number
+  isLiked?: boolean
 }
 
 type PlayerDetail = {
@@ -136,6 +229,38 @@ function getPositionColors(position: string | null, isDark: boolean): { bg: stri
     return isDark ? { bg: '#22324d', fg: '#7eb2ff' } : { bg: '#e8eef9', fg: '#256ef4' }
   }
   return isDark ? { bg: '#323844', fg: '#c6d0dc' } : { bg: '#f0f0f0', fg: '#666' }
+}
+
+// ────────────────────────────────────────────────────────────────
+// 선수 평가 헬퍼
+// ────────────────────────────────────────────────────────────────
+
+function pickDefaultAvatar(id: string): string {
+  const emojis = ['😀', '😊', '🦊', '🐼', '🦁', '🐯', '🐸', '🐧', '🦅', '🐬']
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  return emojis[hash % emojis.length] ?? '😀'
+}
+
+function getLevelColor(level?: number | null): string {
+  if (!level || !Number.isFinite(level)) return '#9aa3af'
+  if (level <= 10) return '#9aa3af'
+  if (level <= 20) return '#457ae5'
+  if (level <= 30) return '#0f9f8c'
+  if (level <= 40) return '#18a957'
+  if (level <= 50) return '#65b32e'
+  if (level <= 60) return '#d4a017'
+  if (level <= 70) return '#d97904'
+  if (level <= 80) return '#d94f3d'
+  if (level <= 90) return '#c43d6b'
+  return '#8b5cf6'
+}
+
+function LevelBadge({ level }: { level?: number | null }) {
+  if (!level || !Number.isFinite(level)) return null
+  return (
+    <Text style={{ fontSize: 12, fontWeight: '600', color: getLevelColor(level), lineHeight: 16 }}>Lv.{level}</Text>
+  )
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -226,7 +351,7 @@ function NationCard({
 /**
  * 능력치 카드 (웹과 동일 - soft-bg, 이름+값+부스표시)
  */
-function AbilityCard({
+const AbilityCard = memo(function AbilityCard({
   stat, abilityBoost, chemistryBoost, teamColorBoost, boostColor, colors,
 }: {
   stat: AbilityStat
@@ -258,7 +383,7 @@ function AbilityCard({
       </View>
     </View>
   )
-}
+})
 
 const abilityCardStyle = StyleSheet.create({
   wrap: { flexBasis: '48%', flexGrow: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
@@ -331,19 +456,26 @@ export default function PlayerDetailScreen() {
     return Number.isInteger(parsed) && parsed >= 1 && parsed <= 13 ? parsed : 1
   })()
   const initialTab: 'detail' | 'review' = tab === 'review' ? 'review' : 'detail'
+  const [activePillLevel, setActivePillLevel] = useState(initialStrongLevel)
   const [strongLevel, setStrongLevel] = useState(initialStrongLevel)
+  const [, startLevelTransition] = useTransition()
   const [isChemistryApplied, setIsChemistryApplied] = useState(false)
   const [teamColorBoost, setTeamColorBoost] = useState(0)
   const [showTeamColorPicker, setShowTeamColorPicker] = useState(false)
   const [activeTab, setActiveTab] = useState<'detail' | 'review'>(initialTab)
+  const [aiSummaryLevel, setAiSummaryLevel] = useState(initialStrongLevel)
+  const [showAiLevelPicker, setShowAiLevelPicker] = useState(false)
   const [reviewItems, setReviewItems] = useState<PlayerReviewItem[]>([])
   const [reviewCount, setReviewCount] = useState(0)
   const [reviewPage, setReviewPage] = useState(1)
-  const [reviewHasMore, setReviewHasMore] = useState(false)
   const [reviewLoading, setReviewLoading] = useState(false)
   const [levelViewportWidth, setLevelViewportWidth] = useState(0)
   const [levelContentWidth, setLevelContentWidth] = useState(0)
-  const [levelScrollX, setLevelScrollX] = useState(0)
+  const levelScrollXRef = useRef(0)
+  const [showLeftFade, setShowLeftFade] = useState(false)
+  const [showRightFade, setShowRightFade] = useState(true)
+  const showLeftFadeRef = useRef(false)
+  const showRightFadeRef = useRef(true)
 
   /** 적응도 토글 애니메이션 */
   const chemToggleAnim = useRef(new Animated.Value(0)).current
@@ -362,7 +494,7 @@ export default function PlayerDetailScreen() {
   const levelScrollRef = useRef<ScrollView>(null)
   const levelTabLayouts = useRef<Record<number, { x: number; width: number }>>({})
 
-  const s = styles(colors)
+  const s = useMemo(() => styles(colors), [colors])
 
   useEffect(() => {
     if (!id) return
@@ -380,45 +512,60 @@ export default function PlayerDetailScreen() {
   }, [id])
 
   useEffect(() => {
+    setActivePillLevel(initialStrongLevel)
     setStrongLevel(initialStrongLevel)
   }, [initialStrongLevel, id])
+
+  useEffect(() => {
+    setAiSummaryLevel(strongLevel)
+  }, [strongLevel])
 
   useEffect(() => {
     setActiveTab(initialTab)
     setReviewItems([])
     setReviewCount(0)
     setReviewPage(1)
-    setReviewHasMore(false)
   }, [id, initialTab])
 
-  const fetchReviewPage = async (page: number, append = false) => {
+  const fetchReviewPage = async (page: number) => {
     if (!id) return
     setReviewLoading(true)
     try {
-      const response = await fetch(
-        `${API_BASE}/api/player-reviews/posts?playerId=${encodeURIComponent(String(id))}&page=${page}&pageSize=5`,
+      const response = await apiFetch(
+        `/api/player-reviews/posts?playerId=${encodeURIComponent(String(id))}&page=${page}&pageSize=5`,
       )
       const result = await response.json()
       const items = Array.isArray(result.items) ? result.items : []
       const totalCount = Number(result.totalCount ?? 0) || 0
 
-      setReviewItems((current) => (append ? [...current, ...items] : items))
+      setReviewItems(items)
       setReviewCount(totalCount)
       setReviewPage(page)
-      setReviewHasMore(page * 5 < totalCount)
     } catch {
-      if (!append) {
-        setReviewItems([])
-        setReviewCount(0)
-        setReviewHasMore(false)
-      }
+      setReviewItems([])
+      setReviewCount(0)
     } finally {
       setReviewLoading(false)
     }
   }
 
+  const handleReviewLike = async (item: PlayerReviewItem) => {
+    setReviewItems((prev) => prev.map((r) =>
+      r.id === item.id
+        ? { ...r, isLiked: !r.isLiked, likeCount: r.likeCount + (r.isLiked ? -1 : 1) }
+        : r,
+    ))
+    try {
+      await apiFetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: item.id, postType: 'player_review' }),
+      })
+    } catch {}
+  }
+
   useEffect(() => {
-    void fetchReviewPage(1, false)
+    void fetchReviewPage(1)
   }, [id])
 
   const currentPrice = detail?.prices[strongLevel]
@@ -442,18 +589,29 @@ export default function PlayerDetailScreen() {
   const clubHistory = Array.isArray(detail?.clubHistory) ? detail.clubHistory : []
 
   /** 능력치 정렬 (웹과 동일한 ABILITY_GROUPS 순서) */
-  const orderedAbilities = detail?.abilities.slice().sort((a, b) => {
-    const order = ABILITY_GROUPS.flat() as string[]
-    const ai = order.indexOf(a.name)
-    const bi = order.indexOf(b.name)
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-  }) ?? []
+  const orderedAbilities = useMemo(() =>
+    detail?.abilities.slice().sort((a, b) => {
+      const ai = ABILITY_ORDER.indexOf(a.name)
+      const bi = ABILITY_ORDER.indexOf(b.name)
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+    }) ?? [],
+  [detail?.abilities])
 
-  const showLeftFade = levelScrollX > 4
-  const showRightFade = levelContentWidth - levelViewportWidth - levelScrollX > 4
+  const aiSummaryText = useMemo(() => {
+    if (!detail || detail.abilities.length === 0) return null
+    const boost = getStrongPoint(aiSummaryLevel) - getStrongPoint(1)
+    return buildAiReviewSummary({
+      playerName: playerName || detail.name,
+      abilities: detail.abilities.map((ab) => ({ name: ab.name, value: ab.value + boost })),
+      traits: detail.traits,
+      position: detail.position,
+      overall: detail.overall != null ? detail.overall - getStrongPoint(1) + getStrongPoint(aiSummaryLevel) : null,
+      strongLevel: aiSummaryLevel,
+    })
+  }, [detail, aiSummaryLevel, playerName])
 
   useEffect(() => {
-    const activeLayout = levelTabLayouts.current[strongLevel]
+    const activeLayout = levelTabLayouts.current[activePillLevel]
     if (!activeLayout || levelViewportWidth <= 0) {
       return
     }
@@ -465,7 +623,7 @@ export default function PlayerDetailScreen() {
       x: Math.min(Math.max(0, targetX), maxScrollX),
       animated: true,
     })
-  }, [strongLevel, levelViewportWidth, levelContentWidth])
+  }, [activePillLevel, levelViewportWidth, levelContentWidth])
 
   const handleLevelTabLayout = (level: number, event: LayoutChangeEvent) => {
     const { x, width } = event.nativeEvent.layout
@@ -473,7 +631,18 @@ export default function PlayerDetailScreen() {
   }
 
   const handleLevelScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setLevelScrollX(event.nativeEvent.contentOffset.x)
+    const x = event.nativeEvent.contentOffset.x
+    levelScrollXRef.current = x
+    const newLeft = x > 4
+    const newRight = levelContentWidth - levelViewportWidth - x > 4
+    if (newLeft !== showLeftFadeRef.current) {
+      showLeftFadeRef.current = newLeft
+      setShowLeftFade(newLeft)
+    }
+    if (newRight !== showRightFadeRef.current) {
+      showRightFadeRef.current = newRight
+      setShowRightFade(newRight)
+    }
   }
 
   return (
@@ -485,7 +654,7 @@ export default function PlayerDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* 헤더 뒤로가기 */}
-        <TouchableOpacity style={s.backRow} onPress={() => router.back()}>
+        <TouchableOpacity style={s.backRow} onPress={() => router.back()} delayPressIn={0}>
           <Feather name="chevron-left" size={22} color={colors.title} />
           <Text style={s.backText} numberOfLines={1}>{playerName || '선수 정보'}</Text>
         </TouchableOpacity>
@@ -601,6 +770,7 @@ export default function PlayerDetailScreen() {
               <TouchableOpacity
                 onPress={() => setActiveTab('detail')}
                 activeOpacity={0.8}
+                delayPressIn={0}
                 style={[
                   s.topTabButton,
                   activeTab === 'detail'
@@ -616,6 +786,7 @@ export default function PlayerDetailScreen() {
               <TouchableOpacity
                 onPress={() => setActiveTab('review')}
                 activeOpacity={0.8}
+                delayPressIn={0}
                 style={[
                   s.topTabButton,
                   activeTab === 'review'
@@ -634,8 +805,8 @@ export default function PlayerDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {activeTab === 'detail' && orderedAbilities.length > 0 && (
-              <View style={s.card}>
+            {orderedAbilities.length > 0 && (
+              <View style={[s.card, activeTab !== 'detail' ? { display: 'none' } : null]}>
                 <View style={s.sectionHeaderRow}>
                   <Text style={[s.sectionTitle, { color: colors.title }]}>능력치</Text>
                   {adjustedTotalAbility != null && (
@@ -675,16 +846,20 @@ export default function PlayerDetailScreen() {
                       <TouchableOpacity
                         key={level}
                         onLayout={(event) => handleLevelTabLayout(level, event)}
-                        onPress={() => setStrongLevel(level)}
+                        onPress={() => {
+                          setActivePillLevel(level)
+                          startLevelTransition(() => setStrongLevel(level))
+                        }}
                         activeOpacity={0.75}
+                        delayPressIn={0}
                         style={[
                           s.levelPill,
-                          strongLevel === level
+                          activePillLevel === level
                             ? s.levelPillActive
                             : { backgroundColor: isDark ? colors.surfaceSoft : '#ffffff', borderColor: colors.cardBorder },
                         ]}
                       >
-                        <Text style={[s.levelPillText, { color: strongLevel === level ? '#fff' : colors.bodyText }]}>
+                        <Text style={[s.levelPillText, { color: activePillLevel === level ? '#fff' : colors.bodyText }]}>
                           {level}카
                         </Text>
                       </TouchableOpacity>
@@ -696,6 +871,7 @@ export default function PlayerDetailScreen() {
                 <TouchableOpacity
                   onPress={handleChemToggle}
                   activeOpacity={0.85}
+                  delayPressIn={0}
                   style={[s.controlRow, s.controlRowFirst, { backgroundColor: colors.surfaceSoft }]}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -720,6 +896,7 @@ export default function PlayerDetailScreen() {
                 <TouchableOpacity
                   onPress={() => setShowTeamColorPicker(true)}
                   activeOpacity={0.85}
+                  delayPressIn={0}
                   style={[s.controlRow, { backgroundColor: colors.surfaceSoft }]}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -776,8 +953,8 @@ export default function PlayerDetailScreen() {
               </View>
             )}
 
-            {activeTab === 'detail' && clubHistory.length > 0 && (
-              <View style={s.card}>
+            {clubHistory.length > 0 && (
+              <View style={[s.card, activeTab !== 'detail' ? { display: 'none' } : null]}>
                 <Text style={[s.sectionTitle, { color: colors.title }]}>소속 정보</Text>
                 <View style={{ marginTop: 14 }}>
                   <Text style={[s.clubHistoryLabel, { color: colors.mutedText }]}>이전 소속팀</Text>
@@ -807,81 +984,216 @@ export default function PlayerDetailScreen() {
               </View>
             )}
 
-            {activeTab === 'review' && (
+            {/* ── 선수 평가 탭 ── */}
+            <View style={activeTab !== 'review' ? { display: 'none' } : { gap: 12 }}>
+
+              {/* 헤더 카드: 제목 + 글쓰기 버튼 + AI 선수평가 */}
               <View style={s.card}>
                 <View style={s.reviewHeaderRow}>
-                  <Text style={[s.sectionTitle, { color: colors.title }]}>선수 평가</Text>
-                  <Text style={[s.reviewHeaderCount, { color: colors.mutedText }]}>
-                    총 {reviewCount.toLocaleString()}개
-                  </Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[s.reviewSectionTitle, { color: colors.title }]}>
+                      {playerName || (detail?.name ?? '선수')} 선수 평가
+                    </Text>
+                    <Text style={[s.reviewSectionDesc, { color: colors.mutedText }]}>
+                      총 {reviewCount.toLocaleString()}개의 평가가 있어요
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[s.reviewWriteBtn, { backgroundColor: '#457ae5' }]}
+                    onPress={() => router.push({
+                      pathname: '/(tabs)/players/review/new' as any,
+                      params: { playerId: id, playerName },
+                    })}
+                    activeOpacity={0.85}
+                    delayPressIn={0}
+                  >
+                    <Text style={s.reviewWriteBtnText}>글쓰기</Text>
+                  </TouchableOpacity>
                 </View>
 
-                {reviewLoading && reviewItems.length === 0 ? (
-                  <View style={s.reviewStateWrap}>
-                    <ActivityIndicator size="small" color={colors.accentBlue} />
-                    <Text style={[s.reviewStateText, { color: colors.bodyText }]}>선수 평가를 불러오는 중이에요</Text>
-                  </View>
-                ) : reviewItems.length === 0 ? (
-                  <View style={s.reviewStateWrap}>
-                    <Text style={[s.reviewStateText, { color: colors.bodyText }]}>아직 등록된 선수 평가가 없습니다.</Text>
-                  </View>
-                ) : (
-                  <View style={{ marginTop: 14, gap: 10 }}>
-                    {reviewItems.map((item) => (
-                      <View
-                        key={item.id}
-                        style={[s.reviewItemCard, { backgroundColor: colors.surfaceSoft }]}
-                      >
-                        <View style={s.reviewMetaRow}>
-                          <View style={s.reviewMetaLeft}>
-                            <Text style={[s.reviewNickname, { color: colors.title }]} numberOfLines={1}>
-                              {item.nickname}
-                            </Text>
-                            <Text style={[s.reviewDot, { color: colors.mutedText }]}>·</Text>
-                            <Text style={[s.reviewTime, { color: colors.mutedText }]}>{item.createdAtLabel}</Text>
-                          </View>
-                        </View>
-
-                        <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        <Text style={[s.reviewBody, { color: colors.bodyText }]} numberOfLines={3}>
-                          {item.content}
-                        </Text>
-
-                        <View style={s.reviewFooterRow}>
-                          <Text style={[s.reviewFooterText, { color: colors.mutedText }]}>
-                            댓글 <Text style={{ color: '#457ae5', fontWeight: '600' }}>{item.commentCount}</Text>
-                          </Text>
-                          <Text style={[s.reviewFooterText, { color: colors.mutedText }]}>
-                            좋아요 <Text style={{ color: '#457ae5', fontWeight: '600' }}>{item.likeCount}</Text>
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-
-                    {reviewHasMore && (
+                {/* AI 선수평가 섹션 */}
+                {aiSummaryText != null && (
+                  <>
+                    <View style={[s.reviewDivider, { backgroundColor: colors.divider }]} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <Text style={[s.reviewAiLabel, { color: colors.mutedText }]}>요약 AI 선수평가</Text>
                       <TouchableOpacity
-                        onPress={() => void fetchReviewPage(reviewPage + 1, true)}
-                        activeOpacity={0.8}
-                        style={[s.reviewMoreButton, { borderColor: colors.cardBorder, backgroundColor: colors.cardBg }]}
+                        style={[s.reviewAiSelect, { backgroundColor: colors.surfaceSoft, borderColor: colors.cardBorder }]}
+                        onPress={() => setShowAiLevelPicker(true)}
+                        activeOpacity={0.75}
+                        delayPressIn={0}
                       >
-                        {reviewLoading ? (
-                          <ActivityIndicator size="small" color={colors.accentBlue} />
-                        ) : (
-                          <Text style={[s.reviewMoreText, { color: colors.title }]}>선수 평가 더 보기</Text>
-                        )}
+                        <Text style={[s.reviewAiSelectText, { color: colors.title }]}>{aiSummaryLevel}카</Text>
+                        <Feather name="chevron-down" size={12} color={colors.mutedText} />
                       </TouchableOpacity>
-                    )}
-                  </View>
+                    </View>
+                    <Text style={[s.reviewAiBody, { color: colors.bodyText }]}>{aiSummaryText}</Text>
+                  </>
                 )}
               </View>
-            )}
+
+              {/* 로딩 / 빈 상태 */}
+              {reviewLoading && reviewItems.length === 0 ? (
+                <View style={[s.card, s.reviewStateWrap]}>
+                  <ActivityIndicator size="small" color={colors.accentBlue} />
+                  <Text style={[s.reviewStateText, { color: colors.bodyText }]}>선수 평가를 불러오는 중이에요</Text>
+                </View>
+              ) : reviewItems.length === 0 ? (
+                <View style={[s.card, s.reviewStateWrap]}>
+                  <Text style={[s.reviewStateText, { color: colors.bodyText }]}>아직 등록된 선수 평가가 없어요.</Text>
+                  <TouchableOpacity
+                    style={[s.reviewWriteBtn, { backgroundColor: '#457ae5', marginTop: 4 }]}
+                    onPress={() => router.push({
+                      pathname: '/(tabs)/players/review/new' as any,
+                      params: { playerId: id, playerName },
+                    })}
+                    activeOpacity={0.85}
+                    delayPressIn={0}
+                  >
+                    <Text style={s.reviewWriteBtnText}>첫 평가 남기기</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  {/* 개별 리뷰 카드 */}
+                  {reviewItems.map((item) => {
+                    const cardMatch = item.title?.match(/^\[(\d+)카\]/)
+                    const cardLevel = cardMatch ? parseInt(cardMatch[1], 10) : null
+                    const displayTitle = cardMatch ? item.title.slice(cardMatch[0].length).trim() : item.title
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={s.card}
+                        onPress={() => router.push({
+                          pathname: '/(tabs)/players/review/[reviewId]' as any,
+                          params: { reviewId: item.id, postData: JSON.stringify(item) },
+                        })}
+                        activeOpacity={0.8}
+                        delayPressIn={0}
+                      >
+                        <View style={s.reviewAuthorRow}>
+                          <View style={[s.reviewAvatar, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
+                            {item.avatarUrl ? (
+                              <Image source={{ uri: item.avatarUrl }} style={{ width: 40, height: 40, borderRadius: 999 }} />
+                            ) : (
+                              <Text style={{ fontSize: 18 }}>{item.authorId ? pickDefaultAvatar(item.authorId) : '😀'}</Text>
+                            )}
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <View style={s.reviewMetaLeft}>
+                              <LevelBadge level={item.level} />
+                              <Text style={[s.reviewNickname, { color: colors.bodyText }]} numberOfLines={1}>
+                                {item.nickname}
+                              </Text>
+                              <Text style={[s.reviewDot, { color: colors.mutedText }]}>·</Text>
+                              <Text style={[s.reviewTime, { color: colors.mutedText }]}>{item.createdAtLabel}</Text>
+                            </View>
+                            <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={2}>
+                              {cardLevel != null && (
+                                <Text style={{ color: '#457ae5' }}>[{cardLevel}카] </Text>
+                              )}{displayTitle}
+                            </Text>
+                            <Text style={[s.reviewBody, { color: colors.bodyText }]} numberOfLines={2}>
+                              {item.content}
+                            </Text>
+                            <View style={s.reviewFooterRow}>
+                              <TouchableOpacity style={s.reviewFooterAction} onPress={() => router.push({
+                                pathname: '/(tabs)/players/review/[reviewId]' as any,
+                                params: { reviewId: item.id, postData: JSON.stringify(item) },
+                              })} delayPressIn={0}>
+                                <Feather name="message-circle" size={14} color={colors.mutedText} />
+                                <Text style={[s.reviewFooterCount, { color: colors.mutedText }]}>{item.commentCount}</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={s.reviewFooterAction}
+                                onPress={() => handleReviewLike(item)}
+                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                                delayPressIn={0}
+                              >
+                                <FontAwesome name={item.isLiked ? 'heart' : 'heart-o'} size={14} color={item.isLiked ? '#e03131' : colors.mutedText} />
+                                <Text style={[s.reviewFooterCount, { color: item.isLiked ? '#e03131' : colors.mutedText }]}>{item.likeCount}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    )
+                  })}
+
+                  {/* 페이지네이션 */}
+                  {(() => {
+                    const totalPages = Math.max(1, Math.ceil(reviewCount / 5))
+                    if (totalPages <= 1) return null
+                    const windowStart = Math.max(1, Math.min(reviewPage - 2, totalPages - 4))
+                    const windowEnd = Math.min(totalPages, windowStart + 4)
+                    const pages = Array.from({ length: windowEnd - windowStart + 1 }, (_, i) => windowStart + i)
+                    return (
+                      <View style={[s.reviewPaginationRow, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                        <TouchableOpacity
+                          onPress={() => void fetchReviewPage(Math.max(1, reviewPage - 1))}
+                          disabled={reviewPage <= 1}
+                          style={[s.reviewPageNavBtn, { backgroundColor: colors.surfaceSoft }, reviewPage <= 1 && { opacity: 0.4 }]}
+                          activeOpacity={0.7}
+                          delayPressIn={0}
+                        >
+                          <Feather name="chevron-left" size={16} color={colors.bodyText} />
+                        </TouchableOpacity>
+                        <View style={s.reviewPageNums}>
+                          {pages.map((p) => (
+                            <TouchableOpacity
+                              key={p}
+                              onPress={() => void fetchReviewPage(p)}
+                              disabled={p === reviewPage}
+                              style={[s.reviewPageBtn, { backgroundColor: p === reviewPage ? '#457ae5' : colors.surfaceSoft }]}
+                              activeOpacity={0.7}
+                              delayPressIn={0}
+                            >
+                              <Text style={[s.reviewPageBtnText, { color: p === reviewPage ? '#fff' : colors.bodyText }]}>{p}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => void fetchReviewPage(Math.min(totalPages, reviewPage + 1))}
+                          disabled={reviewPage >= totalPages}
+                          style={[s.reviewPageNavBtn, { backgroundColor: colors.surfaceSoft }, reviewPage >= totalPages && { opacity: 0.4 }]}
+                          activeOpacity={0.7}
+                          delayPressIn={0}
+                        >
+                          <Feather name="chevron-right" size={16} color={colors.bodyText} />
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  })()}
+                </>
+              )}
+            </View>
 
             <View style={{ height: 8 }} />
           </>
         )}
       </ScrollView>
+
+      {/* AI 강화단계 선택 Modal */}
+      <Modal visible={showAiLevelPicker} transparent animationType="fade" onRequestClose={() => setShowAiLevelPicker(false)}>
+        <TouchableOpacity style={teamPickerStyle.overlay} onPress={() => setShowAiLevelPicker(false)} activeOpacity={1}>
+          <View style={[teamPickerStyle.sheet, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+            <Text style={[teamPickerStyle.sheetTitle, { color: colors.mutedText }]}>카드 강화단계 선택</Text>
+            {([1,2,3,4,5,6,7,8,9,10,11,12,13] as const).map((lv, i) => (
+              <TouchableOpacity
+                key={lv}
+                style={[teamPickerStyle.option, i < 12 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}
+                onPress={() => { setAiSummaryLevel(lv); setShowAiLevelPicker(false) }}
+                activeOpacity={0.7}
+                delayPressIn={0}
+              >
+                <Text style={[teamPickerStyle.optionText, { color: lv === aiSummaryLevel ? '#457ae5' : colors.title }, lv === aiSummaryLevel && { fontWeight: '700' }]}>
+                  {lv}카
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* 팀컬러 선택 Modal */}
       <Modal visible={showTeamColorPicker} transparent animationType="fade" onRequestClose={() => setShowTeamColorPicker(false)}>
@@ -897,6 +1209,7 @@ export default function PlayerDetailScreen() {
                 ]}
                 onPress={() => { setTeamColorBoost(val); setShowTeamColorPicker(false) }}
                 activeOpacity={0.7}
+                delayPressIn={0}
               >
                 <Text style={[teamPickerStyle.optionText, { color: val === teamColorBoost ? '#457ae5' : colors.title }, val === teamColorBoost && { fontWeight: '700' }]}>
                   {val === 0 ? '미적용 (0)' : `+${val}`}
@@ -1026,20 +1339,42 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     clubHistoryRent: { fontSize: 12, fontWeight: '500', flexShrink: 0, marginTop: 1 },
 
     /* 선수 평가 */
-    reviewHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+    reviewHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
     reviewHeaderCount: { fontSize: 12, fontWeight: '500' },
+    reviewSectionTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
+    reviewSectionDesc: { fontSize: 12, fontWeight: '500', marginTop: 3 },
+    reviewDivider: { height: 1, marginVertical: 16 },
+    reviewAiLabel: { fontSize: 13, fontWeight: '700' },
+    reviewAiSelect: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      minWidth: 64,
+    },
+    reviewAiSelectText: { fontSize: 12, fontWeight: '600' },
+    reviewAiBody: { fontSize: 13, fontWeight: '400', lineHeight: 20, marginTop: 10 },
+    reviewCardBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+    reviewCardBadgeText: { fontSize: 11, fontWeight: '700' },
+    reviewWriteBtn: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+    reviewWriteBtnText: { fontSize: 13, fontWeight: '700', color: '#ffffff' },
     reviewStateWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 28, gap: 10 },
     reviewStateText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
     reviewItemCard: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14 },
-    reviewMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    reviewMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 },
-    reviewNickname: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
+    reviewAuthorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    reviewAvatar: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, marginTop: 2 },
+    reviewMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+    reviewNickname: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
     reviewDot: { fontSize: 12, fontWeight: '500' },
     reviewTime: { fontSize: 12, fontWeight: '500' },
-    reviewTitle: { fontSize: 15, fontWeight: '700', marginTop: 10 },
-    reviewBody: { fontSize: 13, fontWeight: '500', lineHeight: 20, marginTop: 8 },
-    reviewFooterRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12 },
-    reviewFooterText: { fontSize: 12, fontWeight: '500' },
+    reviewTitle: { fontSize: 14, fontWeight: '700', marginTop: 6 },
+    reviewBody: { fontSize: 13, fontWeight: '400', lineHeight: 19, marginTop: 4, color: c.bodyText },
+    reviewFooterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
+    reviewFooterAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    reviewFooterCount: { fontSize: 12, fontWeight: '500' },
     reviewMoreButton: {
       height: 44,
       borderRadius: 12,
@@ -1049,6 +1384,20 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
       marginTop: 2,
     },
     reviewMoreText: { fontSize: 14, fontWeight: '700' },
+    reviewPaginationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    reviewPageNavBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 999 },
+    reviewPageNums: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    reviewPageBtn: { minWidth: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 999, paddingHorizontal: 10 },
+    reviewPageBtnText: { fontSize: 14, fontWeight: '600' },
   })
 
 const teamPickerStyle = StyleSheet.create({

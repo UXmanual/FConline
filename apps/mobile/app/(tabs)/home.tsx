@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   ScrollView,
@@ -204,7 +204,7 @@ export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions()
   const { label, period, daysLeft } = getSeasonInfo(getKstToday())
   const dateLabel = getKoreaDateLabel()
-  const s = styles(colors)
+  const s = useMemo(() => styles(colors), [colors])
   const bannerWidth = Math.floor(screenWidth - 40)
   const bannerHeight = Math.floor(bannerWidth / BANNER_ASPECT)
   const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
@@ -451,7 +451,7 @@ function LatestReviews({
   reviews: LatestPlayerReviewItem[]
   loading: boolean
 }) {
-  const s = styles(colors)
+  const s = useMemo(() => styles(colors), [colors])
 
   if (loading) {
     return (
@@ -548,7 +548,7 @@ function HomeControllerUsageCard({
   colors: ReturnType<typeof useTheme>['colors']
   usage: HomeControllerUsage | null
 }) {
-  const s = styles(colors)
+  const s = useMemo(() => styles(colors), [colors])
   const [animatedPercentages, setAnimatedPercentages] = useState<number[]>([])
 
   useEffect(() => {

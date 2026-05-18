@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
@@ -106,10 +105,8 @@ export default function MatchesScreen() {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('official1on1')
-  const [searching, setSearching] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchError, setSearchError] = useState('')
-  const requestIdRef = useRef(0)
 
   const [topRanks, setTopRanks] = useState<TopRankItem[]>([])
   const [topRanksLoading, setTopRanksLoading] = useState(true)
@@ -185,7 +182,7 @@ export default function MatchesScreen() {
     }
   }, [managerFormationLoading, managerFormationMeta.length, triggerManagerFormationIfVisible])
 
-  const s = styles(colors, isDark)
+  const s = useMemo(() => styles(colors, isDark), [colors, isDark])
   const scrollRef = useRef<ScrollView>(null)
   useScrollToTop(scrollRef)
   useFocusEffect(
@@ -198,52 +195,74 @@ export default function MatchesScreen() {
     }, []),
   )
 
-  const searchNickname = async (nickname: string) => {
+  const goToLookup = (nickname: string, candidateData?: object) => {
     const trimmed = nickname.trim()
-    if (!trimmed || searching) return
-
-    const reqId = ++requestIdRef.current
-    setSearching(true)
+    if (!trimmed) return
     setSearchError('')
-
-    try {
-      const res = await fetch(`${API_BASE}/api/nexon/matches/search?nickname=${encodeURIComponent(trimmed)}`)
-      const data = await res.json().catch(() => null)
-
-      if (reqId !== requestIdRef.current) return
-
-      let exact: MatchCandidate | null = data?.exactMatch ?? null
-
-      if (exact && !exact.ouid) {
-        const userRes = await fetch(`${API_BASE}/api/nexon/matches/user?nickname=${encodeURIComponent(trimmed)}`)
-        if (userRes.ok) {
-          const userData = await userRes.json().catch(() => null)
-          const resolvedOuid = userData?.ouid ?? null
-          if (resolvedOuid) exact = { ...exact, ouid: resolvedOuid }
-        }
-      }
-
-      if (reqId !== requestIdRef.current) return
-
-      if (exact?.ouid) {
-        router.push({
-          pathname: '/(tabs)/matches/[ouid]',
-          params: { ouid: exact.ouid, mode, candidateData: JSON.stringify(exact) },
-        } as any)
-      } else if (!exact) {
-        setSearchError(`'${trimmed}' 구단주를 찾을 수 없어요.`)
-      } else {
-        setSearchError(`'${trimmed}' 구단주의 경기 기록을 찾지 못했어요.`)
-      }
-    } catch {
-      if (reqId !== requestIdRef.current) return
-      setSearchError('검색에 실패했어요. 다시 시도해주세요.')
-    } finally {
-      if (reqId === requestIdRef.current) setSearching(false)
-    }
+    router.push({
+      pathname: '/(tabs)/matches/lookup',
+      params: {
+        nickname: trimmed,
+        mode,
+        ...(candidateData ? { candidateData: JSON.stringify(candidateData) } : {}),
+      },
+    } as any)
   }
 
-  const handleSearch = () => searchNickname(query)
+  const goToDetail = (ouid: string, item: TopRankItem | VoltaTopRankItem) => {
+    // TopRankItem/VoltaTopRankItem 필드명을 MatchCandidate 필드명으로 매핑
+    let candidateData: Record<string, unknown> = { nickname: item.nickname, ouid: item.ouid }
+    if (mode === 'official1on1') {
+      const r = item as TopRankItem
+      candidateData = {
+        ...candidateData,
+        officialRank: r.rank,
+        officialRankPoint: r.rankPoint,
+        officialWinRate: r.winRate,
+        officialWins: r.wins,
+        officialDraws: r.draws,
+        officialLosses: r.losses,
+        officialFormation: r.formation,
+        officialRankIconUrl: r.rankIconUrl,
+        price: r.price,
+      }
+    } else if (mode === 'manager') {
+      const r = item as TopRankItem
+      candidateData = {
+        ...candidateData,
+        managerRank: r.rank,
+        managerRankPoint: r.rankPoint,
+        managerWinRate: r.winRate,
+        managerWins: r.wins,
+        managerDraws: r.draws,
+        managerLosses: r.losses,
+        managerFormation: r.formation,
+        managerRankIconUrl: r.rankIconUrl,
+        price: r.price,
+      }
+    } else if (mode === 'voltaLive') {
+      const r = item as VoltaTopRankItem
+      candidateData = {
+        ...candidateData,
+        voltaRank: r.rank,
+        voltaRankPoint: r.rankPoint,
+        voltaWinRate: r.winRate,
+        voltaAverageRating: r.averageRating,
+        voltaMainPosition: (r as any).mainPositionDetail ?? r.mainPosition,
+        voltaRankIconUrl: r.rankIconUrl,
+      }
+    }
+    router.push({
+      pathname: '/(tabs)/matches/[ouid]',
+      params: { ouid, mode, candidateData: JSON.stringify(candidateData) },
+    } as any)
+  }
+
+  const handleSearch = () => {
+    const trimmed = query.trim()
+    if (!trimmed) return
+    goToLookup(trimmed)
+  }
 
   const placeholder =
     mode === 'official1on1' ? '1:1 공식경기 구단주명 입력'
@@ -277,6 +296,7 @@ export default function MatchesScreen() {
                 style={[s.modeTab, isActive && { backgroundColor: activeColor }]}
                 onPress={() => setMode(m.value)}
                 activeOpacity={0.8}
+                delayPressIn={0}
               >
                 <Text style={[s.modeTabText, isActive && s.modeTabTextActive]}>{m.label}</Text>
               </TouchableOpacity>
@@ -297,12 +317,8 @@ export default function MatchesScreen() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
           />
-          <TouchableOpacity style={s.searchIconBtn} onPress={handleSearch} activeOpacity={0.8}>
-            {searching ? (
-              <ActivityIndicator size="small" color={searchFocused ? '#457ae5' : colors.mutedText} />
-            ) : (
-              <Feather name="search" size={20} color={searchFocused ? '#457ae5' : colors.mutedText} />
-            )}
+          <TouchableOpacity style={s.searchIconBtn} onPress={handleSearch} activeOpacity={0.8} delayPressIn={0}>
+            <Feather name="search" size={20} color={searchFocused ? '#457ae5' : colors.mutedText} />
           </TouchableOpacity>
         </View>
 
@@ -319,7 +335,7 @@ export default function MatchesScreen() {
             {/* 랭킹 TOP 5 */}
             <HomeBlock titleAccent="1:1 공식경기" titleRest=" 랭킹 TOP 5" badge="공식경기" loading={topRanksLoading} colors={colors}>
               {topRanks.map((item, i) => (
-                <TouchableOpacity key={item.rank} style={[hb.row, i < topRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => searchNickname(item.nickname)} activeOpacity={0.7}>
+                <TouchableOpacity key={item.rank} style={[hb.row, i < topRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => item.ouid ? goToDetail(item.ouid, item) : goToLookup(item.nickname, item)} activeOpacity={0.7} delayPressIn={0}>
                   <View style={hb.iconBox}>
                     {item.rankIconUrl
                       ? <Image source={{ uri: item.rankIconUrl }} style={hb.iconImg} resizeMode="contain" />
@@ -405,7 +421,7 @@ export default function MatchesScreen() {
             {/* 볼타 랭킹 TOP 5 */}
             <HomeBlock titleAccent="볼타" titleRest=" 랭킹 TOP 5" badge="VOLTA" accentColor={VOLTA_ACCENT} loading={voltaTopLoading} colors={colors}>
               {voltaTopRanks.map((item, i) => (
-                <TouchableOpacity key={item.rank} style={[hb.row, i < voltaTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => searchNickname(item.nickname)} activeOpacity={0.7}>
+                <TouchableOpacity key={item.rank} style={[hb.row, i < voltaTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => item.ouid ? goToDetail(item.ouid, item) : goToLookup(item.nickname, item)} activeOpacity={0.7} delayPressIn={0}>
                   <View style={hb.iconBox}>
                     {item.rankIconUrl
                       ? <Image source={{ uri: item.rankIconUrl }} style={hb.iconImgSm} resizeMode="contain" />
@@ -454,7 +470,7 @@ export default function MatchesScreen() {
             {/* 감독모드 랭킹 TOP 5 */}
             <HomeBlock titleAccent="감독모드" titleRest=" 랭킹 TOP 5" badge="감독모드" accentColor={MANAGER_ACCENT} loading={managerTopLoading} colors={colors}>
               {managerTopRanks.map((item, i) => (
-                <TouchableOpacity key={item.rank} style={[hb.row, i < managerTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => searchNickname(item.nickname)} activeOpacity={0.7}>
+                <TouchableOpacity key={item.rank} style={[hb.row, i < managerTopRanks.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]} onPress={() => item.ouid ? goToDetail(item.ouid, item) : goToLookup(item.nickname, item)} activeOpacity={0.7} delayPressIn={0}>
                   <View style={hb.iconBox}>
                     {item.rankIconUrl
                       ? <Image source={{ uri: item.rankIconUrl }} style={hb.iconImg} resizeMode="contain" />

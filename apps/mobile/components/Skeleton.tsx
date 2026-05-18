@@ -59,21 +59,16 @@ export function SkeletonPostCard({ colors, isDark }: { colors: { cardBg: string;
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-        {/* avatar */}
         <SkeletonBox width={40} height={40} radius={999} />
         <View style={{ flex: 1, gap: 8 }}>
-          {/* author meta row */}
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
             <SkeletonBox width={32} height={12} radius={4} />
             <SkeletonBox width={60} height={12} radius={4} />
             <SkeletonBox width={40} height={12} radius={4} />
           </View>
-          {/* title */}
           <SkeletonBox width="85%" height={15} radius={5} />
-          {/* content lines */}
           <SkeletonBox width="100%" height={13} radius={4} />
           <SkeletonBox width="65%" height={13} radius={4} />
-          {/* footer */}
           <View style={{ flexDirection: 'row', gap: 14, marginTop: 2 }}>
             <SkeletonBox width={40} height={12} radius={4} />
             <SkeletonBox width={40} height={12} radius={4} />

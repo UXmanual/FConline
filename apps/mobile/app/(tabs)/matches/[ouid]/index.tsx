@@ -15,6 +15,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
+import { SkeletonBox } from '@/components/Skeleton'
 
 type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
 
@@ -432,7 +433,7 @@ function buildVoltaTeams(match: MatchData, myOuid: string) {
     teammates: teammates.length > 0 ? teammates : [me],
     opponents,
     myScore: getDisplayScore(me),
-    opponentScore: isDraw ? getDisplayScore(me) : getDisplayScore(opponents[0]),
+    opponentScore: isDraw ? getDisplayScore(me) : (opponents[0] ? getDisplayScore(opponents[0]) : 0),
   }
 }
 
@@ -902,7 +903,7 @@ function getMatchScore(match: MatchData, myOuid: string) {
   const opponents = myResult === '무'
     ? players.filter((p) => p.ouid !== myOuid)
     : players.filter((p) => p.matchDetail.matchResult !== myResult)
-  return { my: getDisplayScore(me), opp: getDisplayScore(opponents[0]) }
+  return { my: getDisplayScore(me), opp: opponents[0] ? getDisplayScore(opponents[0]) : 0 }
 }
 
 // ??? Main Screen ???????????????????????????????????????????????????????
@@ -917,17 +918,40 @@ export default function OwnerDetailScreen() {
   const { colors, isDark } = useTheme()
   const tabBarHeight = useBottomTabBarHeight()
 
-  const candidate: MatchCandidate = (() => {
+  const [candidate, setCandidate] = useState<MatchCandidate>(() => {
     try { return JSON.parse(candidateData ?? '{}') } catch { return {} as MatchCandidate }
-  })()
+  })
 
   const [mode, setMode] = useState<SearchMode>((initialMode as SearchMode) ?? 'official1on1')
   const [matches, setMatches] = useState<MatchData[]>([])
   const [matchLoading, setMatchLoading] = useState(false)
   const [error, setError] = useState('')
+  const [enriching, setEnriching] = useState(!(candidate as any).nexonSn)
 
   const scrollRef = useRef<ScrollView>(null)
   useScrollToTop(scrollRef)
+
+  // Enrich profile data if candidateData came from the direct-nav path (no nexonSn).
+  // Search API results always include nexonSn; goToDetail never does.
+  useEffect(() => {
+    const nick = candidate.nickname
+    if (!nick || (candidate as any).nexonSn) { setEnriching(false); return }
+    fetch(`${API_BASE}/api/nexon/matches/search?nickname=${encodeURIComponent(nick)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const exact = data?.exactMatch
+        if (exact) setCandidate((prev) => {
+          // Fill missing fields from exact, but never overwrite non-null values already in prev
+          const result: Record<string, unknown> = { ...exact }
+          for (const key of Object.keys(prev as object)) {
+            if ((prev as any)[key] != null) result[key] = (prev as any)[key]
+          }
+          return result as MatchCandidate
+        })
+      })
+      .catch(() => {})
+      .finally(() => setEnriching(false))
+  }, [candidate.nickname])
 
   const loadMatches = useCallback(async (searchMode: SearchMode) => {
     if (!ouid) return
@@ -948,7 +972,7 @@ export default function OwnerDetailScreen() {
     }
   }, [ouid])
 
-  useEffect(() => { loadMatches(mode) }, [])
+  useEffect(() => { void loadMatches(mode) }, [loadMatches])
 
   const handleModeChange = (newMode: SearchMode) => {
     if (newMode === mode) return
@@ -1000,6 +1024,7 @@ export default function OwnerDetailScreen() {
           matches={matches}
           ouid={ouid ?? ''}
           matchLoading={matchLoading}
+          enriching={enriching}
         />
 
         {/* 蹂쇳? ?곸꽭 ?뺣낫 移대뱶 */}
@@ -1025,6 +1050,12 @@ export default function OwnerDetailScreen() {
             colors={colors}
             onPress={(matchId) => router.push(`/(tabs)/matches/${ouid}/${matchId}` as any)}
           />
+        )}
+
+        {!matchLoading && matches.length === 0 && !error && ouid && (
+          <View style={s.card}>
+            <Text style={[s.emptyText, { color: colors.mutedText }]}>최근 경기 기록이 없어요.</Text>
+          </View>
         )}
 
         {/* 최근 10경기 주요 선수 TOP 5 */}
@@ -1240,7 +1271,7 @@ const tp = StyleSheet.create({
 // ??? 援щ떒二??곸꽭 ?뺣낫 移대뱶 ?????????????????????????????????????????????
 
 function OwnerDetailCard({
-  candidate, mode, colors, matches, ouid, matchLoading,
+  candidate, mode, colors, matches, ouid, matchLoading, enriching,
 }: {
   candidate: MatchCandidate
   mode: SearchMode
@@ -1248,6 +1279,7 @@ function OwnerDetailCard({
   matches: MatchData[]
   ouid: string
   matchLoading: boolean
+  enriching: boolean
 }) {
   const isVolta = mode === 'voltaLive'
   const isManager = mode === 'manager'
@@ -1401,6 +1433,7 @@ function OwnerDetailCard({
                   value={item.value}
                   valueColor={item.valueColor}
                   colors={colors}
+                  loading={enriching && item.value === '-'}
                 />
               ))}
               {row.length === 1 && <View style={{ flex: 1 }} />}
@@ -1428,19 +1461,24 @@ function OwnerDetailCard({
 }
 
 function InfoCard({
-  label, value, valueColor, colors,
+  label, value, valueColor, colors, loading,
 }: {
   label: string
   value: string
   valueColor?: string
   colors: ReturnType<typeof useTheme>['colors']
+  loading?: boolean
 }) {
   return (
     <View style={[cd.infoCard, { flex: 1, backgroundColor: colors.surfaceSoft }]}>
       <Text style={[cd.infoLabel, { color: colors.mutedText }]}>{label}</Text>
-      <Text style={[cd.infoValue, { color: valueColor ?? colors.title }]} numberOfLines={1}>
-        {value}
-      </Text>
+      {loading ? (
+        <SkeletonBox width="70%" height={13} radius={4} style={{ marginTop: 2 }} />
+      ) : (
+        <Text style={[cd.infoValue, { color: valueColor ?? colors.title }]} numberOfLines={1}>
+          {value}
+        </Text>
+      )}
     </View>
   )
 }

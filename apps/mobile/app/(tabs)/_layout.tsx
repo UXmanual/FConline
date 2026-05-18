@@ -89,7 +89,6 @@ export default function TabLayout() {
         name="home"
         options={{
           title: '홈',
-          unmountOnBlur: true,
           tabBarIcon: ({ focused }) => <HomeIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
@@ -97,7 +96,6 @@ export default function TabLayout() {
         name="players"
         options={{
           title: '선수',
-          unmountOnBlur: true,
           tabBarIcon: ({ focused }) => <PlayerIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
@@ -105,7 +103,6 @@ export default function TabLayout() {
         name="matches"
         options={{
           title: '분석',
-          unmountOnBlur: true,
           tabBarIcon: ({ focused }) => <AnalysisIcon size={22} color={focused ? c.navActive : c.navIcon} />,
         }}
       />
@@ -116,7 +113,6 @@ export default function TabLayout() {
           const isDetail = focused !== undefined && focused !== 'index'
           return {
             title: '커뮤니티',
-            unmountOnBlur: true,
             tabBarIcon: ({ focused: f }) => <CommunityIcon size={22} color={f ? c.navActive : c.navIcon} />,
             ...(isDetail ? { tabBarStyle: { display: 'none' } } : {}),
           }
@@ -129,7 +125,6 @@ export default function TabLayout() {
           const isNested = focused !== undefined && focused !== 'index'
           return {
             title: '마이',
-            unmountOnBlur: true,
             tabBarIcon: ({ focused: f }) => <MypageIcon size={22} color={f ? c.navActive : c.navIcon} />,
             ...(isNested ? { tabBarStyle: { display: 'none' } } : {}),
           }

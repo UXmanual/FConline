@@ -27,7 +27,7 @@ import { supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
-import { TERMS_CONTENT, PRIVACY_CONTENT, PRIVACY_EMAIL, PRIVACY_DATA_URL } from '@/constants/legalContent'
+import { TERMS_CONTENT, PRIVACY_CONTENT, PRIVACY_EMAIL } from '@/constants/legalContent'
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
@@ -457,6 +457,20 @@ export default function MypageScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* 계정 및 데이터 삭제 */}
+        {profile && (
+          <View style={s.card}>
+            <TouchableOpacity
+              style={s.settingRowCompact}
+              onPress={() => router.push('/(tabs)/mypage/data-deletion' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.settingLabel, { color: '#e03131' }]}>계정 및 데이터 삭제</Text>
+              <Feather name="chevron-right" size={16} color="#e03131" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 오픈소스 라이선스 */}
         <View style={s.card}>
           <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowLicenses(true)}>
@@ -487,20 +501,14 @@ export default function MypageScreen() {
           <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
             {(() => {
               const emailMarker = PRIVACY_EMAIL
-              const urlMarker = PRIVACY_DATA_URL
               const [beforeEmail, afterEmail] = PRIVACY_CONTENT.split(emailMarker)
-              const [betweenLinks, afterUrl] = (afterEmail ?? '').split(urlMarker)
               return (
                 <Text style={[s.termsText, { color: colors.bodyText }]}>
                   {beforeEmail}
                   <Text style={{ color: '#457ae5' }} onPress={() => Linking.openURL(`mailto:${emailMarker}`)}>
                     {emailMarker}
                   </Text>
-                  {betweenLinks}
-                  <Text style={{ color: '#457ae5' }} onPress={() => Linking.openURL(urlMarker)}>
-                    {urlMarker}
-                  </Text>
-                  {afterUrl}
+                  {afterEmail}
                 </Text>
               )
             })()}

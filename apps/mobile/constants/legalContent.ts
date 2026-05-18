@@ -177,7 +177,7 @@ FConline Ground(이하 "서비스")는 이용자의 개인정보를 중요하게
 개인정보 보호 관련 문의, 열람 요청, 정정 요청, 삭제 요청, 처리 정지 요청, 탈퇴 요청은 아래 연락처로 접수할 수 있습니다.
 
 · 이메일: uxdmanual@gmail.com
-· 데이터 삭제 요청 안내: https://fconlineground.com/data-deletion
+· 계정 및 데이터 삭제 요청: 앱 내 마이페이지 → '계정 및 데이터 삭제' 메뉴를 통해 직접 요청하실 수 있습니다.
 
 11. 자동 수집 장치의 설치, 운영 및 거부
 
@@ -198,4 +198,3 @@ FConline Ground(이하 "서비스")는 이용자의 개인정보를 중요하게
 중요한 변경이 있는 경우 앱 또는 관련 페이지를 통해 안내합니다.`
 
 export const PRIVACY_EMAIL = 'uxdmanual@gmail.com'
-export const PRIVACY_DATA_URL = 'https://fconlineground.com/data-deletion'
