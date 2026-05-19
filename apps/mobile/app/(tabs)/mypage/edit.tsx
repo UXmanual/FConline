@@ -10,7 +10,7 @@ import {
   Platform,
   Image,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import * as ImagePicker from 'expo-image-picker'
@@ -29,6 +29,7 @@ function pickDefaultAvatar(id: string): string {
 
 export default function ProfileEditScreen() {
   const { colors, isDark } = useTheme()
+  const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ nickname?: string; avatarUrl?: string; userId?: string }>()
   const [nickname, setNickname] = useState(params.nickname ?? '')
   const [avatarUri, setAvatarUri] = useState<string | null>(params.avatarUrl || null)
@@ -140,7 +141,7 @@ export default function ProfileEditScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safeArea} edges={['top']}>
+    <View style={[s.safeArea, { paddingTop: insets.top }]}>
       <View style={s.navHeader}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Feather name="chevron-left" size={24} color={colors.title} />
@@ -209,7 +210,7 @@ export default function ProfileEditScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -217,7 +218,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.cardBg },
     navHeader: {
-      height: 44,
+      height: 56,
       paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',

@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.0': '2026-05-19T18:40:00+09:00',
   '0.1.7': '2026-05-14T00:25:40+09:00',
   '0.1.6': '2026-05-13T16:35:00+09:00',
   '0.1.5': '2026-05-13T10:15:00+09:00',
@@ -12,6 +13,11 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.0': [
+    'React Native 기반 모바일 앱에서 다크모드 저장 방식과 탭바/마이페이지 구성을 정리해 프리뷰 환경에서의 테마 유지와 화면 안정성을 보강했습니다.',
+    '모바일 안드로이드 스플래시 자산을 정사각 안전영역 기준으로 다시 생성해 시작 로고가 좌우로 잘려 보이던 문제를 줄였습니다.',
+    '웹 홈 최신 선수평가 응답의 시즌 이미지 URL 보정과 선수 상세 시즌 이미지 파싱을 함께 다듬어 운영 데이터 표시 안정성을 높였습니다.',
+  ],
   '0.1.7': [
     '모바일 최근 경기 화면을 TWA 기준으로 다시 정리하고, 1:1 공식경기·볼타 라이브·감독모드의 최근 10경기 카드와 아코디언 상세 구성을 일관되게 맞췄습니다.',
     '모바일 구단주 검색 결과에 대표팀/팀컬러 엠블럼 fallback을 보강해 랭크 배지 표시에 실패하던 오류를 줄였고, 최근 경기 상세의 한글 문구 깨짐과 표시 오류를 정리했습니다.',

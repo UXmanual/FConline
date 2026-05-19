@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
+import { PlayerImage } from '@/components/PlayerImage'
 
 type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
 
@@ -1069,34 +1070,6 @@ export default function OwnerDetailScreen() {
 
 // ─── TOP 5 선수 블록 ──────────────────────────────────────────────────────────
 
-function PlayerImageWithFallback({ spId, size, colors }: { spId: number; size: number; colors: ReturnType<typeof useTheme>['colors'] }) {
-  const urls = [
-    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${spId}.png`,
-    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${spId % 1000000}.png`,
-    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/players/p${spId}.png`,
-    `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/players/p${spId % 1000000}.png`,
-  ]
-  const [urlIndex, setUrlIndex] = useState(0)
-  const failed = urlIndex >= urls.length
-
-  if (failed) {
-    return (
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 22 }}>⚽</Text>
-      </View>
-    )
-  }
-
-  return (
-    <Image
-      source={{ uri: urls[urlIndex] }}
-      style={{ width: size, height: size }}
-      resizeMode="contain"
-      onError={() => setUrlIndex((i) => i + 1)}
-    />
-  )
-}
-
 const POSITION_GROUP_COLORS: Record<string, { bg: string; fg: string }> = {
   GK: { bg: 'rgba(234,179,8,0.15)', fg: '#ca8a04' },
   DF: { bg: 'rgba(59,130,246,0.13)', fg: '#2563eb' },
@@ -1142,7 +1115,7 @@ function TopPlayersBlock({
           return (
             <View key={player.key} style={[tp.row, i < topPlayers.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
               <View style={[tp.imgBox, { backgroundColor: colors.surfaceStrong }]}>
-                <PlayerImageWithFallback spId={player.spId} size={52} colors={colors} />
+                <PlayerImage spid={player.spId} size={52} />
               </View>
 
               <View style={tp.infoCol}>
@@ -2010,11 +1983,7 @@ function VoltaMatchItem({
               </View>
               {selectedPlayer.spId ? (
                 <View style={[mc.playerImageFrame, { backgroundColor: colors.surfaceSoft }]}>
-                  <Image
-                    source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${selectedPlayer.spId}.png` }}
-                    style={mc.playerImage}
-                    resizeMode="contain"
-                  />
+                  <PlayerImage spid={selectedPlayer.spId} size={56} />
                 </View>
               ) : null}
             </View>

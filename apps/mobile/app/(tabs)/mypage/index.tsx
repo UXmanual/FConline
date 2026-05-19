@@ -8,26 +8,24 @@ import {
   Image,
   Alert,
   Easing,
-  Modal,
-  LayoutAnimation,
   Platform,
   UIManager,
   PermissionsAndroid,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import { router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
-import * as WebBrowser from 'expo-web-browser'
 import * as Linking from 'expo-linking'
+import * as WebBrowser from 'expo-web-browser'
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
 import { supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
-import { TERMS_CONTENT, PRIVACY_CONTENT, PRIVACY_EMAIL } from '@/constants/legalContent'
+import { pickDefaultAvatar } from '@/lib/avatar'
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
@@ -68,12 +66,6 @@ function getLevelColor(level?: number | null): string {
   return '#8b5cf6'
 }
 
-function pickDefaultAvatar(id: string): string {
-  const emojis = ['😀', '😊', '🦊', '🐼', '🦁', '🐯', '🐸', '🐧', '🦅', '🐬']
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  return emojis[hash % emojis.length] ?? '😀'
-}
 
 const APP_VERSION = '0.1.8'
 
@@ -82,10 +74,6 @@ export default function MypageScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
-  const [showTerms, setShowTerms] = useState(false)
-  const [showPrivacy, setShowPrivacy] = useState(false)
-  const [showLicenses, setShowLicenses] = useState(false)
-  const [xpGuideOpen, setXpGuideOpen] = useState(false)
   const [xpBarWidth, setXpBarWidth] = useState(0)
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
 
@@ -96,7 +84,6 @@ export default function MypageScreen() {
   const [notifPending, setNotifPending] = useState(false)
   const notifToggleTranslateX = useRef(new Animated.Value(0)).current
 
-  const insets = useSafeAreaInsets()
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
   useScrollToTop(scrollRef)
@@ -180,7 +167,6 @@ export default function MypageScreen() {
   const handleLogin = async () => {
     try {
       const redirectTo = Linking.createURL('auth/callback')
-      if (Platform.OS === 'android') await WebBrowser.warmUpAsync().catch(() => null)
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -190,15 +176,13 @@ export default function MypageScreen() {
           queryParams: { prompt: 'select_account' },
         },
       })
-      if (error || !data.url) return Alert.alert('오류', '로그인 URL을 가져오지 못했습니다.')
-      if (!data.url.startsWith('https://')) return Alert.alert('오류', '잘못된 로그인 URL입니다.')
+      if (error || !data?.url) return Alert.alert('오류', '로그인 URL을 가져오지 못했습니다.')
 
       await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
-      if (Platform.OS === 'android') await WebBrowser.coolDownAsync().catch(() => null)
-
       await fetchProfile()
-    } catch {
-      Alert.alert('오류', '로그인 중 문제가 발생했습니다.')
+    } catch (e: any) {
+      console.log('[LOGIN] exception:', String(e?.message ?? e))
+      Alert.alert('오류', String(e?.message ?? e))
     }
   }
 
@@ -355,35 +339,15 @@ export default function MypageScreen() {
           </View>
         )}
 
-        {/* 레벨 가이드 */}
-        <View style={s.card}>
-          <TouchableOpacity
-            style={s.settingRowCompact}
-            onPress={() => {
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-              setXpGuideOpen(prev => !prev)
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={[s.settingLabel, { color: colors.title }]}>경험치 획득 방법</Text>
-            <Feather name={xpGuideOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.mutedText} />
-          </TouchableOpacity>
-          {xpGuideOpen && (
-            <View style={{ gap: 6, marginTop: 12 }}>
-              {[
-                '하루 첫 로그인: +5 XP',
-                '커뮤니티 글 작성: +12 XP',
-                '선수평가 글 작성: +10 XP',
-                '커뮤니티 댓글 작성: +4 XP',
-                '선수평가 댓글 작성: +4 XP',
-                '하루 첫 글 보너스: +5 XP',
-                '하루 첫 댓글 보너스: +3 XP',
-              ].map((item, i) => (
-                <Text key={i} style={[s.guideItem, { color: colors.bodyText }]}>· {item}</Text>
-              ))}
-            </View>
-          )}
-        </View>
+        {/* 경험치 획득 방법 */}
+        {profile && (
+          <View style={s.card}>
+            <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/xp-guide' as any)}>
+              <Text style={[s.settingLabel, { color: colors.bodyText }]}>경험치 획득 방법</Text>
+              <Feather name="chevron-right" size={16} color={colors.mutedText} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* 앱 알림 */}
         <View style={[s.card, notifPending && { opacity: 0.76 }]}>
@@ -436,25 +400,41 @@ export default function MypageScreen() {
           </View>
         </View>
 
+        {/* 문의하기 */}
+        <View style={s.card}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/contact' as any)}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>무엇을 도와드릴까요?</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 이용약관 / 개인정보처리방침 */}
+        <View style={s.card}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/terms')}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+          <View style={[s.divider, { backgroundColor: colors.divider }]} />
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/privacy')}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>개인정보처리방침</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 오픈소스 라이선스 */}
+        <View style={s.card}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/licenses')}>
+            <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedText} />
+          </TouchableOpacity>
+        </View>
+
         {/* 버전 */}
         <View style={s.card}>
           <View style={s.settingRowCompact}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>버전</Text>
             <Text style={[s.settingValue, { color: colors.mutedText }]}>{APP_VERSION}</Text>
           </View>
-        </View>
-
-        {/* 이용약관 / 개인정보처리방침 */}
-        <View style={s.card}>
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowTerms(true)}>
-            <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
-            <Feather name="chevron-right" size={16} color={colors.mutedText} />
-          </TouchableOpacity>
-          <View style={[s.divider, { backgroundColor: colors.divider }]} />
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowPrivacy(true)}>
-            <Text style={[s.settingLabel, { color: colors.bodyText }]}>개인정보처리방침</Text>
-            <Feather name="chevron-right" size={16} color={colors.mutedText} />
-          </TouchableOpacity>
         </View>
 
         {/* 계정 및 데이터 삭제 */}
@@ -470,82 +450,8 @@ export default function MypageScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* 오픈소스 라이선스 */}
-        <View style={s.card}>
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => setShowLicenses(true)}>
-            <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
-            <Feather name="chevron-right" size={16} color={colors.mutedText} />
-          </TouchableOpacity>
-        </View>
       </ScrollView>
 
-      {/* 이용약관 모달 */}
-      <Modal visible={showTerms} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowTerms(false)}>
-        <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
-          <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
-            <Text style={[s.termsText, { color: colors.bodyText }]}>{TERMS_CONTENT}</Text>
-          </ScrollView>
-          <View style={[s.modalHeader, { top: insets.top, backgroundColor: isDark ? 'rgba(18,19,24,0.88)' : 'rgba(240,243,245,0.88)', borderBottomColor: colors.divider }]}>
-            <Text style={[s.modalTitle, { color: colors.title }]}>이용약관</Text>
-            <TouchableOpacity onPress={() => setShowTerms(false)}>
-              <Feather name="x" size={22} color={colors.bodyText} />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
-
-      {/* 개인정보처리방침 모달 */}
-      <Modal visible={showPrivacy} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPrivacy(false)}>
-        <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
-          <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
-            {(() => {
-              const emailMarker = PRIVACY_EMAIL
-              const [beforeEmail, afterEmail] = PRIVACY_CONTENT.split(emailMarker)
-              return (
-                <Text style={[s.termsText, { color: colors.bodyText }]}>
-                  {beforeEmail}
-                  <Text style={{ color: '#457ae5' }} onPress={() => Linking.openURL(`mailto:${emailMarker}`)}>
-                    {emailMarker}
-                  </Text>
-                  {afterEmail}
-                </Text>
-              )
-            })()}
-          </ScrollView>
-          <View style={[s.modalHeader, { top: insets.top, backgroundColor: isDark ? 'rgba(18,19,24,0.88)' : 'rgba(240,243,245,0.88)', borderBottomColor: colors.divider }]}>
-            <Text style={[s.modalTitle, { color: colors.title }]}>개인정보처리방침</Text>
-            <TouchableOpacity onPress={() => setShowPrivacy(false)}>
-              <Feather name="x" size={22} color={colors.bodyText} />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
-
-      {/* 오픈소스 모달 */}
-      <Modal visible={showLicenses} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLicenses(false)}>
-        <SafeAreaView style={[s.modalSafe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
-          <ScrollView contentContainerStyle={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, gap: 16 }}>
-            {[
-              { name: '여기어때 잘난체', desc: '여기어때컴퍼니 폰트 라이선스' },
-              { name: '넥슨 Open API', desc: 'FC Online 데이터 제공 · openapi.nexon.com' },
-              { name: 'Expo', desc: 'MIT License · expo.dev' },
-              { name: 'React Native', desc: 'MIT License · reactnative.dev' },
-            ].map((item) => (
-              <View key={item.name}>
-                <Text style={[s.licenseTitle, { color: colors.title }]}>{item.name}</Text>
-                <Text style={[s.licenseDesc, { color: colors.mutedText }]}>{item.desc}</Text>
-              </View>
-            ))}
-          </ScrollView>
-          <View style={[s.modalHeader, { top: insets.top, backgroundColor: isDark ? 'rgba(18,19,24,0.88)' : 'rgba(240,243,245,0.88)', borderBottomColor: colors.divider }]}>
-            <Text style={[s.modalTitle, { color: colors.title }]}>오픈소스 라이선스</Text>
-            <TouchableOpacity onPress={() => setShowLicenses(false)}>
-              <Feather name="x" size={22} color={colors.bodyText} />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   )
 }
@@ -602,7 +508,6 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     },
     googleBtnText: { fontSize: 14, fontWeight: '600' },
     sectionTitle: { fontSize: 14, fontWeight: '600' },
-    guideItem: { fontSize: 13, lineHeight: 20, fontWeight: '400' },
     settingRowCompact: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 },
     settingTitleRowCompact: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     settingLabel: { fontSize: 14, fontWeight: '500' },
@@ -622,21 +527,4 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
       borderRadius: 999,
       backgroundColor: '#ffffff',
     },
-    modalSafe: { flex: 1 },
-    modalHeader: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      zIndex: 10,
-    },
-    modalTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 12 },
-    termsText: { fontSize: 14, lineHeight: 22, fontWeight: '400' },
-    licenseTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
-    licenseDesc: { fontSize: 13, fontWeight: '400' },
   })

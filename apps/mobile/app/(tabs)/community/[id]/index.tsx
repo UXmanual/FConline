@@ -10,7 +10,7 @@ import {
   Platform,
   Linking,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
@@ -18,6 +18,8 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
+import { likeStore } from '@/lib/communityLikeStore'
+import { pickDefaultAvatar, randomDefaultAvatar } from '@/lib/avatar'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
 const URL_PART_PATTERN = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/
@@ -52,12 +54,6 @@ type Comment = {
   canDelete?: boolean
 }
 
-function pickDefaultAvatar(id: string): string {
-  const emojis = ['😀', '😊', '🦊', '🐼', '🦁', '🐯', '🐸', '🐧', '🦅', '🐬']
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  return emojis[hash % emojis.length] ?? '😀'
-}
 
 function getLevelColor(level?: number | null): string {
   if (!level || !Number.isFinite(level)) return '#9aa3af'
@@ -113,8 +109,9 @@ export default function PostDetailScreen() {
   const [commentDraft, setCommentDraft] = useState('')
   const [submitBusy, setSubmitBusy] = useState(false)
   const [commentCount, setCommentCount] = useState(0)
-  const [isLiked, setIsLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(0)
+  const [isLiked, setIsLiked] = useState(() => likeStore.get(String(id))?.isLiked ?? false)
+  const [likeCount, setLikeCount] = useState(() => likeStore.get(String(id))?.likeCount ?? 0)
+  const guestEmoji = useState(() => randomDefaultAvatar())[0]
 
   const s = styles(colors, isDark)
 
@@ -144,8 +141,12 @@ export default function PostDetailScreen() {
           const p = json.item as Post
           setPost(p)
           setCommentCount(p.commentCount)
-          setIsLiked(p.isLiked ?? false)
-          setLikeCount(p.likeCount)
+          const cachedLike = likeStore.get(String(id))
+          const resolvedIsLiked = cachedLike?.isLiked ?? p.isLiked ?? false
+          const resolvedLikeCount = cachedLike?.likeCount ?? p.likeCount
+          setIsLiked(resolvedIsLiked)
+          setLikeCount(resolvedLikeCount)
+          likeStore.set(String(id), resolvedIsLiked, resolvedLikeCount)
         }
       })
       .catch(() => null)
@@ -168,10 +169,17 @@ export default function PostDetailScreen() {
 
   const handleLike = async () => {
     if (!post) return
-    setIsLiked((v) => !v)
-    setLikeCount((n) => n + (isLiked ? -1 : 1))
+    const newIsLiked = !isLiked
+    const newLikeCount = likeCount + (isLiked ? -1 : 1)
+    setIsLiked(newIsLiked)
+    setLikeCount(newLikeCount)
+    likeStore.set(post.id, newIsLiked, newLikeCount)
     try {
-      await fetch(`${API_BASE}/api/community/posts/${post.id}/like`, { method: 'POST' })
+      await fetch(`${API_BASE}/api/likes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, postType: 'community' }),
+      })
     } catch {}
   }
 
@@ -196,7 +204,7 @@ export default function PostDetailScreen() {
 
   if (postLoading) {
     return (
-      <SafeAreaView style={s.safeArea} edges={['top']}>
+      <View style={[s.safeArea, { paddingTop: insets.top }]}>
         <View style={s.navHeader}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Feather name="chevron-left" size={24} color={colors.title} />
@@ -205,13 +213,13 @@ export default function PostDetailScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="small" color={colors.accentBlue} />
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   if (!post) {
     return (
-      <SafeAreaView style={[s.safeArea]} edges={['top']}>
+      <View style={[s.safeArea, { paddingTop: insets.top }]}>
         <View style={s.navHeader}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Feather name="chevron-left" size={24} color={colors.title} />
@@ -220,12 +228,12 @@ export default function PostDetailScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: colors.mutedText }}>게시글을 불러올 수 없습니다.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={s.safeArea} edges={['top']}>
+    <View style={[s.safeArea, { paddingTop: insets.top }]}>
       {/* 헤더 */}
       <View style={s.navHeader}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -264,16 +272,16 @@ export default function PostDetailScreen() {
           {/* 본문 */}
           <LinkifiedText text={post.content} style={[s.postContent, { color: colors.bodyText }]} />
 
-          {/* 하트 + 댓글 수 */}
+          {/* 댓글 수 + 하트 */}
           <View style={s.postActions}>
-            <TouchableOpacity style={s.likeBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
-              <Text style={[s.likeCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
-            </TouchableOpacity>
             <View style={s.likeBtn}>
               <Feather name="message-circle" size={18} color={colors.mutedText} />
               <Text style={[s.likeCount, { color: colors.mutedText }]}>{commentCount}</Text>
             </View>
+            <TouchableOpacity style={s.likeBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
+              <Text style={[s.likeCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 섹션 구분 */}
@@ -324,41 +332,44 @@ export default function PostDetailScreen() {
               <Image source={{ uri: currentUser.avatarUrl }} style={{ width: 46, height: 46 }} />
             ) : currentUser ? (
               <Text style={{ fontSize: 20 }}>{pickDefaultAvatar(currentUser.id)}</Text>
-            ) : null}
+            ) : (
+              <Text style={{ fontSize: 20 }}>{guestEmoji}</Text>
+            )}
           </View>
           <TextInput
             style={[s.commentInput, { backgroundColor: isDark ? '#2a2f3d' : colors.surfaceSoft, color: colors.title }]}
             value={commentDraft}
             onChangeText={setCommentDraft}
-            placeholder="댓글로 의견을 남겨보세요"
+            placeholder={currentUser ? '댓글로 의견을 남겨보세요' : '로그인 후 이용해주세요'}
             placeholderTextColor={colors.inputPlaceholder}
             keyboardAppearance={isDark ? 'dark' : 'light'}
             underlineColorAndroid="transparent"
             autoCorrect={false}
             spellCheck={false}
             multiline
+            editable={!!currentUser}
           />
           <TouchableOpacity
-            style={[s.commentSendBtn, { backgroundColor: commentDraft.trim() ? '#457ae5' : (isDark ? '#2a2f3d' : colors.surfaceSoft) }]}
+            style={[s.commentSendBtn, { backgroundColor: (currentUser && commentDraft.trim()) ? '#457ae5' : (isDark ? '#2a2f3d' : colors.surfaceSoft) }]}
             onPress={handleSubmitComment}
-            disabled={!commentDraft.trim() || submitBusy}
+            disabled={!currentUser || !commentDraft.trim() || submitBusy}
           >
             {submitBusy ? (
-              <ActivityIndicator size="small" color={commentDraft.trim() ? '#fff' : colors.mutedText} />
+              <ActivityIndicator size="small" color={(currentUser && commentDraft.trim()) ? '#fff' : colors.mutedText} />
             ) : (
-              <Feather name="arrow-up" size={18} color={commentDraft.trim() ? '#fff' : colors.mutedText} />
+              <Feather name="arrow-up" size={18} color={(currentUser && commentDraft.trim()) ? '#fff' : colors.mutedText} />
             )}
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.cardBg },
-    navHeader: { paddingHorizontal: 8, height: 44, justifyContent: 'center' },
+    navHeader: { paddingHorizontal: 8, height: 56, justifyContent: 'center' },
     backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     content: { paddingHorizontal: 20, paddingTop: 12, gap: 0 },
     authorRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },

@@ -4,12 +4,15 @@ import { StatusBar } from 'expo-status-bar'
 import { useFonts } from 'expo-font'
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
+import * as SplashScreen from 'expo-splash-screen'
 import 'react-native-reanimated'
 import { ThemePreferenceProvider } from '@/contexts/ThemePreferenceContext'
 import { useTheme } from '@/hooks/useTheme'
+import { useThemePreference } from '@/contexts/ThemePreferenceContext'
 import { APP_FONT_STACK } from '@/constants/fonts'
 
-enableScreens(true)
+enableScreens(Platform.OS !== 'web')
+SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -37,6 +40,13 @@ export default function RootLayout() {
 
 function RootLayoutContent() {
   const { isDark } = useTheme()
+  const { themeLoaded } = useThemePreference()
+
+  useEffect(() => {
+    if (themeLoaded) {
+      SplashScreen.hideAsync()
+    }
+  }, [themeLoaded])
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {

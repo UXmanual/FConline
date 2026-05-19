@@ -17,6 +17,8 @@ import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { consumeCommunityRefresh } from '@/lib/communityRefresh'
 import { SkeletonPostCard } from '@/components/Skeleton'
+import { likeStore } from '@/lib/communityLikeStore'
+import { pickDefaultAvatar } from '@/lib/avatar'
 
 const POSTS_PER_PAGE = 5
 
@@ -43,12 +45,6 @@ function clampLines(text: string, max: number): string {
   return text
 }
 
-function pickDefaultAvatar(id: string): string {
-  const emojis = ['😀', '😊', '🦊', '🐼', '🦁', '🐯', '🐸', '🐧', '🦅', '🐬']
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  return emojis[hash % emojis.length] ?? '😀'
-}
 
 function getLevelColor(level?: number | null): string {
   if (!level || !Number.isFinite(level)) return '#9aa3af'
@@ -90,7 +86,10 @@ export default function CommunityScreen() {
       const res = await fetch(`${API_BASE}/api/community/posts?page=${page}&pageSize=${POSTS_PER_PAGE}&includeTotalCount=1`)
       const data = await res.json().catch(() => null)
       if (data?.items) {
-        setPosts(data.items)
+        setPosts(data.items.map((p: Post) => {
+          const cached = likeStore.get(p.id)
+          return cached ? { ...p, ...cached } : p
+        }))
         setTotalCount(data.totalCount ?? 0)
       }
     } catch {}
@@ -103,6 +102,10 @@ export default function CommunityScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setPosts((prev) => prev.map((p) => {
+        const cached = likeStore.get(p.id)
+        return cached ? { ...p, ...cached } : p
+      }))
       if (consumeCommunityRefresh()) {
         setCurrentPage(1)
         void loadPosts(1)
@@ -111,13 +114,20 @@ export default function CommunityScreen() {
   )
 
   const handleLike = async (post: Post) => {
+    const newIsLiked = !post.isLiked
+    const newLikeCount = post.likeCount + (post.isLiked ? -1 : 1)
+    likeStore.set(post.id, newIsLiked, newLikeCount)
     setPosts((prev) => prev.map((p) =>
       p.id === post.id
-        ? { ...p, isLiked: !p.isLiked, likeCount: p.likeCount + (p.isLiked ? -1 : 1) }
+        ? { ...p, isLiked: newIsLiked, likeCount: newLikeCount }
         : p
     ))
     try {
-      await fetch(`${API_BASE}/api/community/posts/${post.id}/like`, { method: 'POST' })
+      await fetch(`${API_BASE}/api/likes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, postType: 'community' }),
+      })
     } catch {}
   }
 

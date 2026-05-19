@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
@@ -17,6 +17,7 @@ import { apiFetch } from '@/lib/apiFetch'
 
 export default function PlayerReviewNewScreen() {
   const { colors, isDark } = useTheme()
+  const insets = useSafeAreaInsets()
   const { playerId, playerName } = useLocalSearchParams<{ playerId: string; playerName: string }>()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -47,7 +48,7 @@ export default function PlayerReviewNewScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safeArea} edges={['top']}>
+    <View style={[s.safeArea, { paddingTop: insets.top }]}>
       <View style={s.navHeader}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 16, bottom: 16, left: 16, right: 24 }}>
           <Feather name="chevron-left" size={24} color={colors.title} />
@@ -107,7 +108,7 @@ export default function PlayerReviewNewScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -115,7 +116,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.cardBg },
     navHeader: {
-      height: 44,
+      height: 56,
       paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',
@@ -140,7 +141,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
     categoryText: { fontSize: 13, fontWeight: '600' },
     content: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 40 },
     titleInput: {
-      fontSize: 17,
+      fontSize: 15,
       fontWeight: '600',
       paddingVertical: 18,
       borderBottomWidth: 1,

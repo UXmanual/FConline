@@ -198,7 +198,7 @@ async function getPlayerDetailRaw(spid: string): Promise<PlayerDetail | null> {
 
   return {
     name: matchGroup(html, /<div class="name">([^<]+)</) ?? '',
-    seasonImg: matchGroup(html, /<div class="season"><img src="([^"]+)"/),
+    seasonImg: matchGroup(html, /class="nameWrap"[\s\S]*?class="season">\s*<img src="([^"]+)"/),
     seasonName: matchGroup(
       html,
       /<span class="nameWrap">\s*<span class="season">[\s\S]*?<span class="name"><span>([^<]+)</
@@ -233,7 +233,7 @@ async function getPlayerDetailRaw(spid: string): Promise<PlayerDetail | null> {
 
 export const getPlayerDetail = unstable_cache(
   async (spid: string) => getPlayerDetailRaw(spid),
-  ['player-detail-v2'],
+  ['player-detail-v4'],
   { revalidate: 3600 },
 )
 

@@ -22,6 +22,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
+import { PlayerImage } from '@/components/PlayerImage'
 
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, i) => i + 1)
 const STRONG_POINT_TABLE = [0, 3, 4, 5, 7, 9, 11, 14, 18, 20, 22, 24, 27, 30]
@@ -674,11 +675,7 @@ export default function PlayerDetailScreen() {
               {/* 이미지 + 이름/포지션/오버롤 */}
               <View style={s.playerRow}>
                 <View style={[s.thumbWrap, { backgroundColor: colors.surfaceStrong }]}>
-                  <Image
-                    source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${id}.png` }}
-                    style={{ width: 96, height: 96 }}
-                    resizeMode="contain"
-                  />
+                  <PlayerImage spid={id} size={96} />
                 </View>
 
                 <View style={s.playerInfo}>
@@ -1040,18 +1037,7 @@ export default function PlayerDetailScreen() {
                 </View>
               ) : reviewItems.length === 0 ? (
                 <View style={[s.card, s.reviewStateWrap]}>
-                  <Text style={[s.reviewStateText, { color: colors.bodyText }]}>아직 등록된 선수 평가가 없어요.</Text>
-                  <TouchableOpacity
-                    style={[s.reviewWriteBtn, { backgroundColor: '#457ae5', marginTop: 4 }]}
-                    onPress={() => router.push({
-                      pathname: '/(tabs)/players/review/new' as any,
-                      params: { playerId: id, playerName },
-                    })}
-                    activeOpacity={0.85}
-                    delayPressIn={0}
-                  >
-                    <Text style={s.reviewWriteBtnText}>첫 평가 남기기</Text>
-                  </TouchableOpacity>
+                  <Text style={[s.reviewStateText, { color: colors.bodyText }]}>아직 등록된 선수 평가가 없어요</Text>
                 </View>
               ) : (
                 <>
@@ -1359,8 +1345,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     reviewAiBody: { fontSize: 13, fontWeight: '400', lineHeight: 20, marginTop: 10 },
     reviewCardBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
     reviewCardBadgeText: { fontSize: 11, fontWeight: '700' },
-    reviewWriteBtn: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
-    reviewWriteBtnText: { fontSize: 13, fontWeight: '700', color: '#ffffff' },
+    reviewWriteBtn: { borderRadius: 999, height: 36, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+    reviewWriteBtnText: { fontSize: 13, fontWeight: '600', color: '#ffffff' },
     reviewStateWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 28, gap: 10 },
     reviewStateText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
     reviewItemCard: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14 },

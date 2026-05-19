@@ -9,14 +9,16 @@ import {
   Keyboard,
   Platform,
 } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import Feather from '@expo/vector-icons/Feather'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
+import { pickDefaultAvatar, randomDefaultAvatar } from '@/lib/avatar'
 
 type ReviewPost = {
   id: string
@@ -43,12 +45,6 @@ type Comment = {
   createdAtLabel: string
 }
 
-function pickDefaultAvatar(id: string): string {
-  const emojis = ['😀', '😊', '🦊', '🐼', '🦁', '🐯', '🐸', '🐧', '🦅', '🐬']
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  return emojis[hash % emojis.length] ?? '😀'
-}
 
 function getLevelColor(level?: number | null): string {
   if (!level || !Number.isFinite(level)) return '#9aa3af'
@@ -73,6 +69,7 @@ function LevelBadge({ level }: { level?: number | null }) {
 
 export default function PlayerReviewDetailScreen() {
   const { colors, isDark } = useTheme()
+  const tabBarHeight = useBottomTabBarHeight()
   const insets = useSafeAreaInsets()
   const [keyboardHeight, setKeyboardHeight] = useState(0)
   const { reviewId, postData } = useLocalSearchParams<{ reviewId: string; postData: string }>()
@@ -89,6 +86,7 @@ export default function PlayerReviewDetailScreen() {
   const [commentCount, setCommentCount] = useState(() => post?.commentCount ?? 0)
   const [isLiked, setIsLiked] = useState(() => post?.isLiked ?? false)
   const [likeCount, setLikeCount] = useState(() => post?.likeCount ?? 0)
+  const guestEmoji = useState(() => randomDefaultAvatar())[0]
 
   const s = styles(colors, isDark)
 
@@ -153,7 +151,7 @@ export default function PlayerReviewDetailScreen() {
 
   if (!post) {
     return (
-      <SafeAreaView style={s.safeArea} edges={['top']}>
+      <View style={[s.safeArea, { paddingTop: insets.top }]}>
         <View style={s.navHeader}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Feather name="chevron-left" size={24} color={colors.title} />
@@ -162,12 +160,12 @@ export default function PlayerReviewDetailScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: colors.mutedText }}>평가를 불러올 수 없습니다.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={s.safeArea} edges={['top']}>
+    <View style={[s.safeArea, { paddingTop: insets.top }]}>
       <View style={s.navHeader}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="chevron-left" size={24} color={colors.title} />
@@ -200,7 +198,14 @@ export default function PlayerReviewDetailScreen() {
           </View>
 
           {/* 타이틀 */}
-          <Text style={[s.postTitle, { color: colors.title }]}>{post.title}</Text>
+          <Text style={[s.postTitle, { color: colors.title }]}>
+            {(() => {
+              const m = post.title?.match(/^\[(\d+)카\]/)
+              const level = m ? parseInt(m[1], 10) : null
+              const rest = m ? post.title.slice(m[0].length).trim() : post.title
+              return <>{level != null && <Text style={{ color: '#457ae5' }}>[{level}카] </Text>}{rest}</>
+            })()}
+          </Text>
 
           {/* 본문 */}
           <Text style={[s.postContent, { color: colors.bodyText }]}>{post.content}</Text>
@@ -259,47 +264,50 @@ export default function PlayerReviewDetailScreen() {
         </ScrollView>
 
         {/* 댓글 입력 */}
-        <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: insets.bottom + 14 }]}>
+        <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: tabBarHeight + 14 }]}>
           <View style={[s.inputAvatar, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
             {currentUser?.avatarUrl ? (
               <Image source={{ uri: currentUser.avatarUrl }} style={{ width: 46, height: 46 }} />
             ) : currentUser ? (
               <Text style={{ fontSize: 20 }}>{pickDefaultAvatar(currentUser.id)}</Text>
-            ) : null}
+            ) : (
+              <Text style={{ fontSize: 20 }}>{guestEmoji}</Text>
+            )}
           </View>
           <TextInput
             style={[s.commentInput, { backgroundColor: isDark ? '#2a2f3d' : colors.surfaceSoft, color: colors.title }]}
             value={commentDraft}
             onChangeText={setCommentDraft}
-            placeholder="댓글로 의견을 남겨보세요"
+            placeholder={currentUser ? '댓글로 의견을 남겨보세요' : '로그인 후 이용해주세요'}
             placeholderTextColor={colors.inputPlaceholder}
             keyboardAppearance={isDark ? 'dark' : 'light'}
             underlineColorAndroid="transparent"
             autoCorrect={false}
             spellCheck={false}
             multiline
+            editable={!!currentUser}
           />
           <TouchableOpacity
-            style={[s.commentSendBtn, { backgroundColor: commentDraft.trim() ? '#457ae5' : (isDark ? '#2a2f3d' : colors.surfaceSoft) }]}
+            style={[s.commentSendBtn, { backgroundColor: (currentUser && commentDraft.trim()) ? '#457ae5' : (isDark ? '#2a2f3d' : colors.surfaceSoft) }]}
             onPress={handleSubmitComment}
-            disabled={!commentDraft.trim() || submitBusy}
+            disabled={!currentUser || !commentDraft.trim() || submitBusy}
           >
             {submitBusy ? (
-              <ActivityIndicator size="small" color={commentDraft.trim() ? '#fff' : colors.mutedText} />
+              <ActivityIndicator size="small" color={(currentUser && commentDraft.trim()) ? '#fff' : colors.mutedText} />
             ) : (
-              <Feather name="arrow-up" size={18} color={commentDraft.trim() ? '#fff' : colors.mutedText} />
+              <Feather name="arrow-up" size={18} color={(currentUser && commentDraft.trim()) ? '#fff' : colors.mutedText} />
             )}
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.cardBg },
-    navHeader: { paddingHorizontal: 8, height: 44, justifyContent: 'center' },
+    navHeader: { paddingHorizontal: 8, height: 56, justifyContent: 'center' },
     backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     content: { paddingHorizontal: 20, paddingTop: 12, gap: 0 },
     authorRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },

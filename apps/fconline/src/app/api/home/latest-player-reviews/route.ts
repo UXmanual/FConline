@@ -22,6 +22,13 @@ function trimPlayerReviewTitle(title: string) {
   return title.replace(/^\[\d+카\]\s*/, '').trim() || title
 }
 
+function normalizeImgUrl(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('//')) return `https:${url}`
+  if (url.startsWith('/')) return `https://m.fconline.nexon.com${url}`
+  return url
+}
+
 export async function GET() {
   try {
     const supabase = createSupabaseAdminClient()
@@ -45,7 +52,7 @@ export async function GET() {
           playerId: review.player_id,
           playerName: review.player_name,
           nickname: review.nickname,
-          seasonImg: detail?.seasonImg ?? null,
+          seasonImg: normalizeImgUrl(detail?.seasonImg ?? null),
           title: review.title,
           trimmedTitle: trimPlayerReviewTitle(review.title),
           cardLevel: parseCardLevel(review.title),

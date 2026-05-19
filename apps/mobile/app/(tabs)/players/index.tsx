@@ -18,6 +18,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
+import { PlayerImage } from '@/components/PlayerImage'
 
 type SortBy = 'latest' | 'price' | 'pay'
 
@@ -473,11 +474,7 @@ function PlayerRow({
       activeOpacity={0.7}
     >
       <View style={[playerRowStyle.thumb, { backgroundColor: colors.surfaceStrong }]}>
-        <Image
-          source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${player.id}.png` }}
-          style={{ width: 72, height: 72 }}
-          resizeMode="contain"
-        />
+        <PlayerImage spid={player.id} size={72} />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>

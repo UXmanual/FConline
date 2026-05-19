@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router'
-import { Pressable } from 'react-native'
+import { Pressable, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs'
@@ -15,6 +15,7 @@ function AnimatedTabBarButton({ children, onPress, onLongPress, style, accessibi
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
     transform: [{ scale: scale.value }],
   }))
 
@@ -43,6 +44,7 @@ function AnimatedTabBarButton({ children, onPress, onLongPress, style, accessibi
 export default function TabLayout() {
   const { colors: c } = useTheme()
   const insets = useSafeAreaInsets()
+  const isWeb = Platform.OS === 'web'
   const baseTabBarHeight = 68
   const tabBarBottomPadding = Math.max(insets.bottom, 6)
 
@@ -54,7 +56,7 @@ export default function TabLayout() {
         tabBarLabelPosition: 'below-icon',
         tabBarActiveTintColor: c.navActive,
         tabBarInactiveTintColor: c.navLabel,
-        tabBarButton: (props) => <AnimatedTabBarButton {...props} />,
+        tabBarButton: !isWeb ? (props) => <AnimatedTabBarButton {...props} /> : undefined,
         tabBarStyle: {
           backgroundColor: c.navBg,
           borderTopColor: c.navBorder,
@@ -64,13 +66,15 @@ export default function TabLayout() {
           height: baseTabBarHeight + tabBarBottomPadding,
           paddingTop: 0,
           paddingBottom: 0,
+          overflow: 'visible',
           paddingHorizontal: 20,
           position: 'absolute',
           elevation: 0,
+          zIndex: isWeb ? 9999 : 10,
         },
         tabBarItemStyle: {
           paddingTop: 12,
-          paddingBottom: tabBarBottomPadding + 12,
+          paddingBottom: isWeb ? 0 : tabBarBottomPadding + 12,
           alignItems: 'center',
         },
         tabBarIconStyle: {

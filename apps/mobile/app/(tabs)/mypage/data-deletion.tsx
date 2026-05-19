@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { View, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
@@ -15,6 +15,7 @@ const DELETION_ITEMS = [
 
 export default function DataDeletionScreen() {
   const { colors, isDark } = useTheme()
+  const insets = useSafeAreaInsets()
   const s = styles(colors, isDark)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -61,7 +62,7 @@ export default function DataDeletionScreen() {
   }
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.pageBg }]} edges={['top', 'bottom']}>
+    <View style={[s.safe, { backgroundColor: colors.pageBg, paddingTop: insets.top }]}>
       {/* 헤더 */}
       <View style={s.navHeader}>
         <TouchableOpacity
@@ -126,7 +127,7 @@ export default function DataDeletionScreen() {
 
         <View style={{ height: 20 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -134,7 +135,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
   StyleSheet.create({
     safe: { flex: 1 },
     navHeader: {
-      height: 44,
+      height: 56,
       paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',

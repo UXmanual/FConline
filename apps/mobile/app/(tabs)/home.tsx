@@ -19,6 +19,7 @@ import { AppLogo } from '@/components/icons/AppLogo'
 import { PlayerActionIcon, AnalysisActionIcon } from '@/components/icons/QuickActionIcons'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
+import { PlayerImage } from '@/components/PlayerImage'
 
 const RECURRING_SEASON_DAYS = 70
 const BANNER_ASPECT = 440 / 112
@@ -306,7 +307,7 @@ export default function HomeScreen() {
               <Text style={[s.seasonLabel, { color: '#457ae5' }]}>{label}</Text>
               <View style={s.seasonRight}>
                 <Text style={[s.seasonPeriod, { color: colors.title }]}>{period}</Text>
-                <Text style={[s.sep, { color: colors.mutedText }]}>|</Text>
+                <Text style={[s.sep, { color: colors.mutedText, opacity: 0.35 }]}>|</Text>
                 {daysLeft > 0 ? (
                   <CountdownNumber target={daysLeft} isUrgent={daysLeft <= 10} />
                 ) : (
@@ -319,15 +320,15 @@ export default function HomeScreen() {
           <View style={s.quickRow}>
             <TouchableOpacity style={s.quickCard} onPress={() => router.push('/players')}>
               <View style={s.quickText}>
-                <Text style={[s.quickTitle, { color: colors.title }]}>선수 이름으로</Text>
-                <Text style={[s.quickTitle, { color: colors.title }]}>정보 검색</Text>
+                <Text style={[s.quickTitle, { color: colors.title }]} numberOfLines={1}>선수 이름</Text>
+                <Text style={[s.quickTitle, { color: colors.title }]} numberOfLines={1}>상세 검색</Text>
               </View>
               <PlayerActionIcon isDark={isDark} />
             </TouchableOpacity>
             <TouchableOpacity style={s.quickCard} onPress={() => router.push('/matches')}>
               <View style={s.quickText}>
-                <Text style={[s.quickTitle, { color: colors.title }]}>내 경기</Text>
-                <Text style={[s.quickTitle, { color: colors.title }]}>플레이 분석</Text>
+                <Text style={[s.quickTitle, { color: colors.title }]} numberOfLines={1}>내 경기</Text>
+                <Text style={[s.quickTitle, { color: colors.title }]} numberOfLines={1}>플레이 분석</Text>
               </View>
               <AnalysisActionIcon isDark={isDark} />
             </TouchableOpacity>
@@ -506,11 +507,7 @@ function LatestReviews({
             activeOpacity={0.8}
           >
             <View style={[s.reviewThumb, { backgroundColor: colors.surfaceStrong }]}>
-              <Image
-                source={{ uri: `https://fco.dn.nexoncdn.co.kr/live/externalAssets/common/playersAction/p${review.playerId}.png` }}
-                style={{ width: 48, height: 48 }}
-                resizeMode="contain"
-              />
+              <PlayerImage spid={review.playerId} size={48} />
             </View>
             <View style={s.reviewInfo}>
               <View style={s.reviewNameRow}>
@@ -667,7 +664,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
       gap: 12,
     },
     quickText: { flex: 1, gap: 4 },
-    quickTitle: { fontSize: 15, fontWeight: '500', letterSpacing: -0.3, lineHeight: 18 },
+    quickTitle: { fontSize: 15, fontWeight: '500', letterSpacing: -0.3, lineHeight: 17 },
 
     reviewRow: { paddingVertical: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     reviewRowFirst: { paddingTop: 0 },
@@ -675,7 +672,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     reviewThumb: { width: 48, height: 48, borderRadius: 16, overflow: 'hidden', flexShrink: 0 },
     reviewInfo: { flex: 1, minWidth: 0 },
     reviewNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
-    seasonBadge: { width: 20, height: 20 },
+    seasonBadge: { width: 20, height: 20, flexShrink: 0 },
     reviewPlayer: { fontSize: 14, fontWeight: '600' },
     reviewMetaDot: { fontSize: 13, fontWeight: '500' },
     cardLevelText: { fontSize: 14, fontWeight: '600' },
