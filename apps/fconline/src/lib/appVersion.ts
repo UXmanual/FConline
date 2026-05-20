@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.3': '2026-05-20T18:05:00+09:00',
   '0.2.2': '2026-05-20T17:41:47+09:00',
   '0.2.0': '2026-05-19T18:40:00+09:00',
   '0.1.7': '2026-05-14T00:25:40+09:00',
@@ -14,6 +15,10 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.3': [
+    'Vercel 설정에서 Next.js 기본 빌드 산출물 감지를 방해할 수 있는 출력 디렉터리 강제 지정을 제거해 배포 안정성을 높였습니다.',
+    '프로덕션 배포가 앱 루트와 Next.js 기본 출력 경로를 기준으로 일관되게 해석되도록 정리해 Routes Manifest 계열 배포 오류 재발 가능성을 낮췄습니다.',
+  ],
   '0.2.2': [
     '구단주 분석 검색과 포메이션 조회 경로를 정리해 1:1 공식경기·감독모드 포메이션 fallback과 대표 스쿼드 탐색 안정성을 보강했습니다.',
     '모바일 분석 탭의 구단주 상세·포메이션 화면에서 로딩/오류 안내와 상세 진입 흐름을 손봐 포메이션 확인 경험을 다듬었습니다.',
