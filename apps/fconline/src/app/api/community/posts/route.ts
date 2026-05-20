@@ -123,6 +123,7 @@ async function fetchPostsPage(
   includeTotalCount = false,
   includeIpPrefix = true,
   includeAuthorUserId = true,
+  category?: string,
 ) {
   const baseFields = includeAuthorUserId
     ? 'id, category, nickname, comment_count, author_user_id, password_hash'
@@ -131,21 +132,27 @@ async function fetchPostsPage(
     ? `${baseFields}, ip_prefix, title, content, created_at`
     : `${baseFields}, title, content, created_at`
 
-  const response = await supabase
+  let query = supabase
     .from('community_posts')
     .select(selectFields, includeTotalCount ? { count: 'exact' } : undefined)
     .order('created_at', { ascending: false })
     .range(from, to)
+
+  if (category) {
+    query = query.eq('category', category)
+  }
+
+  const response = await query
 
   if (!response.error || !includeIpPrefix) {
     return response
   }
 
   if (includeAuthorUserId) {
-    return fetchPostsPage(supabase, from, to, includeTotalCount, includeIpPrefix, false)
+    return fetchPostsPage(supabase, from, to, includeTotalCount, includeIpPrefix, false, category)
   }
 
-  return fetchPostsPage(supabase, from, to, includeTotalCount, false, includeAuthorUserId)
+  return fetchPostsPage(supabase, from, to, includeTotalCount, false, includeAuthorUserId, category)
 }
 
 export async function GET(request: NextRequest) {
@@ -154,6 +161,8 @@ export async function GET(request: NextRequest) {
     const { page: rawPage, pageSize, from: rawFrom, to: rawTo } = getPaginationParams(request)
     const includeTotalCount = shouldIncludeTotalCount(request)
     const highlightPostId = request.nextUrl.searchParams.get('postId')?.trim() ?? ''
+    const categoryParam = request.nextUrl.searchParams.get('category')?.trim() ?? ''
+    const category = isCommunityCategory(categoryParam) ? categoryParam : undefined
     const supabase = createSupabaseAdminClient()
     const resolvedPage = highlightPostId
       ? await resolvePageForPostId(supabase, highlightPostId, pageSize)
@@ -164,7 +173,7 @@ export async function GET(request: NextRequest) {
     const userPromise = hasSupabaseAuthCookie(request)
       ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
       : Promise.resolve({ data: { user: null } })
-    const postsPromise = fetchPostsPage(supabase, from, to, includeTotalCount)
+    const postsPromise = fetchPostsPage(supabase, from, to, includeTotalCount, true, true, category)
     const t1 = Date.now()
     const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([
       userPromise,
