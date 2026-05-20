@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router'
+import { useTheme } from '@/hooks/useTheme'
 
-export default function MatchesLayout() {
-  return <Stack screenOptions={{ headerShown: false, animation: 'simple_push', animationDuration: 150 }} />
+export default function Layout() {
+  const { colors } = useTheme()
+  return <Stack screenOptions={{ headerShown: false, animation: 'simple_push', animationDuration: 150, contentStyle: { backgroundColor: colors.pageBg } }} />
 }

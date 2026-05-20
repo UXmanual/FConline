@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Platform } from 'react-native'
+import { Appearance, Platform } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import { Colors, type ThemeColors } from '@/constants/Colors'
 
@@ -53,18 +53,27 @@ export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
     readStoredThemeMode().then((mode) => {
       setThemeModeState(mode)
       setThemeLoaded(true)
+      if (Platform.OS !== 'web') {
+        Appearance.setColorScheme(mode)
+      }
     })
   }, [])
 
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode)
     writeStoredThemeMode(mode)
+    if (Platform.OS !== 'web') {
+      Appearance.setColorScheme(mode)
+    }
   }
 
   const toggleThemeMode = () => {
     setThemeModeState((current) => {
       const next = current === 'dark' ? 'light' : 'dark'
       writeStoredThemeMode(next)
+      if (Platform.OS !== 'web') {
+        Appearance.setColorScheme(next)
+      }
       return next
     })
   }

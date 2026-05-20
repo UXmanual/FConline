@@ -1,11 +1,59 @@
 import { useEffect, useRef } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
-import { SkeletonBox } from '@/components/Skeleton'
+
+type SearchMode = 'official1on1' | 'voltaLive' | 'manager'
+
+function normalizeCandidateDataByMode(
+  raw: Record<string, unknown>,
+  mode: string | undefined,
+) {
+  const normalized = { ...raw }
+  const resolvedMode = (mode ?? 'official1on1') as SearchMode
+
+  if (resolvedMode === 'official1on1') {
+    normalized.officialRank ??= raw.rank ?? null
+    normalized.officialRankPoint ??= raw.rankPoint ?? raw.elo ?? null
+    normalized.officialWinRate ??= raw.winRate ?? null
+    normalized.officialWins ??= raw.wins ?? null
+    normalized.officialDraws ??= raw.draws ?? null
+    normalized.officialLosses ??= raw.losses ?? null
+    normalized.officialFormation ??= raw.formation ?? null
+    normalized.officialRankIconUrl ??= raw.rankIconUrl ?? null
+    normalized.officialTeamColors ??= raw.teamColors ?? []
+  } else if (resolvedMode === 'manager') {
+    normalized.managerRank ??= raw.rank ?? null
+    normalized.managerRankPoint ??= raw.rankPoint ?? raw.elo ?? null
+    normalized.managerWinRate ??= raw.winRate ?? null
+    normalized.managerWins ??= raw.wins ?? null
+    normalized.managerDraws ??= raw.draws ?? null
+    normalized.managerLosses ??= raw.losses ?? null
+    normalized.managerFormation ??= raw.formation ?? null
+    normalized.managerRankIconUrl ??= raw.rankIconUrl ?? null
+    normalized.managerTeamColors ??= raw.teamColors ?? []
+  }
+
+  return normalized
+}
+
+function mergeCandidateData(
+  seed: Record<string, unknown>,
+  exact: Record<string, unknown>,
+) {
+  const merged: Record<string, unknown> = { ...seed, ...exact }
+
+  for (const [key, value] of Object.entries(seed)) {
+    if (merged[key] == null && value != null) {
+      merged[key] = value
+    }
+  }
+
+  return merged
+}
 
 export default function LookupScreen() {
   const { nickname, mode, candidateData } = useLocalSearchParams<{
@@ -14,7 +62,7 @@ export default function LookupScreen() {
     candidateData: string
   }>()
   const router = useRouter()
-  const { colors, isDark } = useTheme()
+  const { colors } = useTheme()
   const didResolve = useRef(false)
 
   useEffect(() => {
@@ -41,9 +89,14 @@ export default function LookupScreen() {
         }
 
         if (exact?.ouid) {
-          const merged = candidateData
-            ? JSON.stringify({ ...JSON.parse(candidateData), ...exact })
-            : JSON.stringify(exact)
+          const parsedCandidateData = candidateData
+            ? normalizeCandidateDataByMode(JSON.parse(candidateData), mode)
+            : null
+          const merged = JSON.stringify(
+            parsedCandidateData
+              ? mergeCandidateData(parsedCandidateData, exact)
+              : exact,
+          )
           router.replace({
             pathname: '/(tabs)/matches/[ouid]',
             params: { ouid: exact.ouid, mode: mode ?? 'official1on1', candidateData: merged },
@@ -59,85 +112,28 @@ export default function LookupScreen() {
     void resolve()
   }, [nickname])
 
-  const s = styles(isDark ? colors.pageBg : '#ffffff')
-
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
-      {/* 헤더 스켈레톤 */}
-      <View style={s.header}>
-        <SkeletonBox width={120} height={18} radius={6} />
-      </View>
-
-      {/* 모드 탭 스켈레톤 */}
-      <View style={s.modeRow}>
-        {[90, 80, 72].map((w, i) => (
-          <SkeletonBox key={i} width={w} height={34} radius={999} />
-        ))}
-      </View>
-
-      {/* 프로필 카드 스켈레톤 */}
-      <View style={[s.card, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
-        <View style={s.profileRow}>
-          <SkeletonBox width={52} height={52} radius={999} />
-          <View style={{ flex: 1, gap: 8 }}>
-            <SkeletonBox width="55%" height={16} radius={5} />
-            <SkeletonBox width="75%" height={13} radius={4} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.pageBg }} edges={['top']}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 12, gap: 12 }}>
+        <View style={{ minHeight: 32, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.title, letterSpacing: -0.4 }}>
+            어떤 경기 기록을 찾아볼까요?
+          </Text>
+        </View>
+        <View style={{
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: colors.cardBorder,
+          backgroundColor: colors.cardBg,
+          paddingHorizontal: 20,
+          paddingVertical: 12,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
+            <ActivityIndicator size="small" color={colors.accentBlue} />
+            <Text style={{ fontSize: 14, color: colors.bodyText }}>{nickname} 구단주를 찾는 중이에요</Text>
           </View>
         </View>
-        <View style={{ marginTop: 16, gap: 10 }}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <SkeletonBox width="40%" height={13} radius={4} />
-              <SkeletonBox width="30%" height={13} radius={4} />
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* 경기 목록 스켈레톤 */}
-      <View style={[s.card, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
-        <SkeletonBox width={100} height={14} radius={4} style={{ marginBottom: 12 }} />
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={s.matchRow}>
-            <SkeletonBox width={36} height={36} radius={8} />
-            <View style={{ flex: 1, gap: 6 }}>
-              <SkeletonBox width="60%" height={13} radius={4} />
-              <SkeletonBox width="40%" height={11} radius={4} />
-            </View>
-            <SkeletonBox width={48} height={28} radius={6} />
-          </View>
-        ))}
-      </View>
-
-      <View style={s.hint}>
-        <Text style={{ fontSize: 13, color: colors.mutedText }}>
-          {nickname} 구단주 정보를 불러오는 중...
-        </Text>
       </View>
     </SafeAreaView>
   )
 }
-
-const styles = (bg: string) =>
-  StyleSheet.create({
-    safe: { flex: 1, backgroundColor: bg },
-    header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-    modeRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
-    card: {
-      marginHorizontal: 20,
-      marginBottom: 12,
-      borderRadius: 16,
-      padding: 20,
-      borderWidth: 1,
-    },
-    profileRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-    matchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderTopColor: 'rgba(0,0,0,0.06)',
-    },
-    hint: { alignItems: 'center', marginTop: 8 },
-  })

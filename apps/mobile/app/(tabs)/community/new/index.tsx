@@ -16,11 +16,15 @@ import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
 import { markCommunityRefresh } from '@/lib/communityRefresh'
 
+const POST_CATEGORIES = ['자유', '팁'] as const
+type PostCategory = typeof POST_CATEGORIES[number]
+
 export default function CommunityNewScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [category, setCategory] = useState<PostCategory>('자유')
   const [submitting, setSubmitting] = useState(false)
 
   const s = styles(colors, isDark)
@@ -33,7 +37,7 @@ export default function CommunityNewScreen() {
       const res = await apiFetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), content: content.trim(), category: '자유' }),
+        body: JSON.stringify({ title: title.trim(), content: content.trim(), category }),
       })
       if (res.ok) {
         markCommunityRefresh()
@@ -66,10 +70,23 @@ export default function CommunityNewScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={[s.categoryRow, { borderBottomColor: colors.divider }]}>
-        <View style={[s.categoryChip, { backgroundColor: isDark ? '#2a2f3d' : colors.surfaceSoft }]}>
-          <Text style={[s.categoryText, { color: colors.title }]}>자유</Text>
-        </View>
+      <View style={s.categoryRow}>
+        {POST_CATEGORIES.map((cat) => {
+          const isActive = category === cat
+          return (
+            <TouchableOpacity
+              key={cat}
+              style={[s.categoryChip, isActive
+                ? { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }
+                : {}
+              ]}
+              onPress={() => setCategory(cat)}
+              activeOpacity={0.8}
+            >
+              <Text style={[s.categoryText, { color: isActive ? colors.title : colors.mutedText }]}>{cat}</Text>
+            </TouchableOpacity>
+          )
+        })}
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -122,15 +139,17 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     submitBtn: { paddingHorizontal: 12, height: 40, alignItems: 'center', justifyContent: 'center' },
     submitBtnText: { fontSize: 15, fontWeight: '700', color: '#457ae5' },
     categoryRow: {
+      flexDirection: 'row',
+      gap: 8,
       paddingHorizontal: 20,
       paddingVertical: 12,
-      borderBottomWidth: 1,
     },
     categoryChip: {
-      alignSelf: 'flex-start',
-      borderRadius: 999,
-      paddingHorizontal: 14,
-      paddingVertical: 6,
+      height: 36,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     categoryText: { fontSize: 13, fontWeight: '600' },
     content: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 40 },

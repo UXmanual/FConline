@@ -67,6 +67,9 @@ function LevelBadge({ level }: { level?: number | null }) {
   )
 }
 
+const CATEGORIES = ['전체', '자유', '팁'] as const
+type Category = typeof CATEGORIES[number]
+
 export default function CommunityScreen() {
   const { colors, isDark } = useTheme()
   const tabBarHeight = useBottomTabBarHeight()
@@ -74,16 +77,19 @@ export default function CommunityScreen() {
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState<Category>('전체')
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
 
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
   useScrollToTop(scrollRef)
   const totalPages = Math.max(1, Math.ceil(totalCount / POSTS_PER_PAGE))
 
-  const loadPosts = useCallback(async (page: number) => {
+  const loadPosts = useCallback(async (page: number, category: Category) => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/community/posts?page=${page}&pageSize=${POSTS_PER_PAGE}&includeTotalCount=1`)
+      const categoryParam = category === '전체' ? '' : `&category=${encodeURIComponent(category)}`
+      const res = await fetch(`${API_BASE}/api/community/posts?page=${page}&pageSize=${POSTS_PER_PAGE}&includeTotalCount=1${categoryParam}`)
       const data = await res.json().catch(() => null)
       if (data?.items) {
         setPosts(data.items.map((p: Post) => {
@@ -97,8 +103,26 @@ export default function CommunityScreen() {
   }, [])
 
   useEffect(() => {
-    void loadPosts(currentPage)
-  }, [currentPage, loadPosts])
+    void loadPosts(currentPage, selectedCategory)
+  }, [currentPage, selectedCategory, loadPosts])
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const results = await Promise.all(
+        CATEGORIES.filter((c) => c !== '전체').map(async (cat) => {
+          try {
+            const res = await fetch(`${API_BASE}/api/community/posts?page=1&pageSize=1&includeTotalCount=1&category=${encodeURIComponent(cat)}`)
+            const data = await res.json().catch(() => null)
+            return [cat, data?.totalCount ?? 0] as const
+          } catch {
+            return [cat, 0] as const
+          }
+        })
+      )
+      setCategoryCounts(Object.fromEntries(results))
+    }
+    void fetchCounts()
+  }, [])
 
   useFocusEffect(
     useCallback(() => {
@@ -108,9 +132,9 @@ export default function CommunityScreen() {
       }))
       if (consumeCommunityRefresh()) {
         setCurrentPage(1)
-        void loadPosts(1)
+        void loadPosts(1, selectedCategory)
       }
-    }, [loadPosts]),
+    }, [loadPosts, selectedCategory]),
   )
 
   const handleLike = async (post: Post) => {
@@ -154,10 +178,27 @@ export default function CommunityScreen() {
           </View>
           <Text style={[s.desc, { color: colors.mutedText }]}>{'여기는 누구나 쓸 수 있는 공간이에요\n서로를 배려해서 글을 작성해주세요'}</Text>
           <View style={s.boardRow}>
-            <TouchableOpacity style={[s.boardTab, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]} activeOpacity={0.8}>
-              <Text style={[s.boardTabText, { color: colors.title }]}>자유</Text>
-              <Text style={s.countText}>{totalCount}</Text>
-            </TouchableOpacity>
+            <View style={s.boardTabs}>
+              {CATEGORIES.map((cat) => {
+                const isActive = selectedCategory === cat
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[s.boardTab, isActive
+                      ? { backgroundColor: isDark ? '#3a3f52' : colors.cardBg }
+                      : {}
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => { setSelectedCategory(cat); setCurrentPage(1) }}
+                  >
+                    <Text style={[s.boardTabText, { color: isActive ? colors.title : colors.mutedText }]}>{cat}</Text>
+                    {cat !== '전체' && categoryCounts[cat] != null && (
+                      <Text style={[s.countText, { color: isActive ? colors.title : colors.mutedText }]}>{categoryCounts[cat]}</Text>
+                    )}
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
             <TouchableOpacity style={s.writeBtn} onPress={() => router.push('/(tabs)/community/new/')} activeOpacity={0.85}>
               <Text style={s.writeBtnText}>글쓰기</Text>
             </TouchableOpacity>
@@ -190,7 +231,10 @@ export default function CommunityScreen() {
                     <View style={s.authorMeta}>
                       <LevelBadge level={post.level} />
                       <Text style={[s.authorName, { color: colors.bodyText }]} numberOfLines={1}>{post.nickname}</Text>
-                      <Text style={[s.dot, { color: colors.mutedText }]}>·</Text>
+                      <View style={{ width: 12, height: 16, alignItems: 'center', justifyContent: 'center', marginHorizontal: -3 }}>
+                        <Feather name="chevron-right" size={12} color={colors.mutedText} />
+                      </View>
+                      <Text style={[s.categoryLabel, { color: colors.mutedText }]}>{post.category}</Text>
                       <Text style={[s.timeText, { color: colors.mutedText }]}>{post.createdAtLabel}</Text>
                     </View>
                     <Text style={[s.postTitle, { color: colors.title }]} numberOfLines={2}>{post.title}</Text>
@@ -264,18 +308,19 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
     title: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4 },
     desc: { fontSize: 13, lineHeight: 19 },
     boardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-    boardTab: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 36, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1 },
+    boardTabs: { flexDirection: 'row', gap: 8 },
+    boardTab: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 36, paddingHorizontal: 16, borderRadius: 12 },
     boardTabText: { fontSize: 13, fontWeight: '600' },
     countText: { fontSize: 14, fontWeight: '600', color: '#457ae5' },
-    writeBtn: { backgroundColor: '#457ae5', borderRadius: 999, height: 36, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+    writeBtn: { backgroundColor: '#457ae5', borderRadius: 12, height: 36, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
     writeBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
 
     postCard: { borderRadius: 16, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, borderWidth: 1 },
     postTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
     avatar: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
-    authorMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+    authorMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 },
     authorName: { fontSize: 12, fontWeight: '600' },
-    dot: { fontSize: 12 },
+    categoryLabel: { fontSize: 12, fontWeight: '500' },
     timeText: { fontSize: 12, fontWeight: '500' },
     postTitle: { fontSize: 15, fontWeight: '600', letterSpacing: -0.3, lineHeight: 22, marginTop: 6 },
     postContent: { fontSize: 14, lineHeight: 20, marginTop: 8 },

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import {
   View,
   ScrollView,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import Feather from '@expo/vector-icons/Feather'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg'
@@ -22,6 +23,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
+import { reviewLikeStore } from '@/lib/reviewLikeStore'
 import { PlayerImage } from '@/components/PlayerImage'
 
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, i) => i + 1)
@@ -539,7 +541,10 @@ export default function PlayerDetailScreen() {
       const items = Array.isArray(result.items) ? result.items : []
       const totalCount = Number(result.totalCount ?? 0) || 0
 
-      setReviewItems(items)
+      setReviewItems(items.map((r: PlayerReviewItem) => {
+        const cached = reviewLikeStore.get(r.id)
+        return cached ? { ...r, ...cached } : r
+      }))
       setReviewCount(totalCount)
       setReviewPage(page)
     } catch {
@@ -550,10 +555,22 @@ export default function PlayerDetailScreen() {
     }
   }
 
+  useFocusEffect(
+    useCallback(() => {
+      setReviewItems((prev) => prev.map((r) => {
+        const cached = reviewLikeStore.get(r.id)
+        return cached ? { ...r, ...cached } : r
+      }))
+    }, []),
+  )
+
   const handleReviewLike = async (item: PlayerReviewItem) => {
+    const newIsLiked = !item.isLiked
+    const newLikeCount = item.likeCount + (item.isLiked ? -1 : 1)
+    reviewLikeStore.set(item.id, newIsLiked, newLikeCount)
     setReviewItems((prev) => prev.map((r) =>
       r.id === item.id
-        ? { ...r, isLiked: !r.isLiked, likeCount: r.likeCount + (r.isLiked ? -1 : 1) }
+        ? { ...r, isLiked: newIsLiked, likeCount: newLikeCount }
         : r,
     ))
     try {
@@ -657,7 +674,7 @@ export default function PlayerDetailScreen() {
         {/* 헤더 뒤로가기 */}
         <TouchableOpacity style={s.backRow} onPress={() => router.back()} delayPressIn={0}>
           <Feather name="chevron-left" size={22} color={colors.title} />
-          <Text style={s.backText} numberOfLines={1}>{playerName || '선수 정보'}</Text>
+          <Text style={s.backText} numberOfLines={1}>{playerName || '선수 홈'}</Text>
         </TouchableOpacity>
 
         {loading ? (
@@ -1071,7 +1088,6 @@ export default function PlayerDetailScreen() {
                               <Text style={[s.reviewNickname, { color: colors.bodyText }]} numberOfLines={1}>
                                 {item.nickname}
                               </Text>
-                              <Text style={[s.reviewDot, { color: colors.mutedText }]}>·</Text>
                               <Text style={[s.reviewTime, { color: colors.mutedText }]}>{item.createdAtLabel}</Text>
                             </View>
                             <Text style={[s.reviewTitle, { color: colors.title }]} numberOfLines={2}>
@@ -1217,8 +1233,8 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.pageBg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
-    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, marginBottom: 4 },
+    content: { paddingHorizontal: 20, paddingTop: 12, gap: 12 },
+    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32 },
     backText: { fontSize: 18, fontWeight: '700', color: c.title, letterSpacing: -0.4, flex: 1 },
     loadingWrap: { flex: 1, paddingVertical: 48, alignItems: 'center', justifyContent: 'center' },
     emptyText: { fontSize: 14, textAlign: 'center' },
@@ -1354,7 +1370,6 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     reviewAvatar: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, marginTop: 2 },
     reviewMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
     reviewNickname: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
-    reviewDot: { fontSize: 12, fontWeight: '500' },
     reviewTime: { fontSize: 12, fontWeight: '500' },
     reviewTitle: { fontSize: 14, fontWeight: '700', marginTop: 6 },
     reviewBody: { fontSize: 13, fontWeight: '400', lineHeight: 19, marginTop: 4, color: c.bodyText },

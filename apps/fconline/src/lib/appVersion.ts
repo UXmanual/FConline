@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.2': '2026-05-20T17:41:47+09:00',
   '0.2.0': '2026-05-19T18:40:00+09:00',
   '0.1.7': '2026-05-14T00:25:40+09:00',
   '0.1.6': '2026-05-13T16:35:00+09:00',
@@ -13,6 +14,11 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.2': [
+    '구단주 분석 검색과 포메이션 조회 경로를 정리해 1:1 공식경기·감독모드 포메이션 fallback과 대표 스쿼드 탐색 안정성을 보강했습니다.',
+    '모바일 분석 탭의 구단주 상세·포메이션 화면에서 로딩/오류 안내와 상세 진입 흐름을 손봐 포메이션 확인 경험을 다듬었습니다.',
+    '모바일 커뮤니티·선수평가·탭 레이아웃과 스플래시/테마 자산을 함께 정리해 화면 일관성과 다크모드 표시 품질을 높였습니다.',
+  ],
   '0.2.0': [
     'React Native 기반 모바일 앱에서 다크모드 저장 방식과 탭바/마이페이지 구성을 정리해 프리뷰 환경에서의 테마 유지와 화면 안정성을 보강했습니다.',
     '모바일 안드로이드 스플래시 자산을 정사각 안전영역 기준으로 다시 생성해 시작 로고가 좌우로 잘려 보이던 문제를 줄였습니다.',

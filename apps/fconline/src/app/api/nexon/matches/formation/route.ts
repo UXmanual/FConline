@@ -4,6 +4,7 @@ import { getNexonHeaders, getSpidMetaItem, getSeasonMetaItem } from '@/lib/nexon
 import { getPlayerDetail } from '@/features/player-search/player-detail'
 
 const FETCH_TIMEOUT_MS = 6000
+const RECENT_MATCH_SCAN_LIMIT = 10
 const BROWSER_HEADERS = {
   'user-agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
   const nexonSn = req.nextUrl.searchParams.get('nexonSn')
   const nickname = req.nextUrl.searchParams.get('nickname')
   const mode = req.nextUrl.searchParams.get('mode') ?? 'official1on1'
+  const lite = req.nextUrl.searchParams.get('lite') === '1'
   const matchType = mode === 'manager' ? 52 : 50
   if (!ouid) return Response.json({ error: 'ouid required' }, { status: 400 })
 
@@ -48,28 +50,48 @@ export async function GET(req: NextRequest) {
     // 1. 최근 경기 matchId 조회
     const matchIds: string[] = JSON.parse(
       await fetchRaw(
-        `https://open.api.nexon.com/fconline/v1/user/match?ouid=${ouid}&matchtype=${matchType}&offset=0&limit=3`
+        `https://open.api.nexon.com/fconline/v1/user/match?ouid=${ouid}&matchtype=${matchType}&offset=0&limit=${RECENT_MATCH_SCAN_LIMIT}`
       )
     )
     if (!matchIds.length) return Response.json({ error: 'no matches' }, { status: 404 })
 
-    // 2. 가장 최근 경기 상세
+    // 2. 유효한 스쿼드가 나올 때까지 최근 경기 순으로 넉넉하게 탐색
     type RawPlayer = { spId?: number | null; spPosition?: number | null; spGrade?: number | null }
     type RawMatchInfo = { ouid?: string; player?: RawPlayer[] }
     type RawMatch = { matchId: string; matchDate: string; matchInfo: RawMatchInfo[] }
 
-    const match: RawMatch = JSON.parse(
-      await fetchRaw(`https://open.api.nexon.com/fconline/v1/match-detail?matchid=${matchIds[0]}`)
-    )
+    let match: RawMatch | null = null
+    let squad: (RawPlayer & { spPosition: number })[] = []
 
-    const userTeam = match.matchInfo?.find((info) => info.ouid === ouid)
-    if (!userTeam?.player?.length) return Response.json({ error: 'no squad' }, { status: 404 })
+    for (const matchId of matchIds) {
+      const parsed: RawMatch = JSON.parse(
+        await fetchRaw(`https://open.api.nexon.com/fconline/v1/match-detail?matchid=${matchId}`)
+      )
+      const userTeam = parsed.matchInfo?.find((info) => info.ouid === ouid)
+      if (!userTeam?.player?.length) continue
 
-    // spPosition이 유효한 선수만 추출 (spId null이어도 포함)
-    const squad = userTeam.player.filter(
-      (p): p is RawPlayer & { spPosition: number } =>
-        typeof p.spPosition === 'number' && p.spPosition >= 0 && p.spPosition <= 27,
-    )
+      // GK(position=0) 제외, 아웃필드 포지션(1-27)만 추출
+      const outfield = userTeam.player.filter(
+        (p): p is RawPlayer & { spPosition: number } =>
+          typeof p.spPosition === 'number' && p.spPosition >= 1 && p.spPosition <= 27,
+      )
+      if (outfield.length >= 7) {
+        match = parsed
+        squad = outfield
+        break
+      }
+    }
+
+    if (!match || squad.length === 0) return Response.json({ error: 'no squad' }, { status: 404 })
+
+    // 포메이션 문자열은 포지션 데이터만으로 즉시 계산 가능
+    const formationStr = deriveFormation(squad.map((p) => p.spPosition))
+
+    // lite 모드: 선수 상세 없이 포메이션 문자열만 빠르게 반환
+    if (lite) {
+      if (!formationStr) return Response.json({ error: 'no formation' }, { status: 404 })
+      return Response.json({ formation: formationStr, matchDate: match.matchDate ?? '' })
+    }
 
     // 3. 선수별 메타 + OVR 병렬 조회
     const players = await Promise.all(
@@ -158,9 +180,6 @@ export async function GET(req: NextRequest) {
               teamColorBoost: squadPlayer?.teamColorBoost ?? 0,
             }
           })
-
-    // 5. 포메이션 스트링 구성 (DEF/DM/CM/AM/FW 5줄 기준)
-    const formationStr = deriveFormation(players.map((p) => p.spPosition))
 
     return Response.json({
       formation: formationStr,

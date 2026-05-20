@@ -11,8 +11,8 @@ const outDir = path.resolve(__dirname, '../assets/images')
 const SCALE = 6
 const LOGO_W = Math.round(89 * SCALE)  // 534
 const LOGO_H = Math.round(18 * SCALE)  // 108
-const ANDROID_CANVAS = 1024
-const ANDROID_LOGO_WIDTH = 640
+const ANDROID_CANVAS = 2048
+const ANDROID_LOGO_WIDTH = 1280
 const ANDROID_LOGO_HEIGHT = Math.round((ANDROID_LOGO_WIDTH / LOGO_W) * LOGO_H)
 
 // SVG path data from AppLogo.tsx

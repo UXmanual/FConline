@@ -429,41 +429,46 @@ async function fetchRepresentativeSquadSummary(ownerProfileId: string) {
   }
 }
 
-async function fetchRecentOfficialFormation(ouid: string | null | undefined) {
-  if (!ouid) {
-    return null
-  }
+async function fetchRecentFormationByMatchType(ouid: string | null | undefined, matchType: number) {
+  if (!ouid) return null
 
   const matchIds = await fetchJsonWithRetry<string[]>(
-    `https://open.api.nexon.com/fconline/v1/user/match?ouid=${encodeURIComponent(ouid)}&matchtype=50&offset=0&limit=1`,
+    `https://open.api.nexon.com/fconline/v1/user/match?ouid=${encodeURIComponent(ouid)}&matchtype=${matchType}&offset=0&limit=3`,
     { headers: nexonHeaders, cache: 'no-store' },
-    3500,
-    0,
+    4000,
+    1,
   )
 
-  const matchId = Array.isArray(matchIds) && matchIds.length > 0 ? matchIds[0] : null
-  if (!matchId) {
-    return null
+  if (!Array.isArray(matchIds) || matchIds.length === 0) return null
+
+  // 최근 3경기 중 유효한 포메이션을 반환하는 첫 번째 경기 사용
+  for (const matchId of matchIds) {
+    const detail = await fetchJsonWithRetry<{
+      matchInfo?: Array<{
+        ouid?: string
+        player?: Array<{ spPosition?: number | null }>
+      }>
+    }>(
+      `https://open.api.nexon.com/fconline/v1/match-detail?matchid=${encodeURIComponent(matchId)}`,
+      { headers: nexonHeaders, cache: 'no-store' },
+      4000,
+      1,
+    )
+
+    const userTeam = detail?.matchInfo?.find((info) => info.ouid === ouid)
+    const positions = (userTeam?.player ?? [])
+      .map((p) => p.spPosition)
+      .filter((p): p is number => typeof p === 'number' && p >= 1 && p <= 27)
+
+    const formation = deriveFormation(positions)
+    if (formation) return formation
   }
 
-  const detail = await fetchJsonWithRetry<{
-    matchInfo?: Array<{
-      ouid?: string
-      player?: Array<{ spPosition?: number | null }>
-    }>
-  }>(
-    `https://open.api.nexon.com/fconline/v1/match-detail?matchid=${encodeURIComponent(matchId)}`,
-    { headers: nexonHeaders, cache: 'no-store' },
-    3500,
-    0,
-  )
+  return null
+}
 
-  const userTeam = detail?.matchInfo?.find((info) => info.ouid === ouid)
-  const positions = (userTeam?.player ?? [])
-    .map((player) => player.spPosition)
-    .filter((position): position is number => typeof position === 'number' && position >= 0 && position <= 27)
-
-  return deriveFormation(positions) || null
+function fetchRecentOfficialFormation(ouid: string | null | undefined) {
+  return fetchRecentFormationByMatchType(ouid, 50)
 }
 
 function deriveFormation(positions: number[]) {
@@ -720,41 +725,62 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
     }
 
     const voltaCandidate = voltaHtml ? parseVoltaExactCandidate(voltaHtml, nickname) : null
-    const ownerProfileId = await resolveOwnerProfileId(nickname, voltaHtml)
-    const ownerProfile = ownerProfileId
-      ? await fetchOwnerProfile(ownerProfileId)
-      : { ownerSince: null, representativeTeam: null, representativeTeamEmblemUrl: null }
-    const representativeSquadSummary = ownerProfileId
-      ? await fetchRepresentativeSquadSummary(ownerProfileId)
-      : { formation: null, teamColors: [] as string[] }
-    const recentOfficialFormation = await fetchRecentOfficialFormation(exactData?.ouid)
+    const voltaOwnerProfileId = voltaHtml ? extractOwnerProfileIdFromRows(voltaHtml, nickname) : null
+
+    // 랭크 페이지 스크래핑 + 공식/감독 포메이션 조회를 모두 병렬로 실행
+    // - rankRawResults: 랭크 후보 파싱 + ownerProfileId 추출 (별도 resolveOwnerProfileId fetch 불필요)
+    // - recentOfficialFormation: 순위권 외 유저도 match API로 직접 조회
+    // - recentManagerFormation: 감독모드 포메이션도 동시 조회
+    const [rankRawResults, recentOfficialFormation, recentManagerFormation] = await Promise.all([
+      Promise.all(
+        SEARCH_MODES.map(async (mode) => {
+          const html = await fetchTextWithRetry(
+            `https://fconline.nexon.com/datacenter/rank_inner?rt=${mode.key}&strCharacterName=${encodedNickname}&n4seasonno=0&n4pageno=1`,
+            {
+              headers: {
+                'user-agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+              },
+              cache: 'no-store',
+            },
+            3000,
+            0,
+          )
+          return {
+            mode: mode.key as SearchModeKey,
+            candidates: html ? parseOfficialCandidates(html, mode.label) : [],
+            ownerProfileIdCandidate: html ? extractOwnerProfileIdFromRows(html, nickname) : null,
+          }
+        }),
+      ),
+      fetchRecentOfficialFormation(exactData?.ouid),
+      fetchRecentFormationByMatchType(exactData?.ouid, 52),
+    ])
+
+    // 볼타·랭크 결과에서 ownerProfileId 추출 (별도 HTTP 요청 없음)
+    const ownerProfileId =
+      voltaOwnerProfileId ??
+      rankRawResults.find((r) => r.ownerProfileIdCandidate)?.ownerProfileIdCandidate ??
+      null
+
+    // ownerProfileId 확보 후 프로필·스쿼드 정보 병렬 조회
+    const [ownerProfile, representativeSquadSummary] = await Promise.all([
+      ownerProfileId
+        ? fetchOwnerProfile(ownerProfileId)
+        : Promise.resolve({ ownerSince: null, representativeTeam: null, representativeTeamEmblemUrl: null }),
+      ownerProfileId
+        ? fetchRepresentativeSquadSummary(ownerProfileId)
+        : Promise.resolve({ formation: null, teamColors: [] as string[] }),
+    ])
+
     const resolvedOfficialFormation = representativeSquadSummary.formation ?? recentOfficialFormation
     const firstTeamColor = representativeSquadSummary.teamColors[0] ?? null
     const teamColorEmblemUrl = firstTeamColor
       ? ((await getTeamEmblemMap()).get(normalizeTeamName(firstTeamColor)) ?? null)
       : null
-    let exactCandidate: MatchSearchCandidate | null = null
-    const rankResults = await Promise.all(
-      SEARCH_MODES.map(async (mode) => {
-        const html = await fetchTextWithRetry(
-          `https://fconline.nexon.com/datacenter/rank_inner?rt=${mode.key}&strCharacterName=${encodedNickname}&n4seasonno=0&n4pageno=1`,
-          {
-            headers: {
-              'user-agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-            },
-            cache: 'no-store',
-          },
-          3000,
-          0,
-        )
 
-        return {
-          mode: mode.key,
-          candidates: html ? parseOfficialCandidates(html, mode.label) : [],
-        } satisfies RankSearchModeResult
-      }),
-    )
+    const rankResults: RankSearchModeResult[] = rankRawResults.map(({ mode, candidates }) => ({ mode, candidates }))
+    let exactCandidate: MatchSearchCandidate | null = null
     const mergedRankCandidates = mergeRankCandidates(rankResults)
 
     if (exactData?.ouid) {
@@ -769,6 +795,7 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
         modes: ['exact'],
         formation: resolvedOfficialFormation,
         officialFormation: resolvedOfficialFormation,
+        managerFormation: recentManagerFormation,
         officialTeamColors: representativeSquadSummary.teamColors,
         teamColorEmblemUrl,
       }
@@ -783,6 +810,7 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
         modes: ['volta'],
         formation: resolvedOfficialFormation,
         officialFormation: resolvedOfficialFormation,
+        managerFormation: recentManagerFormation,
         officialTeamColors: representativeSquadSummary.teamColors,
         teamColorEmblemUrl,
       }
@@ -802,6 +830,10 @@ async function getMatchSearchData(nickname: string): Promise<MatchSearchResponse
           exactOfficialCandidate.officialFormation ??
           exactCandidate.officialFormation ??
           resolvedOfficialFormation,
+        managerFormation:
+          exactOfficialCandidate.managerFormation ??
+          exactCandidate.managerFormation ??
+          recentManagerFormation,
         source: 'exact',
       }
     }

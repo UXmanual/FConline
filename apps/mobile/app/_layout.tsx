@@ -1,5 +1,6 @@
 import { enableScreens } from 'react-native-screens'
 import { Stack } from 'expo-router'
+import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { useFonts } from 'expo-font'
 import { useEffect } from 'react'
@@ -39,7 +40,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutContent() {
-  const { isDark } = useTheme()
+  const { isDark, colors } = useTheme()
   const { themeLoaded } = useThemePreference()
 
   useEffect(() => {
@@ -71,13 +72,17 @@ function RootLayoutContent() {
     }
   }, [])
 
+  const navTheme = isDark
+    ? { ...DarkTheme, colors: { ...DarkTheme.colors, background: colors.pageBg, card: colors.cardBg } }
+    : { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.pageBg, card: colors.cardBg } }
+
   return (
-    <>
+    <ThemeProvider value={navTheme}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.pageBg } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" options={{ headerShown: true }} />
       </Stack>
-    </>
+    </ThemeProvider>
   )
 }

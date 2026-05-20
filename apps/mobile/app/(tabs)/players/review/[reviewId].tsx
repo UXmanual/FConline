@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
+import { reviewLikeStore } from '@/lib/reviewLikeStore'
 import { pickDefaultAvatar, randomDefaultAvatar } from '@/lib/avatar'
 
 type ReviewPost = {
@@ -84,8 +85,14 @@ export default function PlayerReviewDetailScreen() {
   const [commentDraft, setCommentDraft] = useState('')
   const [submitBusy, setSubmitBusy] = useState(false)
   const [commentCount, setCommentCount] = useState(() => post?.commentCount ?? 0)
-  const [isLiked, setIsLiked] = useState(() => post?.isLiked ?? false)
-  const [likeCount, setLikeCount] = useState(() => post?.likeCount ?? 0)
+  const [isLiked, setIsLiked] = useState(() => {
+    const cached = post ? reviewLikeStore.get(post.id) : undefined
+    return cached?.isLiked ?? post?.isLiked ?? false
+  })
+  const [likeCount, setLikeCount] = useState(() => {
+    const cached = post ? reviewLikeStore.get(post.id) : undefined
+    return cached?.likeCount ?? post?.likeCount ?? 0
+  })
   const guestEmoji = useState(() => randomDefaultAvatar())[0]
 
   const s = styles(colors, isDark)
@@ -119,8 +126,11 @@ export default function PlayerReviewDetailScreen() {
 
   const handleLike = async () => {
     if (!post) return
-    setIsLiked((v) => !v)
-    setLikeCount((n) => n + (isLiked ? -1 : 1))
+    const newIsLiked = !isLiked
+    const newLikeCount = likeCount + (isLiked ? -1 : 1)
+    setIsLiked(newIsLiked)
+    setLikeCount(newLikeCount)
+    reviewLikeStore.set(post.id, newIsLiked, newLikeCount)
     try {
       await apiFetch('/api/likes', {
         method: 'POST',
@@ -210,16 +220,16 @@ export default function PlayerReviewDetailScreen() {
           {/* 본문 */}
           <Text style={[s.postContent, { color: colors.bodyText }]}>{post.content}</Text>
 
-          {/* 하트 + 댓글 수 */}
+          {/* 댓글 수 + 하트 */}
           <View style={s.postActions}>
-            <TouchableOpacity style={s.actionBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
-              <Text style={[s.actionCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
-            </TouchableOpacity>
             <View style={s.actionBtn}>
               <Feather name="message-circle" size={18} color={colors.mutedText} />
               <Text style={[s.actionCount, { color: colors.mutedText }]}>{commentCount}</Text>
             </View>
+            <TouchableOpacity style={s.actionBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
+              <Text style={[s.actionCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 섹션 구분 */}

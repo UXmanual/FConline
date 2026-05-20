@@ -209,6 +209,36 @@ function getManagerDisplay(c: MatchCandidate) {
   }
 }
 
+function deriveFormationFromPositions(positions: number[]): string {
+  const defPos = new Set([1, 2, 3, 4, 5, 6, 7, 8])
+  const dmPos  = new Set([9, 10, 11])
+  const cmPos  = new Set([12, 13, 14, 15, 16])
+  const amPos  = new Set([17, 18, 19])
+  const fwPos  = new Set([20, 21, 22, 23, 24, 25, 26, 27])
+  const def = positions.filter((p) => defPos.has(p)).length
+  const dm  = positions.filter((p) => dmPos.has(p)).length
+  const cm  = positions.filter((p) => cmPos.has(p)).length
+  const am  = positions.filter((p) => amPos.has(p)).length
+  const fw  = positions.filter((p) => fwPos.has(p)).length
+  const parts = [def, dm, cm, am, fw].filter((n) => n > 0)
+  return parts.join('-')
+}
+
+function getFormationFromMatches(matches: MatchData[], ouid: string): string | null {
+  for (const match of matches) {
+    const players = match.matchInfo?.find((info) => info.ouid === ouid)?.player
+    if (!players || players.length < 7) continue
+    const positions = players
+      .map((p) => p.spPosition)
+      .filter((p): p is number => typeof p === 'number' && p >= 1 && p <= 27)
+    if (positions.length >= 7) {
+      const f = deriveFormationFromPositions(positions)
+      if (f) return f
+    }
+  }
+  return null
+}
+
 function formatTeamColors(colors: string[]) {
   if (!colors || colors.length === 0) return '-'
   return colors.slice(0, 3).join(' · ')
@@ -1254,12 +1284,28 @@ function OwnerDetailCard({
   matchLoading: boolean
   enriching: boolean
 }) {
+  const router = useRouter()
   const isVolta = mode === 'voltaLive'
   const isManager = mode === 'manager'
   const accentColor = getModeAccent(mode)
 
   // Compute display fields with TWA fallback chain
   const display = isManager ? getManagerDisplay(candidate) : getOfficialDisplay(candidate)
+
+  const [fetchedFormation, setFetchedFormation] = useState<string | null>(null)
+  const matchDerivedFormation = (!display.formation && !isVolta && !isManager && ouid)
+    ? getFormationFromMatches(matches, ouid)
+    : null
+  useEffect(() => {
+    if (display.formation || matchDerivedFormation || isVolta) { setFetchedFormation(null); return }
+    setFetchedFormation(null)
+    let cancelled = false
+    fetch(`${API_BASE}/api/nexon/matches/formation?ouid=${ouid}&mode=${mode}&lite=1`)
+      .then((r) => r.json())
+      .catch(() => null)
+      .then((json) => { if (!cancelled && json?.formation) setFetchedFormation(json.formation) })
+    return () => { cancelled = true }
+  }, [ouid, mode, display.formation, matchDerivedFormation, isVolta])
 
   const badgeUrl =
     normalizeImageUrl(isVolta ? candidate.voltaRankIconUrl : display.rankIconUrl)
@@ -1316,7 +1362,7 @@ function OwnerDetailCard({
     const record = (display.wins != null && display.draws != null && display.losses != null)
       ? `${display.wins}승 ${display.draws}무 ${display.losses}패`
       : '-'
-    const formation = display.formation
+    const formation = display.formation ?? matchDerivedFormation ?? fetchedFormation
     const teamColorsStr = formatTeamColors(display.teamColors)
 
     return [
@@ -1334,6 +1380,10 @@ function OwnerDetailCard({
         label: '주요 포메이션',
         value: statVal(formation),
         valueColor: formation ? accentColor : undefined,
+        onPress: (!isVolta && !!formation) ? () => router.push({
+          pathname: '/(tabs)/matches/[ouid]/formation' as any,
+          params: { ouid, mode, nickname: candidate.nickname },
+        }) : undefined,
       },
       { label: '대표팀 컬러', value: teamColorsStr },
       { label: '구단가치', value: statVal(candidate.price) },
@@ -1407,6 +1457,7 @@ function OwnerDetailCard({
                   valueColor={item.valueColor}
                   colors={colors}
                   loading={enriching && item.value === '-'}
+                  onPress={(item as any).onPress}
                 />
               ))}
               {row.length === 1 && <View style={{ flex: 1 }} />}
@@ -1434,26 +1485,36 @@ function OwnerDetailCard({
 }
 
 function InfoCard({
-  label, value, valueColor, colors, loading,
+  label, value, valueColor, colors, loading, onPress,
 }: {
   label: string
   value: string
   valueColor?: string
   colors: ReturnType<typeof useTheme>['colors']
   loading?: boolean
+  onPress?: () => void
 }) {
-  return (
-    <View style={[cd.infoCard, { flex: 1, backgroundColor: colors.surfaceSoft }]}>
+  const content = (
+    <View style={[cd.infoCard, { backgroundColor: colors.surfaceSoft }]}>
       <Text style={[cd.infoLabel, { color: colors.mutedText }]}>{label}</Text>
       {loading ? (
         <SkeletonBox width="70%" height={13} radius={4} style={{ marginTop: 2 }} />
       ) : (
-        <Text style={[cd.infoValue, { color: valueColor ?? colors.title }]} numberOfLines={1}>
-          {value}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          <Text style={[cd.infoValue, { color: valueColor ?? colors.title, marginTop: 0, flexShrink: 1 }]} numberOfLines={1}>
+            {value}
+          </Text>
+          {onPress && (
+            <Feather name="chevron-right" size={13} color={valueColor ?? colors.title} style={{ marginLeft: 2, flexShrink: 0 }} />
+          )}
+        </View>
       )}
     </View>
   )
+  if (onPress) {
+    return <TouchableOpacity style={{ flex: 1 }} onPress={onPress} activeOpacity={0.7}>{content}</TouchableOpacity>
+  }
+  return <View style={{ flex: 1 }}>{content}</View>
 }
 
 function DetailStatCard({
