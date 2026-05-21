@@ -46,7 +46,9 @@ async function writeStoredThemeMode(themeMode: ThemeMode) {
 }
 
 export function ThemePreferenceProvider({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('light')
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(
+    () => Appearance.getColorScheme() === 'dark' ? 'dark' : 'light'
+  )
   const [themeLoaded, setThemeLoaded] = useState(false)
 
   useEffect(() => {

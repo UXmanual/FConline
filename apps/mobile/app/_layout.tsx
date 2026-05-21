@@ -4,18 +4,30 @@ import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native
 import { StatusBar } from 'expo-status-bar'
 import { useFonts } from 'expo-font'
 import { useEffect } from 'react'
-import { Platform } from 'react-native'
+import { Platform, PermissionsAndroid, View, useColorScheme } from 'react-native'
 import * as SplashScreen from 'expo-splash-screen'
+import * as ExpoNotifications from 'expo-notifications'
 import 'react-native-reanimated'
 import { ThemePreferenceProvider } from '@/contexts/ThemePreferenceContext'
 import { useTheme } from '@/hooks/useTheme'
 import { useThemePreference } from '@/contexts/ThemePreferenceContext'
 import { APP_FONT_STACK } from '@/constants/fonts'
+import { API_BASE } from '@/constants/api'
+import { supabase } from '@/lib/supabase'
+
+ExpoNotifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
 
 enableScreens(Platform.OS !== 'web')
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme()
   const [fontsLoaded] = useFonts({
     'Pretendard-100': require('@/assets/fonts/Pretendard-Thin.ttf'),
     'Pretendard-200': require('@/assets/fonts/Pretendard-ExtraLight.ttf'),
@@ -29,7 +41,9 @@ export default function RootLayout() {
   })
 
   if (!fontsLoaded) {
-    return null
+    return (
+      <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#121318' : '#f0f3f5' }} />
+    )
   }
 
   return (
@@ -45,9 +59,34 @@ function RootLayoutContent() {
 
   useEffect(() => {
     if (themeLoaded) {
-      SplashScreen.hideAsync()
+      requestAnimationFrame(() => {
+        SplashScreen.hideAsync()
+      })
     }
   }, [themeLoaded])
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return
+    ;(async () => {
+      try {
+        const granted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS ?? ('android.permission.POST_NOTIFICATIONS' as never),
+        )
+        if (!granted) return
+        const { data: tokenData } = await ExpoNotifications.getExpoPushTokenAsync({
+          projectId: 'fcbf4efe-5968-40ab-b8d9-af3518374baa',
+        })
+        if (!tokenData) return
+        const { data: sessionData } = await supabase.auth.getSession()
+        const userId = sessionData?.session?.user?.id ?? null
+        await fetch(`${API_BASE}/api/push/expo-token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenData, userId }),
+        })
+      } catch {}
+    })()
+  }, [])
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {

@@ -1,5 +1,47 @@
 import webpush, { type PushSubscription } from 'web-push'
 
+export type ExpoToken = {
+  id: string
+  token: string
+}
+
+export async function sendExpoPushBatch(tokens: ExpoToken[], payload: PushNotificationPayload) {
+  const messages = tokens.map((t) => ({
+    to: t.token,
+    title: payload.title,
+    body: payload.body,
+    data: payload.data,
+    sound: 'default' as const,
+  }))
+
+  const chunks: (typeof messages)[] = []
+  for (let i = 0; i < messages.length; i += 100) {
+    chunks.push(messages.slice(i, i + 100))
+  }
+
+  const failedTokenIds: string[] = []
+
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(chunk),
+      })
+      const json = (await res.json()) as { data?: { status: string; details?: { error?: string } }[] }
+      const results = json.data ?? []
+      results.forEach((r, i) => {
+        if (r.status === 'error' && (r.details?.error === 'DeviceNotRegistered' || r.details?.error === 'InvalidCredentials')) {
+          const tokenId = tokens[i]?.id
+          if (tokenId) failedTokenIds.push(tokenId)
+        }
+      })
+    } catch {}
+  }
+
+  return { failedTokenIds, sent: tokens.length - failedTokenIds.length }
+}
+
 export type StoredPushSubscription = {
   id?: string
   endpoint: string

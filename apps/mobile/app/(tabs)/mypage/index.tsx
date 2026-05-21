@@ -12,17 +12,18 @@ import {
   UIManager,
   PermissionsAndroid,
 } from 'react-native'
+import * as ExpoNotifications from 'expo-notifications'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect } from '@react-navigation/native'
 import { router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import * as Linking from 'expo-linking'
-import * as WebBrowser from 'expo-web-browser'
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
 import { supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
+import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
 import { pickDefaultAvatar } from '@/lib/avatar'
@@ -67,26 +68,41 @@ function getLevelColor(level?: number | null): string {
 }
 
 
-const APP_VERSION = '0.1.8'
+const APP_VERSION = '0.2.0'
+
+async function registerExpoPushToken(userId: string | null) {
+  try {
+    const { data: tokenData } = await ExpoNotifications.getExpoPushTokenAsync({
+      projectId: 'fcbf4efe-5968-40ab-b8d9-af3518374baa',
+    })
+    if (!tokenData) return
+    await fetch(`${API_BASE}/api/push/expo-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: tokenData, userId }),
+    })
+  } catch {}
+}
 
 export default function MypageScreen() {
   const { colors, isDark, toggleThemeMode } = useTheme()
   const tabBarHeight = useBottomTabBarHeight()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [xpBarWidth, setXpBarWidth] = useState(0)
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
 
   useEffect(() => {
     themeToggleTranslateX.setValue(isDark ? 24 : 0)
   }, [isDark, themeToggleTranslateX])
+
   const [notifGranted, setNotifGranted] = useState(false)
   const [notifPending, setNotifPending] = useState(false)
   const notifToggleTranslateX = useRef(new Animated.Value(0)).current
 
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
-  useScrollToTop(scrollRef)
 
   useEffect(() => {
     let cancelled = false
@@ -133,6 +149,10 @@ export default function MypageScreen() {
           easing: Easing.out(Easing.circle),
           useNativeDriver: true,
         }).start()
+        if (granted) {
+          const { data: sessionData } = await supabase.auth.getSession()
+          void registerExpoPushToken(sessionData?.session?.user?.id ?? null)
+        }
         if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
           void Linking.openSettings()
         }
@@ -144,29 +164,49 @@ export default function MypageScreen() {
     }
   }
 
-  const fetchProfile = useCallback(async () => {
-    setProfileLoading(true)
+  const profileInitialized = useRef(false)
+
+  const fetchProfile = useCallback(async (showSkeleton = false) => {
+    if (showSkeleton) {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const loggedIn = !!sessionData?.session?.user
+      setHasSession(loggedIn)
+      if (!loggedIn) {
+        setProfile(null)
+        setProfileLoading(false)
+        profileInitialized.current = true
+        return
+      }
+      setProfileLoading(true)
+    }
     try {
       const res = await apiFetch('/api/mypage/profile')
       const data = await res.json().catch(() => null)
       if (data?.id) setProfile(data)
       else setProfile(null)
     } catch {}
-    finally { setProfileLoading(false) }
+    finally {
+      setProfileLoading(false)
+      profileInitialized.current = true
+    }
   }, [])
 
-  useEffect(() => { void fetchProfile() }, [fetchProfile])
+  useEffect(() => { void fetchProfile(true) }, [fetchProfile])
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false })
-      void fetchProfile()
+      if (profileInitialized.current) {
+        void fetchProfile(false)
+      }
     }, [fetchProfile]),
   )
 
+  const loginPending = useRef(false)
   const handleLogin = async () => {
+    if (loginPending.current) return
+    loginPending.current = true
     try {
-      const redirectTo = Linking.createURL('auth/callback')
+      const redirectTo = 'fconlineground://auth/callback'
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -178,11 +218,11 @@ export default function MypageScreen() {
       })
       if (error || !data?.url) return Alert.alert('오류', '로그인 URL을 가져오지 못했습니다.')
 
-      await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
-      await fetchProfile()
+      await Linking.openURL(data.url)
     } catch (e: any) {
-      console.log('[LOGIN] exception:', String(e?.message ?? e))
       Alert.alert('오류', String(e?.message ?? e))
+    } finally {
+      loginPending.current = false
     }
   }
 
@@ -265,8 +305,8 @@ export default function MypageScreen() {
           )}
         </View>
 
-        {/* 프로필 카드 - 스켈레톤 */}
-        {profileLoading && !profile && (
+        {/* 프로필 카드 - 스켈레톤 (로그인 상태 확인된 경우에만) */}
+        {profileLoading && !profile && hasSession === true && (
           <View style={s.card}>
             <View style={s.profileRow}>
               <SkeletonBox width={60} height={60} radius={999} />
@@ -401,12 +441,12 @@ export default function MypageScreen() {
         </View>
 
         {/* 문의하기 */}
-        <View style={s.card}>
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/contact' as any)}>
+        <TouchableOpacity style={s.card} onPress={() => router.push('/(tabs)/mypage/contact' as any)} activeOpacity={0.7}>
+          <View style={s.settingRowCompact}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>무엇을 도와드릴까요?</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
         {/* 이용약관 / 개인정보처리방침 */}
         <View style={s.card}>
@@ -422,12 +462,12 @@ export default function MypageScreen() {
         </View>
 
         {/* 오픈소스 라이선스 */}
-        <View style={s.card}>
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/licenses')}>
+        <TouchableOpacity style={s.card} onPress={() => router.push('/(tabs)/mypage/licenses')} activeOpacity={0.7}>
+          <View style={s.settingRowCompact}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
         {/* 버전 */}
         <View style={s.card}>
@@ -439,16 +479,16 @@ export default function MypageScreen() {
 
         {/* 계정 및 데이터 삭제 */}
         {profile && (
-          <View style={s.card}>
-            <TouchableOpacity
-              style={s.settingRowCompact}
-              onPress={() => router.push('/(tabs)/mypage/data-deletion' as any)}
-              activeOpacity={0.7}
-            >
+          <TouchableOpacity
+            style={s.card}
+            onPress={() => router.push('/(tabs)/mypage/data-deletion' as any)}
+            activeOpacity={0.7}
+          >
+            <View style={s.settingRowCompact}>
               <Text style={[s.settingLabel, { color: '#e03131' }]}>계정 및 데이터 삭제</Text>
               <Feather name="chevron-right" size={16} color="#e03131" />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         )}
       </ScrollView>
 

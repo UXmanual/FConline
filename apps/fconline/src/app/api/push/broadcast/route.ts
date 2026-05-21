@@ -2,8 +2,10 @@ import { NextRequest } from 'next/server'
 import {
   configureWebPush,
   sendPushNotificationBatch,
+  sendExpoPushBatch,
   type PushNotificationPayload,
   type StoredPushSubscription,
+  type ExpoToken,
 } from '@/lib/pushNotifications'
 import { normalizePushTargetUrl } from '@/lib/appUrl'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
@@ -70,13 +72,29 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const { failedEndpointIds, sent } = await sendPushNotificationBatch(subscriptions, payload)
+    const { failedEndpointIds, sent: webSent } = await sendPushNotificationBatch(subscriptions, payload)
 
     if (failedEndpointIds.length > 0) {
       await supabase.from('push_subscriptions').update({ enabled: false }).in('id', failedEndpointIds)
     }
 
-    return Response.json({ success: true, sent, total: subscriptions.length })
+    const { data: expoData } = await supabase
+      .from('expo_push_tokens')
+      .select('id, token')
+      .eq('enabled', true)
+
+    const expoTokens = (expoData ?? []) as ExpoToken[]
+    let expoSent = 0
+
+    if (expoTokens.length > 0) {
+      const { failedTokenIds, sent } = await sendExpoPushBatch(expoTokens, payload)
+      expoSent = sent
+      if (failedTokenIds.length > 0) {
+        await supabase.from('expo_push_tokens').update({ enabled: false }).in('id', failedTokenIds)
+      }
+    }
+
+    return Response.json({ success: true, sent: webSent + expoSent, total: subscriptions.length + expoTokens.length })
   } catch (error) {
     if (error instanceof Error && error.message === 'Missing push admin token.') {
       return Response.json({ message: '운영 공지 토큰이 설정되지 않았습니다.' }, { status: 500 })

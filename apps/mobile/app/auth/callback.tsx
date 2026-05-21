@@ -1,7 +1,10 @@
 import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { supabase } from '@/lib/supabase'
+
+WebBrowser.maybeCompleteAuthSession()
 
 export default function AuthCallbackScreen() {
   const params = useLocalSearchParams<{ code?: string }>()

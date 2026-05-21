@@ -6,6 +6,8 @@ const monorepoRoot = path.resolve(projectRoot, '../..')
 
 const config = getDefaultConfig(projectRoot)
 
+config.projectRoot = projectRoot
+
 config.watchFolders = [monorepoRoot]
 
 config.resolver.nodeModulesPaths = [
@@ -26,6 +28,7 @@ config.resolver.extraNodeModules = {
   'react-test-renderer': path.resolve(projectRoot, 'node_modules/react-test-renderer'),
   scheduler: path.resolve(projectRoot, 'node_modules/scheduler'),
   semver: path.resolve(monorepoRoot, 'node_modules/react-native-reanimated/node_modules/semver'),
+  'expo-router': path.resolve(monorepoRoot, 'node_modules/expo-router'),
 }
 
 module.exports = config

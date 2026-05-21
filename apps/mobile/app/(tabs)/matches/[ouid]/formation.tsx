@@ -477,7 +477,7 @@ export default function FormationScreen() {
           {/* 피치 */}
           <View style={{ marginHorizontal: PITCH_H_MARGIN, marginTop: 8, borderRadius: 12, overflow: 'hidden', width: pitchWidth, height: pitchHeight }}>
             <Image
-              source={require('@/assets/images/ground.png')}
+              source={require('@/assets/images/ground.jpg')}
               style={{ width: pitchWidth, height: pitchHeight }}
               resizeMode="cover"
             />

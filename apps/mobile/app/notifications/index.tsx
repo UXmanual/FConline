@@ -9,6 +9,7 @@ import { Text } from '@/components/Themed'
 const RECENT_WINDOW_MS = 1000 * 60 * 60 * 24 * 7
 
 const RELEASE_PUBLISHED_AT: Record<string, string> = {
+  '0.2.0': '2026-05-21T00:00:00+09:00',
   '0.1.8': '2026-05-17T00:00:00+09:00',
   '0.1.7': '2026-05-14T00:25:40+09:00',
   '0.1.6': '2026-05-13T16:35:00+09:00',
@@ -19,6 +20,11 @@ const RELEASE_PUBLISHED_AT: Record<string, string> = {
 }
 
 const RELEASE_NOTES: Record<string, string[]> = {
+  '0.2.0': [
+    '네이티브 앱으로 전환되었습니다. 더 빠르고 안정적인 환경에서 이용하실 수 있습니다.',
+    '앱 푸시 알림 기능이 추가되었습니다. 마이페이지에서 알림을 허용하면 업데이트 소식을 받아볼 수 있습니다.',
+    '선수평가 탭 개편, 계정 삭제 화면, 화면 전환 최적화 등 다양한 개선이 적용되었습니다.',
+  ],
   '0.1.8': [
     '마이페이지 팝업 헤더가 스테이터스바 위로 올라가던 문제를 수정했습니다.',
     '모달 헤더에 useSafeAreaInsets를 적용해 safe area 범위 내에 정확히 배치되도록 개선했습니다.',

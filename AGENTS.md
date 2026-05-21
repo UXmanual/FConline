@@ -143,6 +143,17 @@ npm run lint
 - If only documentation files changed, do not run unnecessary app commands.
 - 문서만 바뀐 경우에는 불필요한 앱 명령을 실행하지 않습니다.
 
+## Mobile App Security Constraints
+
+- NEVER commit, stage, or push anything inside `apps/mobile/keystore/`.
+- `apps/mobile/keystore/` 폴더의 파일은 절대 커밋, 스테이징, 푸시하지 않습니다.
+- This folder contains the Android release keystore and passwords — leaking it would allow anyone to publish fraudulent updates to the app.
+- 이 폴더에는 Android 릴리스 키스토어와 비밀번호가 포함되어 있으며, 유출될 경우 누구든 앱의 위조 업데이트를 배포할 수 있습니다.
+- The folder is gitignored. Do not remove it from `.gitignore` under any circumstances.
+- 이 폴더는 gitignore 처리되어 있습니다. 어떤 경우에도 `.gitignore`에서 제거하지 않습니다.
+- If a task requires signing configuration changes, edit `build-release.bat` only — never expose raw passwords in committed files.
+- 서명 설정 변경이 필요한 경우 `build-release.bat`만 수정하며, 커밋되는 파일에 비밀번호를 직접 노출하지 않습니다.
+
 ## Documentation Maintenance
 
 - Keep agent instructions in this file only.

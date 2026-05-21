@@ -46,7 +46,8 @@
           "image": "./assets/images/splash-logo-android-dark.png",
           "backgroundColor": "#121318"
         }
-      }
+      },
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
@@ -56,6 +57,19 @@
     "plugins": [
       "expo-router",
       "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-logo-android.png",
+          "imageWidth": 144,
+          "resizeMode": "contain",
+          "backgroundColor": "#f0f3f5",
+          "dark": {
+            "image": "./assets/images/splash-logo-android-dark.png",
+            "backgroundColor": "#121318"
+          }
+        }
+      ],
       [
         "expo-font",
         {
@@ -110,7 +124,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-image-picker"
+      "expo-image-picker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#256ef4"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -118,10 +139,10 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9774e57c-cd6f-4aa8-9ab9-77949c3c24b5"
+        "projectId": "fcbf4efe-5968-40ab-b8d9-af3518374baa"
       }
     },
-    "owner": "fconline",
+    "owner": "uxx",
     "runtimeVersion": {
       "policy": "appVersion"
     },
