@@ -57,3 +57,40 @@ export const supabase = createClient(
     },
   },
 )
+
+const STALE_REFRESH_TOKEN_ERROR_MESSAGES = ['Invalid Refresh Token', 'Refresh Token Not Found']
+
+function isStaleRefreshTokenError(message: string | undefined) {
+  if (!message) {
+    return false
+  }
+
+  return STALE_REFRESH_TOKEN_ERROR_MESSAGES.some((fragment) => message.includes(fragment))
+}
+
+export async function clearLocalSession() {
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+}
+
+export async function getSessionSafely() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
+
+  if (error && isStaleRefreshTokenError(error.message)) {
+    await clearLocalSession()
+
+    return {
+      session: null,
+      recovered: true,
+      error: null,
+    }
+  }
+
+  return {
+    session: session ?? null,
+    recovered: false,
+    error,
+  }
+}

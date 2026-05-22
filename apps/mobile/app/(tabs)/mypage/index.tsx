@@ -11,6 +11,7 @@ import {
   Platform,
   UIManager,
   PermissionsAndroid,
+  InteractionManager,
 } from 'react-native'
 import * as ExpoNotifications from 'expo-notifications'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
@@ -19,11 +20,23 @@ import { useFocusEffect } from '@react-navigation/native'
 import { router } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import * as Linking from 'expo-linking'
+import {
+  GoogleSignin,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore — GoogleOneTapSignIn exists at runtime but types were removed in v15
+  GoogleOneTapSignIn,
+  isCancelledResponse,
+  isErrorWithCode,
+  isSuccessResponse,
+  isNoSavedCredentialFoundResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin'
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
-import { supabase } from '@/lib/supabase'
+import { getSessionSafely, supabase } from '@/lib/supabase'
 import { apiFetch } from '@/lib/apiFetch'
 import { API_BASE } from '@/constants/api'
+import { configureGoogleSignIn, signOutFromGoogle } from '@/lib/googleSignIn'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
 import { pickDefaultAvatar } from '@/lib/avatar'
@@ -97,12 +110,30 @@ export default function MypageScreen() {
     themeToggleTranslateX.setValue(isDark ? 24 : 0)
   }, [isDark, themeToggleTranslateX])
 
+  useEffect(() => {
+    try {
+      configureGoogleSignIn()
+    } catch {}
+  }, [])
+
   const [notifGranted, setNotifGranted] = useState(false)
   const [notifPending, setNotifPending] = useState(false)
   const notifToggleTranslateX = useRef(new Animated.Value(0)).current
 
+  const isNavigatingRef = useRef(false)
+  const fetchCancelledRef = useRef(false)
+  const navigate = useCallback((href: Parameters<typeof router.push>[0]) => {
+    isNavigatingRef.current = true
+    fetchCancelledRef.current = true
+    const savedOffset = scrollOffsetRef.current
+    if (savedOffset > 0) {
+      scrollRef.current?.scrollTo({ y: savedOffset, animated: false })
+    }
+    router.push(href)
+  }, [])
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
+  const scrollOffsetRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -150,8 +181,8 @@ export default function MypageScreen() {
           useNativeDriver: true,
         }).start()
         if (granted) {
-          const { data: sessionData } = await supabase.auth.getSession()
-          void registerExpoPushToken(sessionData?.session?.user?.id ?? null)
+          const { session } = await getSessionSafely()
+          void registerExpoPushToken(session?.user?.id ?? null)
         }
         if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
           void Linking.openSettings()
@@ -167,9 +198,11 @@ export default function MypageScreen() {
   const profileInitialized = useRef(false)
 
   const fetchProfile = useCallback(async (showSkeleton = false) => {
+    if (fetchCancelledRef.current) return
     if (showSkeleton) {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const loggedIn = !!sessionData?.session?.user
+      const { session } = await getSessionSafely()
+      if (fetchCancelledRef.current) return
+      const loggedIn = !!session?.user
       setHasSession(loggedIn)
       if (!loggedIn) {
         setProfile(null)
@@ -181,13 +214,17 @@ export default function MypageScreen() {
     }
     try {
       const res = await apiFetch('/api/mypage/profile')
+      if (fetchCancelledRef.current) return
       const data = await res.json().catch(() => null)
+      if (fetchCancelledRef.current) return
       if (data?.id) setProfile(data)
       else setProfile(null)
     } catch {}
     finally {
-      setProfileLoading(false)
-      profileInitialized.current = true
+      if (!fetchCancelledRef.current) {
+        setProfileLoading(false)
+        profileInitialized.current = true
+      }
     }
   }, [])
 
@@ -195,8 +232,22 @@ export default function MypageScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      fetchCancelledRef.current = false
+      isNavigatingRef.current = false
+      const offset = scrollOffsetRef.current
+      if (offset > 0) {
+        scrollRef.current?.scrollTo({ y: offset, animated: false })
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ y: offset, animated: false })
+        })
+      }
+
+      // 내비게이션 애니메이션 완료 후 프로필 갱신 (전환 중 리렌더 방지)
       if (profileInitialized.current) {
-        void fetchProfile(false)
+        const task = InteractionManager.runAfterInteractions(() => {
+          void fetchProfile(false)
+        })
+        return () => task.cancel()
       }
     }, [fetchProfile]),
   )
@@ -206,21 +257,71 @@ export default function MypageScreen() {
     if (loginPending.current) return
     loginPending.current = true
     try {
-      const redirectTo = 'fconlineground://auth/callback'
+      configureGoogleSignIn()
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      let idToken: string | null = null
+      let accessToken: string | null = null
+
+      try {
+        const oneTapResponse = await GoogleOneTapSignIn.signIn()
+        if (isNoSavedCredentialFoundResponse(oneTapResponse)) {
+          throw new Error('no_credential')
+        }
+        if (!isSuccessResponse(oneTapResponse)) {
+          throw new Error('no_credential')
+        }
+        idToken = oneTapResponse.data?.idToken ?? null
+        accessToken = oneTapResponse.data?.serverAuthCode ?? null
+      } catch {
+        const response = await GoogleSignin.signIn()
+        if (isCancelledResponse(response)) {
+          return
+        }
+        if (!isSuccessResponse(response)) {
+          throw new Error('Google 로그인을 완료하지 못했습니다.')
+        }
+        const tokens = await GoogleSignin.getTokens()
+        idToken = tokens.idToken
+        accessToken = tokens.accessToken
+      }
+
+      if (!idToken) {
+        throw new Error('Google 로그인 토큰을 가져오지 못했습니다.')
+      }
+
+      const { error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        options: {
-          redirectTo,
-          skipBrowserRedirect: true,
-          queryParams: { prompt: 'select_account' },
-        },
+        token: idToken,
+        ...(accessToken ? { access_token: accessToken } : {}),
       })
-      if (error || !data?.url) return Alert.alert('오류', '로그인 URL을 가져오지 못했습니다.')
 
-      await Linking.openURL(data.url)
-    } catch (e: any) {
-      Alert.alert('오류', String(e?.message ?? e))
+      if (error) {
+        await signOutFromGoogle()
+        throw error
+      }
+
+      await fetchProfile(true)
+    } catch (e: unknown) {
+      if (isErrorWithCode(e)) {
+        if (e.code === statusCodes.IN_PROGRESS) {
+          Alert.alert('안내', 'Google 로그인이 이미 진행 중입니다.')
+          return
+        }
+
+        if (e.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          Alert.alert('오류', 'Google Play 서비스가 없거나 최신 상태가 아닙니다.')
+          return
+        }
+      }
+
+      const message = e instanceof Error ? e.message : String(e)
+      if (message.includes('Google 로그인 설정이 아직 완료되지 않았습니다.')) {
+        Alert.alert('설정 필요', message)
+        return
+      }
+
+      Alert.alert('오류', message)
     } finally {
       loginPending.current = false
     }
@@ -232,6 +333,7 @@ export default function MypageScreen() {
       {
         text: '로그아웃', style: 'destructive', onPress: async () => {
           try {
+            await signOutFromGoogle()
             await supabase.auth.signOut()
             await apiFetch('/api/auth/logout', { method: 'POST' })
           } catch {}
@@ -263,6 +365,9 @@ export default function MypageScreen() {
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
+        scrollsToTop={false}
+        onScroll={(e) => { if (!isNavigatingRef.current) scrollOffsetRef.current = e.nativeEvent.contentOffset.y }}
+        scrollEventThrottle={16}
       >
         {/* 헤더 */}
         <View style={s.sectionHeader}>
@@ -370,7 +475,7 @@ export default function MypageScreen() {
             <View style={s.profileActions}>
               <TouchableOpacity
                 style={s.profileAction}
-                onPress={() => router.push({ pathname: '/(tabs)/mypage/edit', params: { nickname: profile.nickname, avatarUrl: profile.avatarUrl ?? '', userId: profile.id } })}
+                onPress={() => navigate({ pathname: '/(tabs)/mypage/edit', params: { nickname: profile.nickname, avatarUrl: profile.avatarUrl ?? '', userId: profile.id } })}
               >
                 <Text style={[s.profileActionText, { color: colors.bodyText }]}>프로필 편집</Text>
                 <Feather name="chevron-right" size={16} color={colors.mutedText} />
@@ -382,7 +487,7 @@ export default function MypageScreen() {
         {/* 경험치 획득 방법 */}
         {profile && (
           <View style={s.card}>
-            <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/xp-guide' as any)}>
+            <TouchableOpacity style={s.settingRowCompact} onPress={() => navigate('/(tabs)/mypage/xp-guide' as any)}>
               <Text style={[s.settingLabel, { color: colors.bodyText }]}>경험치 획득 방법</Text>
               <Feather name="chevron-right" size={16} color={colors.mutedText} />
             </TouchableOpacity>
@@ -441,7 +546,7 @@ export default function MypageScreen() {
         </View>
 
         {/* 문의하기 */}
-        <TouchableOpacity style={s.card} onPress={() => router.push('/(tabs)/mypage/contact' as any)} activeOpacity={0.7}>
+        <TouchableOpacity style={s.card} onPress={() => navigate('/(tabs)/mypage/contact' as any)} activeOpacity={0.7}>
           <View style={s.settingRowCompact}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>무엇을 도와드릴까요?</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
@@ -450,19 +555,19 @@ export default function MypageScreen() {
 
         {/* 이용약관 / 개인정보처리방침 */}
         <View style={s.card}>
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/terms')}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => navigate('/(tabs)/mypage/terms')}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>이용약관</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
           </TouchableOpacity>
           <View style={[s.divider, { backgroundColor: colors.divider }]} />
-          <TouchableOpacity style={s.settingRowCompact} onPress={() => router.push('/(tabs)/mypage/privacy')}>
+          <TouchableOpacity style={s.settingRowCompact} onPress={() => navigate('/(tabs)/mypage/privacy')}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>개인정보처리방침</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
           </TouchableOpacity>
         </View>
 
         {/* 오픈소스 라이선스 */}
-        <TouchableOpacity style={s.card} onPress={() => router.push('/(tabs)/mypage/licenses')} activeOpacity={0.7}>
+        <TouchableOpacity style={s.card} onPress={() => navigate('/(tabs)/mypage/licenses')} activeOpacity={0.7}>
           <View style={s.settingRowCompact}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>오픈소스 라이선스</Text>
             <Feather name="chevron-right" size={16} color={colors.mutedText} />
@@ -481,7 +586,7 @@ export default function MypageScreen() {
         {profile && (
           <TouchableOpacity
             style={s.card}
-            onPress={() => router.push('/(tabs)/mypage/data-deletion' as any)}
+            onPress={() => navigate('/(tabs)/mypage/data-deletion' as any)}
             activeOpacity={0.7}
           >
             <View style={s.settingRowCompact}>
@@ -491,7 +596,6 @@ export default function MypageScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
-
     </SafeAreaView>
   )
 }

@@ -43,3 +43,8 @@ yarn-error.*
 # keystore
 /keystore
 .env.production
+build-config.local.bat
+google-services.json
+build-log.txt
+*.apk
+*.aab

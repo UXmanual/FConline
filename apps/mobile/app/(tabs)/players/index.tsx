@@ -12,8 +12,8 @@ import {
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
+import { useNavigationCover } from '@/lib/useNavigationCover'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
@@ -102,7 +102,7 @@ function normalizeBodyType(v: string | null): string {
 export default function PlayersScreen() {
   const { colors, isDark } = useTheme()
   const tabBarHeight = useBottomTabBarHeight()
-  const router = useRouter()
+  const { covering, navigate, reset } = useNavigationCover()
   const [query, setQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('latest')
@@ -138,11 +138,12 @@ export default function PlayersScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      reset()
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       searchInputRef.current?.blur()
       Keyboard.dismiss()
       setSearchFocused(false)
-    }, []),
+    }, [reset]),
   )
 
   useEffect(() => {
@@ -190,7 +191,7 @@ export default function PlayersScreen() {
     searchInputRef.current?.blur()
     Keyboard.dismiss()
     setSearchFocused(false)
-    router.push({
+    navigate({
       pathname: '/(tabs)/players/[id]',
       params: { id: String(playerId), level: String(strongLevel) },
     } as any)
@@ -343,6 +344,7 @@ export default function PlayersScreen() {
         onSelect={(v) => { setStrongLevel(Number(v)); setShowLevelPicker(false) }}
         colors={colors}
       />
+      {covering && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.pageBg }]} pointerEvents="none" />}
     </SafeAreaView>
   )
 }

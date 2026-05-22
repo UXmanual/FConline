@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { getSessionSafely, supabase } from './supabase'
 import { API_BASE } from '@/constants/api'
 
 let _cachedToken: string | null = null
@@ -10,7 +10,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
   let token = _cachedToken
   if (!token) {
-    const { data: { session } } = await supabase.auth.getSession()
+    const { session } = await getSessionSafely()
     token = session?.access_token ?? null
     _cachedToken = token
   }

@@ -1069,7 +1069,7 @@ export default function PlayerDetailScreen() {
                         style={s.card}
                         onPress={() => router.push({
                           pathname: '/(tabs)/players/review/[reviewId]' as any,
-                          params: { reviewId: item.id, postData: JSON.stringify(item) },
+                          params: { reviewId: item.id, postData: JSON.stringify(item), playerName },
                         })}
                         activeOpacity={0.8}
                         delayPressIn={0}
@@ -1101,7 +1101,7 @@ export default function PlayerDetailScreen() {
                             <View style={s.reviewFooterRow}>
                               <TouchableOpacity style={s.reviewFooterAction} onPress={() => router.push({
                                 pathname: '/(tabs)/players/review/[reviewId]' as any,
-                                params: { reviewId: item.id, postData: JSON.stringify(item) },
+                                params: { reviewId: item.id, postData: JSON.stringify(item), playerName },
                               })} delayPressIn={0}>
                                 <Feather name="message-circle" size={14} color={colors.mutedText} />
                                 <Text style={[s.reviewFooterCount, { color: colors.mutedText }]}>{item.commentCount}</Text>

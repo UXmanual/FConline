@@ -9,8 +9,8 @@ import {
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
+import { useNavigationCover } from '@/lib/useNavigationCover'
 import Feather from '@expo/vector-icons/Feather'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing } from 'react-native-reanimated'
 import { useTheme } from '@/hooks/useTheme'
@@ -102,7 +102,7 @@ const SEARCH_MODES: { value: SearchMode; label: string }[] = [
 export default function MatchesScreen() {
   const { colors, isDark } = useTheme()
   const tabBarHeight = useBottomTabBarHeight()
-  const router = useRouter()
+  const { covering, navigate, reset } = useNavigationCover()
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<SearchMode>('official1on1')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -187,19 +187,20 @@ export default function MatchesScreen() {
   useScrollToTop(scrollRef)
   useFocusEffect(
     useCallback(() => {
+      reset()
       scrollRef.current?.scrollTo({ y: 0, animated: false })
       formationTriggered.current = false
       setFormationVisible(false)
       managerFormationTriggered.current = false
       setManagerFormationVisible(false)
-    }, []),
+    }, [reset]),
   )
 
   const goToLookup = (nickname: string, candidateData?: object) => {
     const trimmed = nickname.trim()
     if (!trimmed) return
     setSearchError('')
-    router.push({
+    navigate({
       pathname: '/(tabs)/matches/lookup',
       params: {
         nickname: trimmed,
@@ -252,7 +253,7 @@ export default function MatchesScreen() {
         voltaRankIconUrl: r.rankIconUrl,
       }
     }
-    router.push({
+    navigate({
       pathname: '/(tabs)/matches/[ouid]',
       params: { ouid, mode, candidateData: JSON.stringify(candidateData) },
     } as any)
@@ -551,6 +552,7 @@ export default function MatchesScreen() {
         )}
 
       </ScrollView>
+      {covering && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.pageBg }]} pointerEvents="none" />}
     </SafeAreaView>
   )
 }

@@ -13,11 +13,13 @@ import { useTheme } from '@/hooks/useTheme'
 import { useThemePreference } from '@/contexts/ThemePreferenceContext'
 import { APP_FONT_STACK } from '@/constants/fonts'
 import { API_BASE } from '@/constants/api'
-import { supabase } from '@/lib/supabase'
+import { getSessionSafely, supabase } from '@/lib/supabase'
 
 ExpoNotifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -77,8 +79,8 @@ function RootLayoutContent() {
           projectId: 'fcbf4efe-5968-40ab-b8d9-af3518374baa',
         })
         if (!tokenData) return
-        const { data: sessionData } = await supabase.auth.getSession()
-        const userId = sessionData?.session?.user?.id ?? null
+        const { session } = await getSessionSafely()
+        const userId = session?.user?.id ?? null
         await fetch(`${API_BASE}/api/push/expo-token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

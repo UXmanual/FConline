@@ -73,7 +73,7 @@ export default function PlayerReviewDetailScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const insets = useSafeAreaInsets()
   const [keyboardHeight, setKeyboardHeight] = useState(0)
-  const { reviewId, postData } = useLocalSearchParams<{ reviewId: string; postData: string }>()
+  const { reviewId, postData, playerName } = useLocalSearchParams<{ reviewId: string; postData: string; playerName: string }>()
 
   const [post] = useState<ReviewPost | null>(() => {
     try { return postData ? (JSON.parse(postData) as ReviewPost) : null } catch { return null }
@@ -166,6 +166,11 @@ export default function PlayerReviewDetailScreen() {
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Feather name="chevron-left" size={24} color={colors.title} />
           </TouchableOpacity>
+          {!!playerName && (
+            <View style={s.headerTitleWrap} pointerEvents="none">
+              <Text style={[s.headerTitle, { color: colors.title }]} numberOfLines={1}>{playerName}</Text>
+            </View>
+          )}
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: colors.mutedText }}>평가를 불러올 수 없습니다.</Text>
@@ -180,6 +185,11 @@ export default function PlayerReviewDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="chevron-left" size={24} color={colors.title} />
         </TouchableOpacity>
+        {!!playerName && (
+          <View style={s.headerTitleWrap} pointerEvents="none">
+            <Text style={[s.headerTitle, { color: colors.title }]} numberOfLines={1}>{playerName}</Text>
+          </View>
+        )}
       </View>
 
       <View style={{ flex: 1, paddingBottom: keyboardHeight }}>
@@ -317,8 +327,10 @@ export default function PlayerReviewDetailScreen() {
 const styles = (c: ReturnType<typeof useTheme>['colors'], _isDark: boolean) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: c.cardBg },
-    navHeader: { paddingHorizontal: 8, height: 56, justifyContent: 'center' },
+    navHeader: { paddingHorizontal: 8, height: 56, flexDirection: 'row', alignItems: 'center' },
     backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    headerTitleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+    headerTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
     content: { paddingHorizontal: 20, paddingTop: 12, gap: 0 },
     authorRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
     avatar: { width: 44, height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },

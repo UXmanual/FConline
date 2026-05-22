@@ -9,7 +9,7 @@ import {
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
-import { router } from 'expo-router'
+import { useNavigationCover } from '@/lib/useNavigationCover'
 import Feather from '@expo/vector-icons/Feather'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useTheme } from '@/hooks/useTheme'
@@ -80,6 +80,7 @@ export default function CommunityScreen() {
   const [selectedCategory, setSelectedCategory] = useState<Category>('전체')
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
 
+  const { covering, navigate, reset } = useNavigationCover()
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
   useScrollToTop(scrollRef)
@@ -126,6 +127,7 @@ export default function CommunityScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      reset()
       setPosts((prev) => prev.map((p) => {
         const cached = likeStore.get(p.id)
         return cached ? { ...p, ...cached } : p
@@ -134,7 +136,7 @@ export default function CommunityScreen() {
         setCurrentPage(1)
         void loadPosts(1, selectedCategory)
       }
-    }, [loadPosts, selectedCategory]),
+    }, [loadPosts, selectedCategory, reset]),
   )
 
   const handleLike = async (post: Post) => {
@@ -156,7 +158,7 @@ export default function CommunityScreen() {
   }
 
   const handleOpenPost = (post: Post) => {
-    router.push({ pathname: '/(tabs)/community/[id]', params: { id: post.id } })
+    navigate({ pathname: '/(tabs)/community/[id]', params: { id: post.id } })
   }
 
   const pageWindowStart = Math.max(1, Math.min(currentPage - 2, totalPages - 4))
@@ -199,7 +201,7 @@ export default function CommunityScreen() {
                 )
               })}
             </View>
-            <TouchableOpacity style={s.writeBtn} onPress={() => router.push('/(tabs)/community/new/')} activeOpacity={0.85}>
+            <TouchableOpacity style={s.writeBtn} onPress={() => navigate('/(tabs)/community/new/')} activeOpacity={0.85}>
               <Text style={s.writeBtnText}>글쓰기</Text>
             </TouchableOpacity>
           </View>
@@ -293,7 +295,7 @@ export default function CommunityScreen() {
           </View>
         )}
       </ScrollView>
-
+      {covering && <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.pageBg }]} pointerEvents="none" />}
     </SafeAreaView>
   )
 }
