@@ -7,6 +7,9 @@ cd /d "%SCRIPT_DIR%" || exit /b 1
 if exist "%SCRIPT_DIR%build-config.local.bat" (
   call "%SCRIPT_DIR%build-config.local.bat"
 )
+if exist "%SCRIPT_DIR%build-config-aab.local.bat" (
+  call "%SCRIPT_DIR%build-config-aab.local.bat"
+)
 
 if not defined JAVA_HOME if exist "C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot" set "JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot"
 if not defined ANDROID_SDK_ROOT if defined ANDROID_HOME set "ANDROID_SDK_ROOT=%ANDROID_HOME%"

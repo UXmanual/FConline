@@ -2,7 +2,7 @@
   "expo": {
     "name": "FConline Ground",
     "slug": "fconline-ground",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fconlineground",
@@ -37,6 +37,7 @@
         "backgroundColor": "#f0f3f5"
       },
       "package": "com.fcoground.app",
+      "versionCode": 2026052602,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "splash": {

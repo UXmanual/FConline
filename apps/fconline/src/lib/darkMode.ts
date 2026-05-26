@@ -14,6 +14,8 @@ function applyDarkModeClass(enabled: boolean) {
   }
 
   document.documentElement.classList.toggle(DARK_MODE_CLASS, enabled)
+  document.documentElement.style.colorScheme = enabled ? 'dark' : 'light'
+  document.documentElement.style.backgroundColor = enabled ? DARK_THEME_COLOR : LIGHT_THEME_COLOR
 
   const themeColorMeta = document.querySelector('meta[name="theme-color"]')
   if (themeColorMeta) {

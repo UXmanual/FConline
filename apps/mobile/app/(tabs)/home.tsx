@@ -16,6 +16,8 @@ import Svg, { Path } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { AppLogo } from '@/components/icons/AppLogo'
+import { hasUnreadReleases } from '@/lib/releaseNotifications'
+import { getSessionSafely } from '@/lib/supabase'
 import { PlayerActionIcon, AnalysisActionIcon } from '@/components/icons/QuickActionIcons'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
@@ -211,6 +213,16 @@ export default function HomeScreen() {
   const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
   const [latestReviews, setLatestReviews] = useState<LatestPlayerReviewItem[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [hasUnread, setHasUnread] = useState(false)
+
+  useFocusEffect(
+    useCallback(() => {
+      getSessionSafely()
+        .then(({ session }) => hasUnreadReleases(session?.user?.id ?? null))
+        .then(setHasUnread)
+        .catch(() => {})
+    }, []),
+  )
   const bannerRef = useRef<ScrollView>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -297,6 +309,7 @@ export default function HomeScreen() {
             <Text style={s.dateLabel}>{dateLabel}</Text>
             <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications' as any)}>
               <NotificationIcon color={colors.navIcon} />
+              {hasUnread && <View style={s.redDot} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -629,6 +642,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     dateLabel: { fontSize: 13, fontWeight: '500', color: c.bodyText },
     notifBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+    redDot: { position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
     controlHeight: { height: 56 },
 
     card: {

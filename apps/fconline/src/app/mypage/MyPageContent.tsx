@@ -134,6 +134,7 @@ export const privacyContent = [
   '- 서비스 이용 과정에서 자동 생성되는 정보: 접속 기록, IP 일부 정보, 기기/브라우저 정보, 오류 기록, 이용 로그',
   '- 알림 기능 이용 시: 푸시 알림 구독 정보 및 기기 식별 정보',
   '- 문의 또는 신고 접수 시: 이용자가 직접 제출한 정보',
+  '- 서비스 이용 통계 수집 시: 익명 방문자 식별자(UUID, 브라우저 로컬에 저장) 및 방문 페이지 경로. 특정 개인을 식별하는 데 사용되지 않으며 서비스 개선 목적으로만 활용됩니다.',
   '서비스는 원칙적으로 주민등록번호, 실명, 생년월일, 휴대전화번호와 같은 민감하거나 불필요한 개인정보를 수집하지 않는 방향으로 운영합니다. 다만 추후 기능 변경으로 수집 항목이 달라질 경우, 앱 또는 관련 문서를 통해 고지합니다.',
   '3. 개인정보의 처리 목적',
   '수집한 정보는 다음 목적 범위에서만 이용합니다.',
@@ -164,7 +165,7 @@ export const privacyContent = [
   '- [Supabase](https://supabase.com): 데이터 저장 및 인증 서비스',
   '- [Vercel](https://vercel.com): 배포 및 호스팅 서비스',
   '- [Nexon Open API](https://openapi.nexon.com/ko/): 게임 데이터 조회를 위한 외부 API',
-  '- [Telegram](https://telegram.org): 문의 접수 운영자 알림',
+  '- [Telegram](https://telegram.org): 문의 접수 운영자 알림. 이용자가 문의하기 기능을 사용할 경우, 문의 유형·제목·내용·연락수단·접수 시각이 운영자 알림 목적으로 Telegram으로 전송됩니다. 전송된 내용은 운영자 확인 후 별도로 저장되지 않습니다.',
   '- Upstash (Redis): API 요청 빈도 제한(레이트리밋) 처리를 위한 임시 IP 기록',
   '- 기타 서비스 운영에 필요한 클라우드 또는 인프라 서비스',
   '이 과정에서 서비스 운영에 필요한 최소 범위의 정보가 관련 인프라를 통해 처리될 수 있습니다.',
@@ -726,6 +727,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
   }, [isEditingNickname, isEditingGameClubName])
 
   const handleGoogleLogin = async () => {
+    const popup = window.open('about:blank', '_blank')
     try {
       setIsAuthPending(true)
 
@@ -735,6 +737,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
         provider: 'google',
         options: {
           redirectTo,
+          skipBrowserRedirect: true,
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
@@ -743,16 +746,24 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
       })
 
       if (error) {
+        popup?.close()
         throw error
       }
 
       if (data.url) {
-        window.location.assign(data.url)
+        if (popup) {
+          popup.location.href = data.url
+        } else {
+          window.location.assign(data.url)
+        }
+        setIsAuthPending(false)
         return
       }
 
+      popup?.close()
       throw new Error('로그인 이동 URL을 만들지 못했습니다.')
     } catch (error) {
+      popup?.close()
       window.alert(error instanceof Error ? error.message : 'Google 로그인을 시작하지 못했습니다.')
       setIsAuthPending(false)
     }
@@ -1345,7 +1356,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                         type="button"
                         onClick={handleGoogleLogin}
                         disabled={isAuthPending || isAuthLoading}
-                        className="mt-1 h-10 gap-0 rounded-xl border px-0 text-sm font-medium"
+                        className="mt-1 h-10 gap-0 rounded-xl border px-0 text-sm font-medium cursor-pointer"
                         style={googleLoginButtonStyle}
                       >
                         <span className="flex items-center gap-[10px] pl-3 pr-3">
@@ -1541,7 +1552,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
                 setIsEditingGameClubName(true)
               }}
               aria-label={isGameClubNameRegistered ? '게임 구단주명 변경하기' : '게임 구단주명 등록하기'}
-              className="shrink-0 text-sm font-medium"
+              className="shrink-0 text-sm font-medium cursor-pointer"
               style={mutedStyle}
             >
               {isGameClubNameRegistered ? '변경하기' : '등록하기'}
@@ -1595,7 +1606,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
 
                 router.push('/mypage/favorites')
               }}
-              className="shrink-0 text-sm font-medium"
+              className="shrink-0 text-sm font-medium cursor-pointer"
               style={mutedStyle}
             >
               자세히보기
@@ -1696,7 +1707,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               type="button"
               onClick={() => setIsContactModalOpen(true)}
               aria-label="문의하기"
-              className="shrink-0 text-sm font-medium"
+              className="shrink-0 text-sm font-medium cursor-pointer"
               style={mutedStyle}
             >
               문의하기
@@ -1704,11 +1715,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </div>
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section className="rounded-lg overflow-hidden" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsLicenseOpen((current) => !current)}
-            className="block w-full text-left"
+            className="block w-full text-left px-5 py-4 cursor-pointer"
             aria-expanded={isLicenseOpen}
           >
             <p className={`text-sm font-medium ${isLicenseOpen ? '' : 'underline underline-offset-2'}`} style={mutedStyle}>
@@ -1717,7 +1728,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </button>
 
           {isLicenseOpen ? (
-            <div className="mt-3 space-y-2">
+            <div className="px-5 pb-4 space-y-2">
               {openSourceLicenses.map((license) => (
                 <a
                   key={license.name}
@@ -1737,11 +1748,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           ) : null}
         </section>
 
-        <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section className="rounded-lg overflow-hidden" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsTermsOpen((current) => !current)}
-            className="block w-full text-left"
+            className="block w-full text-left px-5 py-4 cursor-pointer"
             aria-expanded={isTermsOpen}
           >
             <p className="text-sm font-medium" style={mutedStyle}>
@@ -1750,7 +1761,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </button>
 
           {isTermsOpen ? (
-            <div className="mt-3 space-y-2">
+            <div className="px-5 pb-4 space-y-2">
               {termsContent.map((item) => (
                 <p key={item} className="text-[12px] font-medium leading-[1.5]" style={bodyStyle}>
                   {item}
@@ -1760,11 +1771,11 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           ) : null}
         </section>
 
-        <section ref={privacySectionRef} className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
+        <section ref={privacySectionRef} className="rounded-lg overflow-hidden" style={{ ...cardStyle, ...surfaceTransitionStyle }}>
           <button
             type="button"
             onClick={() => setIsPrivacyOpen((current) => !current)}
-            className="block w-full text-left"
+            className="block w-full text-left px-5 py-4 cursor-pointer"
             aria-expanded={isPrivacyOpen}
           >
             <p className="text-sm font-medium" style={mutedStyle}>
@@ -1773,7 +1784,7 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
           </button>
 
           {isPrivacyOpen ? (
-            <div className="mt-3 space-y-2">
+            <div className="px-5 pb-4 space-y-2">
               {privacyContent.map((item) => (
                 <p key={item} className="text-[12px] font-medium leading-[1.5]" style={bodyStyle}>
                   {renderPolicyLine(item)}
@@ -1781,7 +1792,6 @@ export function MyPageContent({ initialPrivacyOpen = false }: { initialPrivacyOp
               ))}
             </div>
           ) : null}
-
         </section>
 
         <section className="rounded-lg px-5 py-4" style={{ ...cardStyle, ...surfaceTransitionStyle }}>

@@ -49,6 +49,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: #f0f3f5;
   --app-theme-transition: 180ms ease;
   --app-body-bg: #f0f3f5;
@@ -157,6 +158,7 @@
 }
 
 html.app-dark-mode {
+  color-scheme: dark;
   --app-body-bg: #121318;
   --app-shell-bg: #121318;
   --app-page-bg: #121318;
@@ -278,9 +280,11 @@ html.app-dark-mode {
 
   body {
     @apply bg-background text-foreground;
+    background-color: var(--app-body-bg);
   }
   html {
     @apply font-sans;
+    background-color: var(--app-body-bg);
   }
 
   body,

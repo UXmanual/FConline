@@ -40,6 +40,7 @@ import { configureGoogleSignIn, signOutFromGoogle } from '@/lib/googleSignIn'
 import { Text } from '@/components/Themed'
 import { SkeletonBox } from '@/components/Skeleton'
 import { pickDefaultAvatar } from '@/lib/avatar'
+import { fetchReleaseFeed } from '@/lib/releaseNotifications'
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
@@ -81,7 +82,6 @@ function getLevelColor(level?: number | null): string {
 }
 
 
-const APP_VERSION = '0.2.0'
 
 async function registerExpoPushToken(userId: string | null) {
   try {
@@ -107,15 +107,23 @@ export default function MypageScreen() {
   const themeToggleTranslateX = useRef(new Animated.Value(isDark ? 24 : 0)).current
 
   useEffect(() => {
-    themeToggleTranslateX.setValue(isDark ? 24 : 0)
-  }, [isDark, themeToggleTranslateX])
-
-  useEffect(() => {
     try {
       configureGoogleSignIn()
     } catch {}
   }, [])
 
+  useEffect(() => {
+    fetchReleaseFeed()
+      .then((feed) => {
+        if (feed.length > 0) {
+          const version = feed[0].id.replace('release-', '')
+          setLatestVersion(version)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const [latestVersion, setLatestVersion] = useState('')
   const [notifGranted, setNotifGranted] = useState(false)
   const [notifPending, setNotifPending] = useState(false)
   const notifToggleTranslateX = useRef(new Animated.Value(0)).current
@@ -578,7 +586,7 @@ export default function MypageScreen() {
         <View style={s.card}>
           <View style={s.settingRowCompact}>
             <Text style={[s.settingLabel, { color: colors.bodyText }]}>버전</Text>
-            <Text style={[s.settingValue, { color: colors.mutedText }]}>{APP_VERSION}</Text>
+            <Text style={[s.settingValue, { color: colors.mutedText }]}>{latestVersion || '-'}</Text>
           </View>
         </View>
 
@@ -661,11 +669,12 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
       width: 64,
       height: 28,
       borderRadius: 999,
-      padding: 3,
-      justifyContent: 'center',
       flexShrink: 0,
     },
     themeToggleThumb: {
+      position: 'absolute',
+      top: 3,
+      left: 3,
       width: 34,
       height: 22,
       borderRadius: 999,

@@ -81,17 +81,17 @@ export default function AppChrome() {
       {showFooter ? (
         <>
           <div
-            className="px-5 pb-0.5 text-left text-[11px] leading-5"
+            className="px-5 pb-0.5 -mt-2 text-left text-[11px] leading-[1.4]"
             style={{
               backgroundColor: 'var(--app-page-bg)',
               color: 'var(--app-footer-text)',
               transition: 'background-color 180ms ease, color 180ms ease',
             }}
           >
-            {'API 선수 정보 및 관련 이미지 저작권은 NEXON Korea Corporation에 있습니다.'}
+            {'FconlineGround는 비공식 애플리케이션입니다. 본 애플리케이션은 EA Sports 및 NEXON의 공식 승인을 받지 않았으며, 공식 의견이나 관리와는 무관합니다. 애플리케이션 내에 포함된 FC 온라인 관련 이미지는 EA Sports 및 NEXON의 고유 재산이자 등록 상표입니다. 본 애플리케이션은 어떠한 저작권 침해 의도도 없음을 밝힙니다.'}
           </div>
           <footer
-            className="px-5 pb-4 text-left text-xs font-medium tracking-[0.02em]"
+            className="px-5 pt-2 pb-4 text-left text-xs font-medium tracking-[0.02em]"
             style={{
               paddingBottom: mypageFooterPaddingBottom,
               backgroundColor: 'var(--app-page-bg)',
@@ -99,7 +99,7 @@ export default function AppChrome() {
               transition: 'background-color 180ms ease, color 180ms ease',
             }}
           >
-            {'\u00A9uxdmanual'}
+            {'Data provided by NEXON Open API'}
           </footer>
         </>
       ) : null}

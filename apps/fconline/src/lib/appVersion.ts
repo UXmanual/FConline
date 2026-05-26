@@ -3,6 +3,8 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.5': '2026-05-26T11:30:00+09:00',
+  '0.2.4': '2026-05-26T10:00:00+09:00',
   '0.2.3': '2026-05-20T18:05:00+09:00',
   '0.2.2': '2026-05-20T17:41:47+09:00',
   '0.2.0': '2026-05-19T18:40:00+09:00',
@@ -15,6 +17,14 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.5': [
+    '개인정보처리방침을 업데이트했습니다. 문의하기 기능 이용 시 Telegram으로 전송되는 정보 항목과 서비스 이용 통계 수집 방식을 구체적으로 명시했습니다.',
+    '마이페이지 하단에 비공식 앱 고지문을 추가했습니다.',
+    '마이페이지 아코디언 터치 영역과 주요 버튼 인터랙션을 개선했습니다.',
+  ],
+  '0.2.4': [
+    '마이페이지 푸터 문구를 업데이트했습니다.',
+  ],
   '0.2.3': [
     'Vercel 설정에서 Next.js 기본 빌드 산출물 감지를 방해할 수 있는 출력 디렉터리 강제 지정을 제거해 배포 안정성을 높였습니다.',
     '프로덕션 배포가 앱 루트와 Next.js 기본 출력 경로를 기준으로 일관되게 해석되도록 정리해 Routes Manifest 계열 배포 오류 재발 가능성을 낮췄습니다.',
