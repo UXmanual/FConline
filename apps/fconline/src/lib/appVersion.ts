@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.6': '2026-05-27T12:00:00+09:00',
   '0.2.5': '2026-05-26T11:30:00+09:00',
   '0.2.4': '2026-05-26T10:00:00+09:00',
   '0.2.3': '2026-05-20T18:05:00+09:00',
@@ -17,6 +18,13 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.6': [
+    '마이페이지 하단에 비공식 앱 고지문과 데이터 출처를 추가했습니다.',
+    '하단 네비게이션 선수 탭을 누르면 항상 선수 메인 화면으로 이동하도록 수정했습니다. 선수 검색 중 탭을 누르면 검색 상태도 초기화됩니다.',
+    '홈 알림 레드닷이 로그인 후 알림 확인 시 사라지지 않던 문제를 수정했습니다.',
+    '경기 분석 탭 텍스트 도입부 구조를 다양화했습니다.',
+    '문의하기 카테고리 선택 스타일을 커뮤니티 글쓰기와 통일했습니다.',
+  ],
   '0.2.5': [
     '개인정보처리방침을 업데이트했습니다. 문의하기 기능 이용 시 Telegram으로 전송되는 정보 항목과 서비스 이용 통계 수집 방식을 구체적으로 명시했습니다.',
     '마이페이지 하단에 비공식 앱 고지문을 추가했습니다.',

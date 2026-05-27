@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router'
+import { Tabs, router } from 'expo-router'
 import { Pressable, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
@@ -101,6 +101,12 @@ export default function TabLayout() {
         options={{
           title: '선수',
           tabBarIcon: ({ focused }) => <PlayerIcon size={22} color={focused ? c.navActive : c.navIcon} />,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault()
+            router.navigate('/(tabs)/players')
+          },
         }}
       />
       <Tabs.Screen

@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
+import { useScrollToTop, useFocusEffect, useNavigation } from '@react-navigation/native'
 import { useNavigationCover } from '@/lib/useNavigationCover'
 import Feather from '@expo/vector-icons/Feather'
 import { useTheme } from '@/hooks/useTheme'
@@ -135,6 +135,21 @@ export default function PlayersScreen() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  const navigation = useNavigation()
+  useEffect(() => {
+    const parent = navigation.getParent()
+    if (!parent) return
+    const unsubscribe = parent.addListener('tabPress' as never, () => {
+      setQuery('')
+      setSearchQuery('')
+      setSearchFocused(false)
+      searchInputRef.current?.blur()
+      Keyboard.dismiss()
+      scrollRef.current?.scrollTo({ y: 0, animated: false })
+    })
+    return unsubscribe
+  }, [navigation])
 
   useFocusEffect(
     useCallback(() => {

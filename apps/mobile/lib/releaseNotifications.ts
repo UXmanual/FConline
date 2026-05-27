@@ -30,7 +30,7 @@ export async function fetchReleaseFeed(): Promise<ReleaseItem[]> {
 }
 
 function seenKey(userId: string) {
-  return `${SEEN_KEY_PREFIX}:${userId}`
+  return `${SEEN_KEY_PREFIX}_${userId}`
 }
 
 export async function getSeenTimestamp(userId: string): Promise<number> {

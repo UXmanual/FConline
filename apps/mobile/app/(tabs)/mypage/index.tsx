@@ -11,7 +11,6 @@ import {
   Platform,
   UIManager,
   PermissionsAndroid,
-  InteractionManager,
 } from 'react-native'
 import * as ExpoNotifications from 'expo-notifications'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
@@ -45,6 +44,7 @@ import { fetchReleaseFeed } from '@/lib/releaseNotifications'
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true)
 }
+
 
 function GoogleIcon() {
   return (
@@ -128,20 +128,12 @@ export default function MypageScreen() {
   const [notifPending, setNotifPending] = useState(false)
   const notifToggleTranslateX = useRef(new Animated.Value(0)).current
 
-  const isNavigatingRef = useRef(false)
   const fetchCancelledRef = useRef(false)
   const navigate = useCallback((href: Parameters<typeof router.push>[0]) => {
-    isNavigatingRef.current = true
-    fetchCancelledRef.current = true
-    const savedOffset = scrollOffsetRef.current
-    if (savedOffset > 0) {
-      scrollRef.current?.scrollTo({ y: savedOffset, animated: false })
-    }
     router.push(href)
   }, [])
   const s = styles(colors, isDark)
   const scrollRef = useRef<ScrollView>(null)
-  const scrollOffsetRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -240,22 +232,8 @@ export default function MypageScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCancelledRef.current = false
-      isNavigatingRef.current = false
-      const offset = scrollOffsetRef.current
-      if (offset > 0) {
-        scrollRef.current?.scrollTo({ y: offset, animated: false })
-        requestAnimationFrame(() => {
-          scrollRef.current?.scrollTo({ y: offset, animated: false })
-        })
-      }
-
-      // 내비게이션 애니메이션 완료 후 프로필 갱신 (전환 중 리렌더 방지)
       if (profileInitialized.current) {
-        const task = InteractionManager.runAfterInteractions(() => {
-          void fetchProfile(false)
-        })
-        return () => task.cancel()
+        void fetchProfile(false)
       }
     }, [fetchProfile]),
   )
@@ -373,9 +351,7 @@ export default function MypageScreen() {
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingBottom: tabBarHeight + 12 }]}
         showsVerticalScrollIndicator={false}
-        scrollsToTop={false}
-        onScroll={(e) => { if (!isNavigatingRef.current) scrollOffsetRef.current = e.nativeEvent.contentOffset.y }}
-        scrollEventThrottle={16}
+
       >
         {/* 헤더 */}
         <View style={s.sectionHeader}>
@@ -603,6 +579,14 @@ export default function MypageScreen() {
             </View>
           </TouchableOpacity>
         )}
+
+        {/* 푸터 고지문 */}
+        <View style={s.footer}>
+          <Text style={[s.footerText, { color: colors.mutedText }]}>
+            {'FconlineGround는 비공식 애플리케이션입니다. 본 애플리케이션은 EA Sports 및 NEXON의 공식 승인을 받지 않았으며, 공식 의견이나 관리와는 무관합니다. 애플리케이션 내에 포함된 FC 온라인 관련 이미지는 EA Sports 및 NEXON의 고유 재산이자 등록 상표입니다. 본 애플리케이션은 어떠한 저작권 침해 의도도 없음을 밝힙니다.'}
+          </Text>
+          <Text style={[s.footerData, { color: colors.mutedText }]}>{'Data provided by NEXON Open API'}</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -680,4 +664,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors'], isDark: boolean) =>
       borderRadius: 999,
       backgroundColor: '#ffffff',
     },
+    footer: { paddingTop: 4 },
+    footerText: { fontSize: 11, lineHeight: 16, fontWeight: '400' },
+    footerData: { fontSize: 11, fontWeight: '500', marginTop: 6 },
   })

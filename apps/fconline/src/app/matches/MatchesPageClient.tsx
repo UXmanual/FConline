@@ -1589,7 +1589,21 @@ function formatRank(rank: number, total: number) {
   return `${total}명 중 ${rank}위`
 }
 
+function seedHash(matchId: string, salt: number): number {
+  let h = (salt + 1) * 2654435761
+  for (let i = 0; i < matchId.length; i++) {
+    h = Math.imul(h ^ matchId.charCodeAt(i), 2246822519)
+    h ^= h >>> 13
+  }
+  return h >>> 0
+}
+
+function pick<T>(matchId: string, salt: number, variants: T[]): T {
+  return variants[seedHash(matchId, salt) % variants.length]
+}
+
 function buildMatchInsight(
+  matchId: string,
   teams: NonNullable<ReturnType<typeof buildVoltaTeams>>,
   focusPlayer: MatchPlayerInfo = teams.me,
 ) {
@@ -1663,222 +1677,226 @@ function buildMatchInsight(
 
   if (meMetrics.goals > 0) {
     if (goalShare >= 0.5) {
-      addObservation(
-        99,
-        'good',
-        `${formatMetricNumber(meMetrics.goals)}골로 팀 득점의 ${Math.round(goalShare * 100)}%를 책임졌습니다. 마무리 비중이 절대적이었고, 이런 경기에선 같은 위치를 계속 밟기보다 주변 지원을 더 받아 슈팅 수까지 늘리면 영향력이 더 커질 수 있습니다.`,
-      )
+      addObservation(99, 'good', pick(matchId, 1, [
+        `팀 득점의 ${Math.round(goalShare * 100)}%를 혼자 책임졌습니다. ${formatMetricNumber(meMetrics.goals)}골은 단순 마무리가 아니라 공격 흐름의 중심축 역할을 맡은 결과입니다.`,
+        `이 경기 공격의 핵심은 이 선수였습니다. ${formatMetricNumber(meMetrics.goals)}골로 팀 득점의 ${Math.round(goalShare * 100)}%를 담당했고, 그만큼 상대 수비 자원도 집중됐을 가능성이 큽니다.`,
+        `${formatMetricNumber(meMetrics.goals)}골, 팀 득점의 ${Math.round(goalShare * 100)}%. 이 비중은 단순히 골을 넣었다는 게 아니라 팀 공격 패턴 자체를 지탱했다는 의미입니다.`,
+      ]))
     } else if (meMetrics.goals === teamGoalTop) {
-      addObservation(
-        93,
-        'good',
-        `${formatMetricNumber(meMetrics.goals)}골로 팀 내 득점 ${formatRank(goalRank, teammateCount)}였습니다. 결정적인 장면을 살린 건 분명 강점이고, 다음 단계는 골 장면 외 빌드업 관여까지 넓혀 존재감을 경기 전체로 확장하는 것입니다.`,
-      )
+      addObservation(93, 'good', pick(matchId, 2, [
+        `팀 내 가장 많은 득점을 기록했습니다. 결정적 장면에서 흘리지 않은 감각이 이 경기의 핵심 기여였습니다.`,
+        `${formatMetricNumber(meMetrics.goals)}골로 팀 득점 선두였습니다. 찬스가 왔을 때 흘리지 않은 게 결과를 만들었고, 같은 루틴을 유지하는 게 다음 경기에서도 중요합니다.`,
+        `득점 ${formatRank(goalRank, teammateCount)}, 팀에서 가장 골을 많이 넣은 자원이었습니다. 마무리 역할 외에 빌드업 관여까지 넓히면 영향력이 더 커집니다.`,
+      ]))
     } else {
-      addObservation(
-        78,
-        'good',
-        `${formatMetricNumber(meMetrics.goals)}골로 공격 포인트는 만들었습니다. 다만 득점 비중이 압도적이진 않아, 마무리 이후의 연계나 세컨드 액션까지 같이 만들면 더 높은 평가로 이어질 수 있습니다.`,
-      )
+      addObservation(78, 'good', pick(matchId, 3, [
+        `득점 기록은 남겼지만 팀 내 비중까지 크지는 않았습니다. 마무리 이후 세컨드 액션이나 연계까지 더하면 평가가 달라질 경기였습니다.`,
+        `${formatMetricNumber(meMetrics.goals)}골, 찬스가 왔을 때 포착한 감각은 좋았습니다. 같은 상황에서 슈팅 각도를 더 적극적으로 만들어가면 기여가 더 커집니다.`,
+        `공격 포인트는 만들었습니다. 다만 득점 관여도를 더 끌어올리려면 슈팅 시도 자체를 늘리거나 연결 플레이를 붙이는 방향이 필요합니다.`,
+      ]))
     }
   } else if (meMetrics.shots >= 4) {
-    addObservation(
-      96,
-      'bad',
-      `슈팅 ${formatMetricNumber(meMetrics.shots)}회로 시도량은 충분했지만 무득점이었습니다. 공격 위치 선정은 나쁘지 않았다는 뜻이라, 마무리 각도와 첫 터치 안정감만 보완돼도 결과가 크게 달라질 경기였습니다.`,
-    )
+    addObservation(96, 'bad', pick(matchId, 4, [
+      `${formatMetricNumber(meMetrics.shots)}회나 슈팅했지만 무득점이었습니다. 위치 선정은 됐는데 마무리에서 계속 빗나갔다는 뜻입니다. 슈팅 각도와 첫 터치 안정감을 점검해볼 필요가 있습니다.`,
+      `슈팅 시도량은 충분했지만 골이 나오지 않았습니다. 찬스를 만드는 능력은 있다는 긍정적 신호이지만, 슈팅 직전 선택 시점이나 방향을 다시 돌아볼 필요가 있습니다.`,
+      `공격 참여는 많았지만 결과로 연결되지 않은 경기였습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}회 무득점이라면 슈팅 선택 시점 또는 자세 문제일 가능성이 높습니다.`,
+    ]))
   } else if (meMetrics.shots <= 1 && passAttempts <= 5) {
-    addObservation(
-      90,
-      'bad',
-      `슈팅 ${formatMetricNumber(meMetrics.shots)}회, 패스 시도 ${formatMetricNumber(passAttempts)}회에 그쳐 공격 흐름에 깊게 개입하지 못했습니다. 다음 경기에서는 최소한 볼을 받는 위치를 한 줄 더 앞으로 잡을 필요가 있습니다.`,
-    )
+    addObservation(90, 'bad', pick(matchId, 5, [
+      `공격 흐름에 깊게 개입하지 못한 경기였습니다. 슈팅과 패스 시도 모두 적어, 볼을 받는 위치 자체를 한 줄 더 앞에서 잡는 것부터 다시 볼 필요가 있습니다.`,
+      `볼 터치가 눈에 띄게 적었습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}회, 패스 ${formatMetricNumber(passAttempts)}회라면 포지셔닝이나 참여 타이밍이 계속 늦었을 가능성이 높습니다.`,
+      `이 경기에서 공격 흐름에 포함된 장면이 많지 않았습니다. 오프더볼 움직임을 더 능동적으로 가져가지 않으면 같은 패턴이 반복될 수 있습니다.`,
+    ]))
   }
 
   if (effectiveShotRate !== null && meMetrics.shots >= 3) {
     if (effectiveShotRate >= 70 && meMetrics.effectiveShots === teamEffectiveShotTop) {
-      addObservation(
-        87,
-        'good',
+      addObservation(87, 'good', pick(matchId, 6, [
         `유효슛 비율이 ${effectiveShotRate}%로 높았고 유효슛 수 역시 팀 내 ${formatRank(effectiveShotRank, teammateCount)}였습니다. 슈팅 질은 좋았고, 같은 빈도만 유지되면 득점 기대값도 계속 올라갈 경기력이었습니다.`,
-      )
+        `슈팅 ${formatMetricNumber(meMetrics.shots)}회 중 ${effectiveShotRate}%가 유효슛으로 이어졌고, 팀 안에서도 가장 위협적인 슈팅을 만들었습니다. 무리한 각도에서 당기지 않고 제대로 된 타이밍을 잡은 결과입니다.`,
+        `유효슛 비율 ${effectiveShotRate}%, 팀 내 유효슛 수 최상위. 슈팅 선택 자체가 좋았다는 뜻이고, 이 패턴이 득점과 연결되는 경기가 늘어나면 자연스럽게 기록도 따라옵니다.`,
+      ]))
     } else if (effectiveShotRate <= 35) {
-      addObservation(
-        88,
-        'bad',
+      addObservation(88, 'bad', pick(matchId, 7, [
         `슈팅 ${formatMetricNumber(meMetrics.shots)}회 중 유효슛이 ${formatMetricNumber(effectiveShots)}회뿐이었습니다. 무리한 각도에서 빠르게 마무리한 장면이 많았을 가능성이 높아, 한 템포 더 끌고 가는 선택이 필요합니다.`,
-      )
+        `슈팅 시도 대비 유효슛 비율이 ${effectiveShotRate}%에 그쳤습니다. 횟수는 있었지만 골키퍼를 실제로 위협한 장면이 적었다는 의미입니다. 각도가 열리기 전에 당기는 습관이 있다면 고쳐야 할 시점입니다.`,
+        `유효슛 ${formatMetricNumber(effectiveShots)}개/${formatMetricNumber(meMetrics.shots)}개. 슈팅 타이밍이나 방향 선택에 문제가 있었다는 신호입니다. 한 발 더 들어가서 마무리하거나, 더 중앙에서 잡아 슈팅하는 패턴을 고려해볼 수 있습니다.`,
+      ]))
     }
   }
 
   if (meMetrics.goals > 0 && meMetrics.shots >= 3) {
     if (shotConversion >= 50) {
-      addObservation(
-        82,
-        'good',
+      addObservation(82, 'good', pick(matchId, 8, [
         `슈팅 대비 득점 전환율이 ${shotConversion}%로 높았습니다. 많은 찬스를 요구하지 않고 결과를 냈다는 점이 장점이고, 이런 유형은 동료와의 연계가 붙으면 더 무서워집니다.`,
-      )
+        `시도 두 번 중 하나 이상을 득점으로 바꿨습니다. 전환율 ${shotConversion}%는 슈팅 선택 자체가 좋았다는 뜻입니다. 이 감각을 유지하면서 시도 횟수를 조금만 더 늘리면 득점 기록이 더 빠르게 쌓입니다.`,
+        `득점 전환율 ${shotConversion}%. 여러 번 시도해서 결과 낸 게 아니라, 더 적은 기회에서 정확하게 골로 끝냈습니다. 이 유형은 좋은 패스를 받을 수 있는 위치를 먼저 만드는 게 핵심입니다.`,
+      ]))
     } else if (shotConversion <= 25) {
-      addObservation(
-        79,
-        'bad',
+      addObservation(79, 'bad', pick(matchId, 9, [
         `득점은 있었지만 슈팅 대비 득점 전환율이 ${shotConversion}%에 그쳤습니다. 기록상으론 골 결정력보다 시도 누적에 가까워 보여, 마지막 선택의 정교함은 더 다듬을 여지가 있습니다.`,
-      )
+        `슈팅 ${formatMetricNumber(meMetrics.shots)}회에 득점 ${formatMetricNumber(meMetrics.goals)}개면 전환율 ${shotConversion}%. 골은 났지만 슈팅 낭비가 많았다는 뜻이기도 합니다. 유효슛 위주로 슈팅 선택을 조이면 같은 찬스에서 더 많은 결과가 나올 수 있습니다.`,
+        `전환율 ${shotConversion}%는 득점이 있어도 마무리 효율이 높았다고 보기 어려운 수치입니다. 찬스를 만드는 힘은 있는데 마지막 순간 선택이 아쉬운 패턴이라, 슈팅 타이밍 앞에 한 번 더 생각하는 습관이 필요합니다.`,
+      ]))
     }
   }
 
   if (meMetrics.passRate !== null && passAttempts >= 8) {
     if (teammateAvgPassRate > 0 && meMetrics.passRate >= teammateAvgPassRate + 8) {
-      addObservation(
-        81,
-        'good',
+      addObservation(81, 'good', pick(matchId, 10, [
         `패스 성공률 ${meMetrics.passRate}%로 팀 평균보다 연결 안정감이 높았습니다. 단순 안전 패스만 돌린 게 아니라면 빌드업 밸런서를 맡을 만한 기록이고, 전진 패스 비중만 더 붙으면 가치가 더 커집니다.`,
-      )
+        `팀 평균 대비 패스 성공률이 확실히 높았습니다. ${meMetrics.passRate}%는 이 팀에서 볼 배급 안정성을 책임지는 역할로 봐도 될 수치입니다. 전달 안정성에 공격 지향성이 더 붙으면 경기 운영 중심축이 될 수 있습니다.`,
+        `패스 성공률 ${meMetrics.passRate}%, 팀 평균을 크게 웃도는 연결 퀄리티였습니다. 볼 소유 구간에서 실수가 적었고, 이 패턴은 흐름을 잡는 데 기여합니다. 여기에 전진 패스나 공격 전환 연결이 더해지면 완성도가 올라갑니다.`,
+      ]))
     } else if (teammateAvgPassRate > 0 && meMetrics.passRate <= teammateAvgPassRate - 8) {
-      addObservation(
-        85,
-        'bad',
+      addObservation(85, 'bad', pick(matchId, 11, [
         `패스 성공률 ${meMetrics.passRate}%는 팀 평균보다 확실히 낮았습니다. 볼을 오래 끌거나 무리한 찔러주기가 많았을 가능성이 있어, 리턴 패스와 방향 전환 패스를 먼저 안정화할 필요가 있습니다.`,
-      )
+        `팀 평균 패스 성공률보다 낮은 ${meMetrics.passRate}%였습니다. 전개 과정에서 볼 손실이 반복됐다면, 찬스를 스스로 끊고 있는 셈입니다. 난도 높은 패스보다 안정적인 연결 우선으로 패턴을 바꿔야 합니다.`,
+        `패스 성공률이 팀 내에서 낮은 편이었습니다. ${meMetrics.passRate}%면 볼이 들어왔을 때 처리가 불안정했다는 뜻입니다. 첫 터치와 패스 방향을 단순화하는 것만으로도 이 수치는 빠르게 올라갈 수 있습니다.`,
+      ]))
     } else if (meMetrics.passRate < 75) {
-      addObservation(
-        74,
-        'bad',
+      addObservation(74, 'bad', pick(matchId, 12, [
         `패스 참여도는 있었지만 성공률 ${meMetrics.passRate}%로 전개 완성도는 아쉬웠습니다. 같은 터치 수라도 한 번에 풀어가려 하기보다 짧게 끊어 주는 선택이 더 효율적이었을 경기입니다.`,
-      )
+        `패스를 시도는 했지만 ${meMetrics.passRate}%의 성공률은 아쉬운 수치입니다. 볼을 받아서 연결하는 역할을 하려 했다면, 더 쉬운 패스 선택지를 찾는 습관이 선행돼야 합니다.`,
+        `연결 시도 자체는 있었지만 성공률이 ${meMetrics.passRate}%로 충분하지 않았습니다. 어려운 각도에서 억지로 연결하려 했거나, 타이밍이 한 박자 늦었을 가능성이 있습니다.`,
+      ]))
     } else if (passAttempts >= 14 && passVolumeShare >= 1.3) {
-      addObservation(
-        72,
-        'good',
+      addObservation(72, 'good', pick(matchId, 13, [
         `패스 시도 ${formatMetricNumber(passAttempts)}회로 팀 평균보다 공을 더 많이 받았습니다. 전개 중심축 역할은 해냈고, 다음 단계는 그 점유를 공격 포인트로 연결하는 것입니다.`,
-      )
+        `팀에서 가장 많이 볼을 다룬 선수에 가까웠습니다. 패스 ${formatMetricNumber(passAttempts)}회의 참여도는 경기 흐름을 쥐는 유형에 가까우며, 이 볼터치를 마무리 장면으로 연결하는 게 다음 목표입니다.`,
+        `패스 관여 ${formatMetricNumber(passAttempts)}회. 팀 안에서 볼 순환 중심 역할을 했습니다. 흐름을 다루는 건 잘 했지만, 이 참여도가 실제 찬스 생산으로 이어지려면 전진 패스와 템포 조절이 더 필요합니다.`,
+      ]))
     }
   } else if (passAttempts <= 4 && meMetrics.goals === 0 && meMetrics.dribble <= 1) {
-    addObservation(
-      82,
-      'bad',
+    addObservation(82, 'bad', pick(matchId, 14, [
       `패스 관여와 전진 시도가 모두 적어 경기 흐름 안으로 충분히 들어오지 못했습니다. 오프더볼 움직임으로 패스 각을 먼저 만드는 접근이 필요해 보입니다.`,
-    )
+      `이 경기에서 볼을 잡는 빈도 자체가 너무 낮았습니다. 패스도 드리블도 골도 없다면, 경기 흐름에 거의 참여하지 못한 것과 같습니다. 먼저 볼을 받을 수 있는 위치로 이동하는 습관부터 시작해야 합니다.`,
+      `공격 관여 지표 전반이 낮았습니다. 볼이 오지 않았다면 요구를 더 적극적으로 해야 하고, 왔는데 처리가 안 됐다면 첫 터치 준비가 부족했을 수 있습니다.`,
+    ]))
   }
 
   if (meMetrics.dribble >= Math.max(4, teammateAvgDribble + 2) && meMetrics.dribble === teamDribbleTop) {
-    addObservation(
-      75,
-      'good',
+    addObservation(75, 'good', pick(matchId, 15, [
       `드리블 ${formatMetricNumber(meMetrics.dribble)}회로 팀 내 ${formatRank(dribbleRank, teammateCount)}였습니다. 직접 전진해 공간을 여는 역할은 분명했고, 마지막 패스나 슈팅까지 이어졌다면 평가가 더 높아질 수 있었습니다.`,
-    )
+      `팀에서 드리블 돌파를 가장 많이 만들어낸 쪽이었습니다. ${formatMetricNumber(meMetrics.dribble)}회의 전진 시도는 공간을 직접 여는 역할이었고, 이 에너지가 슈팅이나 연계로 마무리되면 훨씬 위협적인 자원이 됩니다.`,
+      `드리블 ${formatMetricNumber(meMetrics.dribble)}회, 팀 내 최상위. 1대1 상황에서 뚫어가는 힘이 있다는 뜻입니다. 드리블 이후 슈팅으로 끝내는 비중이 늘면 위협도가 배가 됩니다.`,
+    ]))
   } else if (meMetrics.dribble <= 1 && meMetrics.shots <= teammateAvgShots) {
-    addObservation(
-      71,
-      'bad',
+    addObservation(71, 'bad', pick(matchId, 16, [
       `드리블 돌파와 직접 전진 시도가 적어 스스로 장면을 만드는 힘은 약했습니다. 볼을 받을 때 등을 지는 플레이보다 전방을 보고 받는 장면을 늘릴 필요가 있습니다.`,
-    )
+      `직접 상대를 제치거나 돌파를 시도한 장면이 거의 없었습니다. 패스와 슈팅도 낮다면 이 경기에서 위협적인 장면 자체를 거의 만들지 못한 셈입니다.`,
+      `드리블 시도가 낮고 슈팅도 팀 평균 이하였습니다. 볼을 가지고 뭔가를 하는 장면이 부족했던 경기입니다. 다음에는 볼을 받는 순간 전진 방향부터 먼저 잡고 움직이는 패턴을 가져가볼 만합니다.`,
+    ]))
   }
 
   if (tackleCount >= 3) {
     addObservation(
       meMetrics.tackleRate !== null && meMetrics.tackleRate >= 55 ? 73 : 68,
       meMetrics.tackleRate !== null && meMetrics.tackleRate >= 55 ? 'good' : 'neutral',
-      `태클 성공 ${formatMetricNumber(tackleCount)}회로 수비 경합 참여는 꾸준했습니다. 경합 빈도 자체는 장점이라, 압박 타이밍만 더 정리되면 수비 영향력을 한 단계 더 끌어올릴 수 있습니다.`,
+      pick(matchId, 17, [
+        `태클 성공 ${formatMetricNumber(tackleCount)}회로 수비 경합 참여는 꾸준했습니다. 경합 빈도 자체는 장점이라, 압박 타이밍만 더 정리되면 수비 영향력을 한 단계 더 끌어올릴 수 있습니다.`,
+        `${formatMetricNumber(tackleCount)}번의 태클 성공은 볼을 빼앗는 역할을 능동적으로 했다는 의미입니다. 이 정도 수비 참여는 경기 흐름에서 분명히 티가 납니다. 볼 탈취 후 빠른 전환과 연결하면 역습 시발점이 될 수 있습니다.`,
+        `수비 경합에서 태클 성공 ${formatMetricNumber(tackleCount)}회를 기록했습니다. 쉽게 밀리지 않는 수비 근성은 장점이고, 이걸 볼 탈취 후 빠른 전환과 연결하면 역습 시발점이 됩니다.`,
+      ])
     )
   } else if (meMetrics.tackleTry !== null && meMetrics.tackleTry > 0 && tackleCount === 0) {
-    addObservation(
-      76,
-      'bad',
+    addObservation(76, 'bad', pick(matchId, 18, [
       `태클 시도는 있었지만 성공 기록이 남지 않았습니다. 수비 반응이 늦었다기보다 들어가는 각도가 좋지 않았을 가능성이 커, 정면 경합보다 커버 위치 조정이 우선입니다.`,
-    )
+      `수비 경합 시도는 있었지만 볼을 실제로 빼앗은 장면은 없었습니다. 적극성은 있었는데 타이밍이나 방향이 아직 정교하지 않다는 뜻입니다.`,
+      `태클을 시도했지만 성공으로 이어지지 않았습니다. 달려드는 의지는 좋지만, 상대 움직임을 읽고 차단 각도를 잡는 것이 더 효율적인 수비로 이어집니다.`,
+    ]))
   }
 
   if (meMetrics.blockRate !== null && meMetrics.blockTry >= 2) {
     if (meMetrics.blockRate >= 60) {
-      addObservation(
-        70,
-        'good',
+      addObservation(70, 'good', pick(matchId, 19, [
         `차단 성공률 ${formatPercent(meMetrics.blockRate)}로 상대 전개를 끊는 장면이 있었습니다. 적극적인 수비 개입이 보였고, 이후 세컨드볼 처리까지 붙으면 더 완성도 높은 수비가 됩니다.`,
-      )
+        `차단 성공률 ${formatPercent(meMetrics.blockRate)}는 수비 위치 선정이 좋았다는 증거입니다. 무작정 달려드는 게 아니라 패스 길목을 읽은 결과로 볼 수 있습니다.`,
+        `${formatPercent(meMetrics.blockRate)}의 차단 성공률. 압박과 예측이 같이 작동하고 있다는 뜻입니다. 이 정도면 수비 기여가 분명히 있었고, 차단 이후 볼 배급까지 연결하면 더 효과적입니다.`,
+      ]))
     } else if (meMetrics.blockRate <= 35) {
-      addObservation(
-        72,
-        'bad',
+      addObservation(72, 'bad', pick(matchId, 20, [
         `차단 성공률 ${formatPercent(meMetrics.blockRate)}로 압박은 들어갔지만 실제 차단으로 이어지는 비율이 낮았습니다. 달려들기보다 패스길 예측을 먼저 가져가는 쪽이 더 효율적일 수 있습니다.`,
-      )
+        `수비 시도는 있었지만 차단 성공률 ${formatPercent(meMetrics.blockRate)}는 아쉽습니다. 움직임 자체는 있었지만 실제 볼을 막는 위치까지 도달하는 데 타이밍이 맞지 않았을 가능성이 있습니다.`,
+        `차단 시도 대비 성공률이 ${formatPercent(meMetrics.blockRate)}에 그쳤습니다. 압박 타이밍을 좀 더 늦추거나 상대의 다음 패스 방향을 먼저 읽는 접근이 더 나을 수 있습니다.`,
+      ]))
     }
   } else if (blockCount >= 2) {
-    addObservation(
-      64,
-      'good',
+    addObservation(64, 'good', pick(matchId, 21, [
       `차단 성공 ${formatMetricNumber(blockCount)}회로 상대 패스 흐름을 실제로 끊어냈습니다. 수비 개입 타이밍은 나쁘지 않았고, 이후 볼 처리만 더 안정되면 역습 출발점 역할도 가능합니다.`,
-    )
+      `${formatMetricNumber(blockCount)}번의 차단 성공. 상대 전개를 끊는 역할을 어느 정도 해냈습니다. 차단 이후 빠른 볼 배급까지 연결하면 더 효과적입니다.`,
+      `패스 차단 ${formatMetricNumber(blockCount)}회는 능동적 위치 선정의 결과입니다. 수비 기여가 분명히 있었고, 비슷한 패턴을 경기 전반에 유지하면 실점 억제에 직결됩니다.`,
+    ]))
   }
 
   if (meMetrics.rating >= Math.max(7.5, teammateAvgRating + 0.5)) {
-    addObservation(
-      84,
-      'good',
+    addObservation(84, 'good', pick(matchId, 22, [
       `평점 ${formatMetricNumber(meMetrics.rating, 2)}로 팀 내 ${formatRank(ratingRank, teammateCount)}였습니다. 단순 수치가 아니라 경기 전반 존재감이 높았다는 뜻이라, 이 경기에서는 맡은 역할을 확실히 수행했습니다.`,
-    )
+      `평점 ${formatMetricNumber(meMetrics.rating, 2)}는 팀 안에서도 상위권이었습니다. 특정 지표만이 아니라 여러 부분에서 고르게 기여했다는 종합 신호입니다.`,
+      `이 경기에서 팀 내 최상위 평점 그룹에 들었습니다. ${formatMetricNumber(meMetrics.rating, 2)}는 득점이나 어시스트만이 아닌 수비 경합, 패스, 포지셔닝까지 두루 작동한 결과입니다.`,
+    ]))
   } else if (meMetrics.rating > 0 && meMetrics.rating <= Math.max(6.5, teammateAvgRating - 0.5)) {
-    addObservation(
-      88,
-      'bad',
+    addObservation(88, 'bad', pick(matchId, 23, [
       `평점 ${formatMetricNumber(meMetrics.rating, 2)}로 팀 내 ${formatRank(ratingRank, teammateCount)}에 머물렀습니다. 기록 전반이 평균 이하였다는 뜻이라, 한 가지 강점 지표라도 뚜렷하게 만드는 방향이 필요합니다.`,
-    )
+      `팀 내 평점 하위권이었습니다. ${formatMetricNumber(meMetrics.rating, 2)}는 이 경기에서 대부분의 지표가 기대치를 밑돌았다는 뜻입니다. 어떤 항목에서 가장 큰 손실이 있었는지 돌아보는 게 다음 경기 준비의 출발점입니다.`,
+      `평점 ${formatMetricNumber(meMetrics.rating, 2)}, 팀 내 하위권. 잘한 장면보다 아쉬운 장면이 더 많이 쌓인 경기였습니다. 한 번에 전부 바꾸려 하지 말고, 가장 잦은 실수 유형 하나를 먼저 고치는 게 효과적입니다.`,
+    ]))
   }
 
   if (isWin && meMetrics.rating >= teammateAvgRating && meMetrics.goals === 0 && passAttempts >= 8) {
-    addObservation(
-      67,
-      'good',
+    addObservation(67, 'good', pick(matchId, 24, [
       `득점 기록이 없어도 승리 경기에서 평균 이상 평점을 받았습니다. 마무리보다 연결과 운영 기여가 있었던 유형으로 볼 수 있어, 이런 경기는 보조 역할 완성도가 장점입니다.`,
-    )
+      `무득점이었지만 팀 승리에서 평균 이상의 역할을 해냈습니다. 골보다 흐름을 만드는 쪽에 기여한 경기였고, 이런 유형의 선수는 팀 구성에 따라 매우 중요한 존재가 됩니다.`,
+      `득점 없이도 팀 내 평균 이상 평점. 수치로 잘 드러나지 않는 연결, 압박, 위치 선정에서 기여가 있었다는 뜻입니다. 이런 경기가 쌓이면 팀 내 역할이 더 명확해집니다.`,
+    ]))
   }
 
   if (isLoss && meMetrics.goals > 0 && perspectiveOpponentScore - perspectiveMyScore >= 2) {
-    addObservation(
-      77,
-      'neutral',
+    addObservation(77, 'neutral', pick(matchId, 25, [
       `팀은 패했지만 득점 기록은 남겼습니다. 개인 마무리는 있었으나 경기 전체 흐름을 뒤집을 만큼 연결되진 못한 경기였고, 수비 전환이나 볼 소유 단계 기여가 더 필요했습니다.`,
-    )
+      `패배 경기였지만 개인 득점은 있었습니다. 팀 전체의 흐름이 어려웠고, 혼자 득점으로 만회하기에는 한계가 있었습니다. 수비 기여나 볼 탈취까지 범위를 넓혀야 하는 경기였습니다.`,
+      `결과는 패배였지만 개인 기록은 남았습니다. 득점 외에 수비 기여나 패스 연결이 더 붙었다면 흐름을 바꿀 가능성도 있었습니다. 팀이 어려울 때 더 다양한 역할로 기여하는 게 다음 과제입니다.`,
+    ]))
   }
 
   if (isHighScoring && meMetrics.goals === 0 && meMetrics.shots <= 1) {
-    addObservation(
-      83,
-      'bad',
+    addObservation(83, 'bad', pick(matchId, 26, [
       `득점이 많이 나온 경기 흐름이었는데 공격 관여는 낮았습니다. 팀이 찬스를 만들던 날에 개인 기록이 비어 있다는 점은 아쉬워, 박스 근처 진입 타이밍을 더 공격적으로 가져갈 필요가 있습니다.`,
-    )
+      `전체적으로 골이 많이 터진 경기였는데 이 선수의 공격 포인트는 없었습니다. 같은 흐름 안에 있었는데 개입이 적었다면, 위치 선정이나 움직임 타이밍을 다시 볼 필요가 있습니다.`,
+      `다득점 경기에서 슈팅이나 득점이 없었습니다. 팀 전체가 찬스를 만들고 있었는데 그 흐름에서 빠져 있었다면, 공격 가담 타이밍이나 전진 움직임을 더 적극적으로 가져가야 합니다.`,
+    ]))
   }
 
   if (isLowScoring && meMetrics.passRate !== null && meMetrics.passRate >= 85 && meMetrics.goals === 0) {
-    addObservation(
-      63,
-      'neutral',
+    addObservation(63, 'neutral', pick(matchId, 27, [
       `저득점 경기에서 패스 성공률 ${meMetrics.passRate}%로 실수는 적었습니다. 다만 안정감이 공격 압박으로 연결되진 않아, 다음에는 전진 패스 한두 번을 더 과감하게 시도해볼 만합니다.`,
-    )
+      `골이 잘 안 나온 경기에서 패스는 안정적으로 연결했습니다. ${meMetrics.passRate}%의 성공률은 실수가 적었다는 뜻이지만, 이 안정성이 공격 전환으로 연결되지 않으면 득점이 늘어나기 어렵습니다.`,
+      `저득점 흐름 속에서 패스 성공률은 ${meMetrics.passRate}%로 높았습니다. 볼 소유 시 안정성은 있었지만, 이 정확도가 전진 패스나 공격 침투로 이어지지 않은 경기였습니다.`,
+    ]))
   }
 
   if (opponentGoalTop >= 2 && meMetrics.goals === 0) {
-    addObservation(
-      80,
-      'bad',
+    addObservation(80, 'bad', pick(matchId, 28, [
       `상대 쪽에서는 다득점 선수가 나왔는데 이쪽은 공격 포인트가 없었습니다. 맞대응 카드가 되지 못한 경기라, 최소 슈팅 수부터 늘리는 방향이 우선입니다.`,
-    )
+      `상대에 득점 폭발 자원이 있었는데 이쪽은 무득점이었습니다. 공격 무게 차가 분명했습니다. 찬스를 만드는 방향부터 다시 잡아야 합니다.`,
+      `상대 팀에서 다득점 선수가 나왔던 경기입니다. 반대쪽 득점 기록이 없었던 만큼, 공격 균형이 일방적이었을 가능성이 높습니다. 슈팅 시도 자체를 늘리는 것부터 시작해야 합니다.`,
+    ]))
   }
 
   if (opponentShotTop >= 4 && meMetrics.shots <= 1) {
-    addObservation(
-      69,
-      'bad',
+    addObservation(69, 'bad', pick(matchId, 29, [
       `상대 핵심 자원은 슈팅을 계속 만들었는데 이쪽은 시도 자체가 적었습니다. 기록상 가장 큰 차이는 마무리보다 '장면 진입 횟수'였습니다.`,
-    )
+      `상대가 슈팅을 쌓는 동안 이쪽은 공격 장면 자체를 거의 만들지 못했습니다. 수비에 치우친 구조였거나 공격 위치로 올라가는 타이밍이 늦었을 수 있습니다.`,
+      `슈팅 시도 횟수 자체에서 큰 차이가 났습니다. 상대는 여러 번 위협했는데 이쪽은 시도가 없었다면, 경기 자체가 한쪽으로 흐른 셈입니다. 공격 기회를 만드는 연결과 움직임이 우선 과제입니다.`,
+    ]))
   }
 
   if (opponentDribbleTop >= 4 && meMetrics.dribble <= 1) {
-    addObservation(
-      64,
-      'bad',
+    addObservation(64, 'bad', pick(matchId, 30, [
       `상대는 드리블로 경기 흐름을 흔들었지만 이쪽은 볼 운반이 거의 없었습니다. 압박을 받더라도 첫 터치 이후 전진 선택지를 더 만들어야 합니다.`,
-    )
+      `상대가 드리블로 경기를 풀어가는 동안 이쪽은 개인 돌파 시도가 없었습니다. 1대1 상황에서 더 적극적으로 치고 나가는 선택이 필요했습니다.`,
+      `드리블 비교에서 상대가 우위였습니다. 이쪽이 볼 운반을 거의 하지 않으면서 공격 루트가 한정됐을 가능성이 있습니다. 볼을 잡고 전진 방향을 먼저 만들어두는 습관을 가져가야 합니다.`,
+    ]))
   }
 
   if (
@@ -1886,33 +1904,33 @@ function buildMatchInsight(
     meMetrics.goals === 0 &&
     meMetrics.rating <= opponentRatingTop - 1
   ) {
-    addObservation(
-      83,
-      'bad',
+    addObservation(83, 'bad', pick(matchId, 31, [
       `상대 핵심 자원들에 비해 존재감이 밀렸습니다. 다실점 경기에서 개인 영향력까지 낮으면 체감보다 기록 평가는 더 박해질 수밖에 없습니다.`,
-    )
+      `상대가 다득점한 경기에서 공격 포인트도, 평점도 상대 핵심 선수들에 비해 낮았습니다. 팀 전체가 힘들었더라도 개인 기여를 더 명확하게 만들어야 하는 상황이었습니다.`,
+      `대량 실점 경기에서 개인 기록까지 좋지 않았습니다. 이런 경기에서는 작은 기여 하나라도 만들어내는 것이 중요합니다.`,
+    ]))
   }
 
   if (meMetrics.yellowCards > 0 || meMetrics.redCards > 0) {
-    addObservation(
-      78,
-      'bad',
+    addObservation(78, 'bad', pick(matchId, 32, [
       '카드 관리는 분명한 감점 요소였습니다. 수비 기여를 하더라도 위험한 반칙이 섞이면 전체 평가는 바로 깎이기 때문에, 압박 타이밍 조절이 필요합니다.',
-    )
+      `카드를 받은 건 분명 감점입니다. 수비 의지나 적극성이 문제가 아니라, 어느 순간 무리한 압박이 들어갔다는 뜻입니다. 상황 판단을 한 박자 더 여유 있게 가져가야 합니다.`,
+      `경고나 퇴장은 경기 평가에서 중요한 감점 포인트입니다. 압박 타이밍이 늦거나 무리한 태클이 원인이었다면, 먼저 위치를 잡고 기다리는 수비 패턴을 더 연습할 필요가 있습니다.`,
+    ]))
   } else if (meMetrics.fouls >= 3) {
-    addObservation(
-      68,
-      'bad',
+    addObservation(68, 'bad', pick(matchId, 33, [
       `파울 ${formatMetricNumber(meMetrics.fouls)}회로 수비 타이밍이 거칠었습니다. 적극성은 있었지만 불필요한 끊김이 많아, 몸을 먼저 붙이기보다 공간을 먼저 막는 선택이 더 나았을 경기입니다.`,
-    )
+      `파울 ${formatMetricNumber(meMetrics.fouls)}회. 적극적이었지만 상대에게 공격 기회를 너무 많이 돌려준 셈이 됩니다. 파울 빈도가 높으면 경기 흐름이 계속 끊기고 수비 리듬도 무너질 수 있습니다.`,
+      `${formatMetricNumber(meMetrics.fouls)}번의 파울은 많은 편입니다. 수비 의지는 좋았지만 체중 이동이나 타이밍이 맞지 않았을 가능성이 높습니다. 경합보다 위치 선점을 우선하는 접근이 파울을 줄이는 데 도움이 됩니다.`,
+    ]))
   }
 
   if (meMetrics.goals === 0 && meMetrics.shots === 0 && passAttempts <= 3 && meMetrics.rating <= 6.5) {
-    addObservation(
-      95,
-      'bad',
+    addObservation(95, 'bad', pick(matchId, 34, [
       '득점, 슈팅, 패스 관여가 모두 낮았습니다. 기록상으로는 경기 흐름에 실질적인 흔적을 거의 남기지 못한 편이고, 다음 경기에서는 한 가지 역할이라도 분명히 가져가는 게 중요합니다.',
-    )
+      '공격, 수비, 연결 지표 전체가 이 경기에서 거의 없었습니다. 경기에 나섰지만 흐름 안에 있지 않은 경기였습니다. 다음에는 볼을 요구하는 움직임부터 시작해야 합니다.',
+      '주요 지표가 전부 낮습니다. 전술적 포지션 문제일 수도 있고, 개인 적극성 문제일 수도 있습니다. 어느 쪽이든 경기 안에서 최소한의 흔적을 남기는 것이 다음 목표가 되어야 합니다.',
+    ]))
   }
 
   if (
@@ -1922,11 +1940,11 @@ function buildMatchInsight(
     meMetrics.passRate >= 80 &&
     meMetrics.rating >= 7
   ) {
-    addObservation(
-      66,
-      'neutral',
+    addObservation(66, 'neutral', pick(matchId, 35, [
       `공격 포인트는 없었지만 슈팅과 패스 지표는 일정 수준 이상이었습니다. 기록만 보면 '조금만 더 정교했으면 좋은 경기'에 가까워, 세부 마무리나 마지막 선택이 성과를 가른 경우로 보입니다.`,
-    )
+      `득점은 없었지만 슈팅 시도와 패스 연결 모두 나쁘지 않았습니다. 노력은 분명히 있었고, 결정적 장면에서 한 번만 더 날카로웠다면 결과가 달랐을 수 있습니다.`,
+      `무득점이었지만 슈팅과 패스 모두 일정 기준을 넘었습니다. 흐름에 참여는 했지만 마지막 선택이 아쉬웠습니다. 결정적 순간 집중력을 높이는 것이 과제입니다.`,
+    ]))
   }
 
   observations.sort((a, b) => b.score - a.score)
@@ -1936,10 +1954,14 @@ function buildMatchInsight(
     return picked
   }
 
-  return ['기록 대부분이 팀 평균 부근에 모여 있어 눈에 띄는 장점과 약점이 크게 갈리진 않았습니다. 이런 경기는 한 가지 역할이라도 더 선명하게 만드는 쪽이 다음 평가를 바꿉니다.']
+  return [pick(matchId, 99, [
+    '기록 대부분이 팀 평균 부근에 모여 있어 눈에 띄는 장점과 약점이 크게 갈리진 않았습니다. 이런 경기는 한 가지 역할이라도 더 선명하게 만드는 쪽이 다음 평가를 바꿉니다.',
+    '이 경기는 뚜렷하게 잘한 것도, 확실히 부족한 것도 없었습니다. 고른 경기력은 안정성의 표시이기도 하지만, 하나라도 강점으로 뽑힐 지표를 만들어가는 게 목표입니다.',
+    '특별히 두드러진 기록 없이 평범한 수준에서 경기를 마쳤습니다. 존재감을 더 분명히 만들기 위한 방향성이 필요합니다.',
+  ])]
 }
 
-function buildOfficialMatchInsight(teams: NonNullable<ReturnType<typeof buildOfficialTeams>>) {
+function buildOfficialMatchInsight(matchId: string, teams: NonNullable<ReturnType<typeof buildOfficialTeams>>) {
   const meMetrics = getOfficialPlayerMetrics(teams.me)
   const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
   const lines: Array<{ priority: number; text: string }> = []
@@ -1971,148 +1993,172 @@ function buildOfficialMatchInsight(teams: NonNullable<ReturnType<typeof buildOff
 
   if (isWin) {
     if (effectiveShotGap >= 2) {
-      addLine(
-        120,
-        `스코어는 ${teams.myScore}:${teams.opponentScore} 승리였고, 유효슛이 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 분명히 앞섰습니다. 이 경기는 단순히 운이 아니라 찬스 질 자체에서 우위를 만든 승리였습니다.`,
-      )
+      addLine(120, pick(matchId, 101, [
+        `스코어는 ${teams.myScore}:${teams.opponentScore} 승리였고, 유효슛이 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 분명히 앞섰습니다. 운이 아닌 경기력 차이가 결과를 만들었습니다.`,
+        `유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}. 상대보다 골문 정면에서 더 많은 위협을 만들었고, 그 차이가 스코어에 그대로 반영됐습니다.`,
+        `위험한 슈팅을 더 많이, 더 정확하게 만들어낸 경기였습니다. 유효슛 우위가 이 경기 승리의 핵심 이유입니다.`,
+      ]))
     } else if (shotGap < 0) {
-      addLine(
-        118,
-        `슈팅 수는 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}로 밀렸는데도 ${teams.myScore}:${teams.opponentScore}로 이겼습니다. 볼을 오래 잡거나 많이 때린 경기라기보다, 적은 기회를 더 정확하게 끝낸 효율 승리에 가깝습니다.`,
-      )
+      addLine(118, pick(matchId, 102, [
+        `슈팅 수는 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}로 밀렸지만 결과는 승리였습니다. 횟수가 아닌 질로 승부한 경기입니다.`,
+        `적게 때리고 더 많이 넣었습니다. 슈팅 수는 상대에 뒤졌지만, 만든 기회를 더 냉정하게 끝냈습니다. 이런 효율이 쌓이면 강한 상대에게도 통합니다.`,
+        `볼 점유나 슈팅 횟수보다 결정적 기회에서의 마무리 정확도가 승부를 갈랐습니다. ${teams.myScore}:${teams.opponentScore}의 결과가 그 증거입니다.`,
+      ]))
     } else {
-      addLine(
-        116,
-        `스코어 ${teams.myScore}:${teams.opponentScore} 승리입니다. 지표 전체를 압도한 경기까지는 아니어도, 적어도 결정적인 순간의 선택과 마무리는 상대보다 낫게 가져갔습니다.`,
-      )
+      addLine(116, pick(matchId, 103, [
+        `전체 수치가 압도적이진 않았어도, 결정적 순간의 선택은 상대보다 나았습니다. ${teams.myScore}:${teams.opponentScore} 승리의 본질입니다.`,
+        `숫자만으론 쉬운 경기가 아니었지만, 중요한 장면마다 더 집중했고 그 차이가 스코어로 남았습니다.`,
+        `지표상 실력 차이가 크지 않았던 경기입니다. 결국 한두 번의 결정적 순간에서 상대보다 침착하게 대응한 쪽이 이겼습니다.`,
+      ]))
     }
   } else if (isLoss) {
     if (shotGap >= 0 && effectiveShotGap >= 0) {
-      addLine(
-        120,
-        `슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 기회 수는 밀리지 않았는데 ${teams.myScore}:${teams.opponentScore}로 패했습니다. 이 경기는 전개보다 마무리 효율과 박스 안 결정력이 결과를 망친 쪽에 가깝습니다.`,
-      )
+      addLine(120, pick(matchId, 104, [
+        `찬스는 충분히 만들었습니다. 슈팅도, 유효슛도 상대에 밀리지 않았는데 패배였습니다. 마무리 정확도가 결과를 갈랐습니다.`,
+        `기회를 많이 만들고도 졌습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}, 전개는 됐지만 박스 안 결정력에서 상대에 뒤졌습니다.`,
+        `내용과 결과가 따로 논 경기입니다. 공격 전개는 충분히 만들었지만, 결정적 장면의 마무리 선택이 아쉬움을 남겼고 ${teams.myScore}:${teams.opponentScore}로 끝났습니다.`,
+      ]))
     } else if (shotGap <= -3 || effectiveShotGap <= -2) {
-      addLine(
-        118,
-        `패배 원인이 비교적 명확합니다. 슈팅이 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛이 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}로 밀려 공격 장면 자체를 덜 만들었습니다. 이번 경기는 마무리 이전에 진입 횟수부터 부족했습니다.`,
-      )
+      addLine(118, pick(matchId, 105, [
+        `이번 패배는 마무리 이전 단계가 더 문제였습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 상대에 비해 박스 근처까지 도달한 횟수 자체가 적었습니다.`,
+        `공격 흐름이 끊기는 장면이 많았던 경기입니다. 슈팅과 유효슛 모두 상대에 뒤진 수치가 그 흔적이고, ${teams.myScore}:${teams.opponentScore} 결과는 필연에 가깝습니다.`,
+        `찬스를 만들지 못했습니다. 슈팅 횟수와 유효슛 모두 상대에 밀렸고, 공격 빌드업과 침투 타이밍에서 전반적으로 한 발씩 늦었습니다.`,
+      ]))
     } else {
-      addLine(
-        116,
-        `스코어는 ${teams.myScore}:${teams.opponentScore} 패배입니다. 전체 흐름이 완전히 한쪽으로 기운 경기는 아니었지만, 결정적 장면 한두 번에서 상대보다 덜 날카로웠고 그 차이가 그대로 점수 차로 남았습니다.`,
-      )
+      addLine(116, pick(matchId, 106, [
+        `큰 차이가 나는 일방적인 경기는 아니었지만, 결정적 장면 한두 번에서 상대보다 덜 날카로웠습니다. 그 차이가 ${teams.myScore}:${teams.opponentScore} 결과를 만들었습니다.`,
+        `팽팽한 흐름이었지만 승리로 연결하지 못했습니다. 한두 장면에서의 집중력 차이가 스코어를 갈랐습니다.`,
+        `지표만 보면 크게 패배할 경기가 아니었습니다. 하지만 몇 번의 결정적 순간에서 한 발 늦었고, 그 대가가 컸습니다.`,
+      ]))
     }
   } else if (shotGap !== 0 || effectiveShotGap !== 0) {
-    addLine(
-      112,
-      `무승부지만 내용은 완전히 대등하지 않았습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)} 흐름을 보면, 다음 경기에서 먼저 한 골을 넣을 쪽이 누구였는지 힌트는 남은 경기였습니다.`,
-    )
+    addLine(112, pick(matchId, 107, [
+      `무승부지만 내용은 완전히 대등하지 않았습니다. 슈팅 ${formatMetricNumber(meMetrics.shots)}대${formatMetricNumber(opponentMetrics.shots)}, 유효슛 ${formatMetricNumber(meMetrics.effectiveShots)}대${formatMetricNumber(opponentMetrics.effectiveShots)}, 어느 쪽이 더 위협적이었는지 흐름은 분명히 있었습니다.`,
+      `양 팀이 비겼지만 공격 내용에서는 차이가 있었습니다. 유효슛 비교가 이 경기의 실제 무게 중심을 보여줍니다. 다음 대결이 있다면 이 흐름이 이어질 가능성이 높습니다.`,
+      `스코어는 같았지만 경기 내용까지 균등했던 건 아닙니다. 슈팅과 유효슛 수치에서 드러나는 공격 주도권 차이가 무승부를 다르게 읽게 만듭니다.`,
+    ]))
   } else {
-    addLine(
-      108,
+    addLine(108, pick(matchId, 108, [
       `무승부 경기였습니다. 스코어뿐 아니라 주요 공격 지표도 비슷해서, 세부 운영 완성도 하나가 승부를 갈랐을 법한 팽팽한 흐름이었습니다.`,
-    )
+      `무승부. 공격 지표도, 수비 지표도 고르게 팽팽했습니다. 이런 경기에서는 작은 실수 하나, 혹은 찬스 하나가 승패를 가릅니다. 더 날카로운 마무리 선택이 필요합니다.`,
+      `접전이었습니다. 양쪽 지표가 비슷해서 무승부로 끝난 경기입니다. 이런 경기를 승리로 바꾸는 열쇠는 결정적 순간의 침착함입니다.`,
+    ]))
   }
 
   if (shotGap >= 3 && effectiveShotGap <= 0) {
-    addLine(
-      110,
+    addLine(110, pick(matchId, 109, [
       `슈팅은 더 많이 가져갔는데 유효슛 우위로 이어지지 않았습니다. 숫자만 보면 공격 시도는 있었지만, 박스 안에서 급하게 끝내거나 각도가 없는 슛이 많았다는 뜻입니다. 같은 점유를 가져가더라도 '언제 때리느냐'를 더 까다롭게 골라야 합니다.`,
-    )
+      `슈팅 시도는 많았지만 유효슛으로 이어진 비율이 낮았습니다. 많이 때렸다고 반드시 위협적인 게 아닙니다. 각도 없는 슈팅보다 유효슛 한 개가 더 가치 있습니다. 슈팅 선택 기준을 높일 필요가 있습니다.`,
+      `슈팅 횟수에서 앞섰지만 유효슛은 따라오지 않았습니다. 많이 시도했지만 위협적인 장면은 적었다는 뜻입니다. 슈팅을 줄이더라도 골문 정면에서 더 정확한 슈팅을 선택하는 게 더 효율적입니다.`,
+    ]))
   } else if (shotGap <= -3 && effectiveShotGap >= 0) {
-    addLine(
-      106,
+    addLine(106, pick(matchId, 110, [
       `슈팅 총량은 적었지만 유효슛 격차는 크지 않았습니다. 많은 장면을 만드는 팀은 아니었지만, 들어간 공격은 비교적 날카로웠다는 뜻입니다. 다만 이 패턴은 한두 번만 막혀도 바로 득점력이 끊겨서, 공격 볼륨을 조금 더 늘릴 필요가 있습니다.`,
-    )
+      `슈팅 수는 적었지만 유효슛 비율은 나쁘지 않았습니다. 적은 기회를 잘 활용하는 스타일이었지만, 이 방식은 위험 부담이 큽니다. 찬스를 조금 더 자주 만들어야 안정적인 득점력이 생깁니다.`,
+      `총 슈팅 수에서 뒤졌지만 유효슛에서는 경쟁력이 있었습니다. 빈도보다 질로 승부한 경기였지만, 절대적인 찬스 부족으로 이어질 수 있습니다. 공격 참여 빈도를 늘리는 게 숙제입니다.`,
+    ]))
   }
 
   if (myConversion === 0 && meMetrics.shots >= 5) {
-    addLine(
-      114,
+    addLine(114, pick(matchId, 111, [
       `슈팅을 ${formatMetricNumber(meMetrics.shots)}개 만들고도 무득점이었습니다. 공격이 안 풀렸다기보다, 마무리 선택이 계속 빗나간 경기로 보는 편이 더 정확합니다. 골문 정면으로 끝낸 슛이 적었다면 박스 안 첫 터치와 슈팅 타이밍부터 다시 봐야 합니다.`,
-    )
+      `${formatMetricNumber(meMetrics.shots)}번이나 슈팅을 했는데 한 골도 못 넣었습니다. 찬스 자체는 나왔는데 마무리가 반복적으로 아쉬웠습니다. 슈팅 위치 선정과 임팩트 순간의 집중력을 특히 돌아봐야 합니다.`,
+      `슈팅 ${formatMetricNumber(meMetrics.shots)}회 무득점. 공격 의지는 있었지만 결과로 연결이 안 됐습니다. 슈팅 선택 시점이나 각도 문제일 가능성이 높습니다. 어떤 위치에서 어떻게 마무리했는지 되짚어볼 필요가 있습니다.`,
+    ]))
   } else if (myConversion + 18 < opponentConversion && opponentMetrics.goals > 0) {
-    addLine(
-      112,
+    addLine(112, pick(matchId, 112, [
       `결정력 차이가 컸습니다. 내 슈팅 대비 득점 전환율은 ${formatPercent(myConversion)}인데 상대는 ${formatPercent(opponentConversion)}였습니다. 같은 몇 번의 찬스라도 상대가 더 값비싸게 쓴 셈이라, 이 경기는 수비보다 마무리 쪽 손실이 더 크게 보입니다.`,
-    )
+      `전환율 차이가 이 경기의 핵심이었습니다. ${formatPercent(myConversion)} 대 ${formatPercent(opponentConversion)}. 상대는 적은 기회를 더 확실하게 득점으로 바꿨고, 이쪽은 그러지 못했습니다. 마무리 집중력이 분명히 차이가 났습니다.`,
+      `같은 수의 슈팅이어도 전환율이 다르면 결과가 달라집니다. 상대 ${formatPercent(opponentConversion)}에 비해 ${formatPercent(myConversion)}는 낮은 수치입니다. 마무리 패턴 개선이 시급합니다.`,
+    ]))
   } else if (myConversion >= 30 && meMetrics.goals > 0) {
-    addLine(
-      98,
+    addLine(98, pick(matchId, 113, [
       `득점 전환율이 ${formatPercent(myConversion)}로 높았습니다. 슛 수가 아주 많지 않아도 유효한 장면을 골로 바꾸는 효율은 괜찮았고, 이 감각을 유지한 채 공격 볼륨만 늘리면 결과가 더 안정될 수 있습니다.`,
-    )
+      `전환율 ${formatPercent(myConversion)}. 슈팅이 많지 않아도 제대로 된 슈팅에서 골을 만들어냈습니다. 이 패턴을 유지하면서 공격 참여 빈도를 높이면 자연스럽게 득점 기회도 늘어납니다.`,
+      `득점 전환율 ${formatPercent(myConversion)}는 효율 좋은 마무리를 했다는 뜻입니다. 많이 때려서 하나를 넣은 게 아니라, 선택적으로 제대로 된 슈팅에서 결과를 낸 경기입니다. 이 감각을 유지하는 게 핵심입니다.`,
+    ]))
   }
 
   if (possessionGap >= 8 && effectiveShotGap <= 0) {
-    addLine(
-      111,
+    addLine(111, pick(matchId, 114, [
       `점유율은 ${formatMetricNumber(meMetrics.possession)}%로 우위였지만, 그 점유가 유효슛 우위로는 연결되지 않았습니다. 볼은 오래 들고 있었는데 상대 수비를 더 아프게 찌르지는 못한, 소유형 정체 구간이 있었다고 보는 게 맞습니다.`,
-    )
+      `볼을 더 많이 가졌지만 더 위험한 슈팅을 만들지는 못했습니다. 점유 ${formatMetricNumber(meMetrics.possession)}%는 높지만, 그 점유가 공격 위협으로 연결되지 않으면 의미가 반감됩니다. 점유보다 전진 패스와 침투 타이밍이 더 중요했습니다.`,
+      `점유율 ${formatMetricNumber(meMetrics.possession)}%로 앞섰지만 유효슛에서는 우위를 못 만들었습니다. 볼을 돌리는 건 됐지만 상대 수비를 흔드는 데까지 연결되지 않았습니다. 점유의 목적을 공격 기회 창출에 더 집중해야 합니다.`,
+    ]))
   } else if (possessionGap <= -8 && effectiveShotGap >= 0) {
-    addLine(
-      103,
+    addLine(103, pick(matchId, 115, [
       `점유율은 내줬지만 유효슛 내용은 크게 밀리지 않았습니다. 볼을 오래 쥐는 운영보다 탈취 후 빠르게 전진하는 패턴이 더 잘 먹힌 경기였고, 괜히 점유를 맞추려 하기보다 전환 속도를 살리는 편이 더 맞는 흐름이었습니다.`,
-    )
+      `점유율을 내줬지만 유효슛에서 경쟁력이 있었습니다. 역습과 전환 공격이 이 팀 스타일에 더 맞았던 경기입니다. 점유보다 전환 속도를 더 살리면 이 패턴이 더 효율적으로 작동합니다.`,
+      `볼을 오래 가진 쪽은 상대였지만, 유효슛은 밀리지 않았습니다. 역습이나 빠른 전환에서 위협을 만들어냈다는 뜻입니다. 이 장점을 더 일관되게 실행하면 점유 없이도 경기를 풀어갈 수 있습니다.`,
+    ]))
   } else if (possessionGap <= -10 && isLoss) {
-    addLine(
-      109,
+    addLine(109, pick(matchId, 116, [
       `점유율이 ${formatMetricNumber(opponentMetrics.possession)}%까지 넘어가며 흐름을 너무 오래 상대에게 줬습니다. 수비 숫자를 맞춰도 결국 다시 공을 뺏기면 계속 눌리기 때문에, 첫 번째 전진 패스 성공률을 끌어올리는 게 우선입니다.`,
-    )
+      `점유율에서 크게 밀렸습니다. 상대가 볼을 오래 가진 만큼 계속 수비 상황이 반복됐을 가능성이 높습니다. 전환 패스와 볼 유지 능력을 높이는 것이 흐름을 바꾸는 출발점입니다.`,
+      `점유율 ${formatMetricNumber(meMetrics.possession)}%에 그쳐 거의 수비만 한 경기였습니다. 볼을 가지고 있지 않으면 공격 기회가 줄어들고, 결국 패배로 이어지는 구조입니다. 볼 소유 시간을 늘리기 위한 구체적인 전략이 필요합니다.`,
+    ]))
   }
 
   if (passGap != null) {
     const myPassRate = meMetrics.passRate ?? 0
 
     if (passGap <= -6) {
-      addLine(
-        110,
+      addLine(110, pick(matchId, 117, [
         `패스 성공률이 ${formatPercent(myPassRate)}로 상대보다 낮았습니다. 공격 템포를 올리려는 의도는 있었겠지만, 실제론 전개 안정성을 잃어버려 흐름을 오래 못 잡았습니다. 이번 경기는 무리한 직선 패스보다 한 번 더 풀어가는 선택이 필요했습니다.`,
-      )
+        `패스 성공률 ${formatPercent(myPassRate)}는 상대보다 낮습니다. 볼 전개에서 반복적으로 끊겼다는 뜻이고, 그 손실이 공격 기회를 줄이는 데 영향을 줬을 가능성이 큽니다. 패스 난도를 낮추고 안정성부터 회복해야 합니다.`,
+        `상대 대비 패스 성공률이 낮았습니다. ${formatPercent(myPassRate)}면 볼 손실이 반복됐을 가능성이 높습니다. 어려운 패스보다 안정적인 짧은 연결을 더 자주 선택했어야 하는 경기였습니다.`,
+      ]))
     } else if (passGap >= 6 && (isLoss || isDraw) && effectiveShotGap <= 0) {
-      addLine(
-        102,
+      addLine(102, pick(matchId, 118, [
         `패스 성공률은 ${formatPercent(myPassRate)}로 더 좋았는데 결과 이득은 크지 않았습니다. 전개 안정성은 있었지만 상대 박스 앞에서 속도 변화나 침투 타이밍이 부족해서, 안전한 소유가 위협으로 전환되지 못했습니다.`,
-      )
+        `패스 연결은 잘 됐지만 그게 유효슛이나 득점으로 이어지지 않았습니다. 점유 과정은 안정적이었지만, 마지막 침투와 마무리 연결 고리가 약했습니다. 패스 정확도보다 '어디로 패스하느냐'가 더 중요했던 경기입니다.`,
+        `패스 성공률은 상대보다 높았지만 결과로 이어지지 않았습니다. 안전한 패스 위주로 돌리면서 결정적인 침투 타이밍을 놓쳤을 가능성이 있습니다. 패스 다음 동작이 더 과감해야 했습니다.`,
+      ]))
     }
   }
 
   if (opponentMetrics.effectiveShots >= 4 && myDefensiveStops <= opponentDefensiveStops && isLoss) {
-    addLine(
-      108,
+    addLine(108, pick(matchId, 119, [
       `상대 유효슛이 ${formatMetricNumber(opponentMetrics.effectiveShots)}개까지 나왔는데, 태클/차단 성공 합계는 ${formatMetricNumber(myDefensiveStops)}회에 그쳤습니다. 최종 수비 구간에서 슛을 너무 편하게 허용한 경기였고, 박스 앞 압박 강도를 더 높여야 합니다.`,
-    )
+      `상대의 유효슛 ${formatMetricNumber(opponentMetrics.effectiveShots)}개를 막기 위한 수비 개입이 충분하지 않았습니다. 상대가 편하게 슈팅한 장면이 많았고, 그게 결과로 이어졌습니다. 슈팅 이전에 압박을 가하는 시점을 앞당겨야 합니다.`,
+      `수비 측면에서 상대 유효슛을 너무 많이 허용했습니다. 태클과 차단 성공 수가 ${formatMetricNumber(myDefensiveStops)}회였는데 상대는 ${formatMetricNumber(opponentMetrics.effectiveShots)}번이나 위협적인 슈팅을 날렸습니다. 수비 진영 재조직과 압박 타이밍이 더 빠를 필요가 있습니다.`,
+    ]))
   } else if (myDefensiveStops >= 6 && (isLoss || isDraw)) {
-    addLine(
-      96,
+    addLine(96, pick(matchId, 120, [
       `태클/차단 성공이 합계 ${formatMetricNumber(myDefensiveStops)}회로 수비 개입은 적지 않았습니다. 버티는 힘은 있었지만, 끊어낸 뒤 바로 다시 내주는 장면이 반복되면 결국 수비 지표가 좋아도 경기 주도권은 가져오기 어렵습니다.`,
-    )
+      `수비 개입 ${formatMetricNumber(myDefensiveStops)}회는 열심히 막았다는 증거입니다. 하지만 이렇게 수비 포인트가 많다는 건 공격 쪽으로 흐름을 전환하지 못했다는 뜻이기도 합니다. 수비 이후 빠른 전환이 다음 단계입니다.`,
+      `태클과 차단을 합쳐 ${formatMetricNumber(myDefensiveStops)}회로 수비 참여가 많았습니다. 방어 노력은 충분했습니다. 볼 탈취 이후를 더 잘 활용해야 수비가 공격으로 전환되는 효율이 올라갑니다.`,
+    ]))
   }
 
   if (meMetrics.offsides >= 3) {
-    addLine(
-      100,
+    addLine(100, pick(matchId, 121, [
       `오프사이드가 ${formatMetricNumber(meMetrics.offsides)}회면 침투 타이밍이 계속 한 박자 빨랐다는 뜻입니다. 지금은 공격 의도는 좋지만, 상대 라인을 흔들기 전에 먼저 뛰어나가면서 좋은 장면을 스스로 끊고 있습니다.`,
-    )
+      `오프사이드 ${formatMetricNumber(meMetrics.offsides)}회. 침투 의도는 좋았지만 타이밍이 계속 빨랐습니다. 상대 수비 라인을 먼저 읽고, 라인이 올라오는 순간을 정확히 잡아야 오프사이드 없이 침투할 수 있습니다.`,
+      `${formatMetricNumber(meMetrics.offsides)}번의 오프사이드는 좋은 공격 본능이 타이밍에서 벗어난 결과입니다. 뛰어드는 시점을 패스 순간이 아닌 패스 직전으로 조금만 늦추면 이 숫자를 줄일 수 있습니다.`,
+    ]))
   }
 
   if (meMetrics.fouls >= 3 || meMetrics.yellowCards > 0 || meMetrics.redCards > 0) {
-    addLine(
-      94,
+    addLine(94, pick(matchId, 122, [
       `파울 ${formatMetricNumber(meMetrics.fouls)}회${meMetrics.yellowCards > 0 ? `, 경고 ${formatMetricNumber(meMetrics.yellowCards)}회` : ''}${meMetrics.redCards > 0 ? `, 퇴장 ${formatMetricNumber(meMetrics.redCards)}회` : ''}로 수비 대응이 다소 급했습니다. 한 번 늦은 압박을 몸으로 끊는 장면이 많아지면, 이후 수비 선택지가 급격히 줄어듭니다.`,
-    )
+      `파울과 카드 수치가 높습니다. 적극성이 있는 건 장점이지만, 반칙이 쌓이면 경기 후반에 수비 강도를 유지하기 어려워집니다. 위치 선정으로 먼저 막는 방식을 더 늘려야 합니다.`,
+      `파울 ${formatMetricNumber(meMetrics.fouls)}회는 많은 편입니다. 수비 의지는 있지만 판단이 늦거나 무리하게 들어가는 장면이 많았다는 뜻입니다. 패스 길목을 끊는 수비 패턴으로 전환하는 게 필요합니다.`,
+    ]))
   }
 
   if (ratingGap <= -0.5 && (isLoss || isDraw)) {
-    addLine(
-      101,
+    addLine(101, pick(matchId, 123, [
       `평점도 ${formatMetricNumber(meMetrics.rating, 2)}대${formatMetricNumber(opponentMetrics.rating, 2)}로 밀렸습니다. 특정 지표 하나만의 문제가 아니라, 공격 마무리와 수비 대응 전체에서 상대가 조금씩 더 나았다는 뜻입니다.`,
-    )
+      `평점 ${formatMetricNumber(meMetrics.rating, 2)} 대 ${formatMetricNumber(opponentMetrics.rating, 2)}로 종합 평가에서도 밀렸습니다. 한두 가지가 아닌 전반적인 부분에서 상대가 더 안정적이었습니다. 가장 차이가 컸던 지표를 우선 개선 대상으로 삼아야 합니다.`,
+      `평점 비교에서도 상대가 앞섰습니다. ${formatMetricNumber(meMetrics.rating, 2)}는 전반적인 경기력이 기대치를 밑돌았다는 종합 지표입니다. 특정 구간에서 집중적인 개선이 필요합니다.`,
+    ]))
   } else if (ratingGap >= 0.5 && isLoss) {
-    addLine(
-      95,
+    addLine(95, pick(matchId, 124, [
       `평점은 ${formatMetricNumber(meMetrics.rating, 2)}대${formatMetricNumber(opponentMetrics.rating, 2)}로 크게 밀리지 않았는데 결과는 패배였습니다. 내용 전체가 나빴다기보다, 실점 장면 몇 번과 마무리 실패가 지나치게 치명적이었던 경기로 보는 편이 맞습니다.`,
-    )
+      `평점은 상대와 비슷하거나 더 높았지만 결과는 졌습니다. 전반적인 경기력은 나쁘지 않았지만, 결정적 실수 몇 번이 모든 걸 뒤집었습니다. 작은 집중력 차이가 결과를 만들었습니다.`,
+      `평점 ${formatMetricNumber(meMetrics.rating, 2)}는 상대보다 낮지 않았지만 결과는 패배였습니다. 이런 경기는 순간적인 집중력 이탈이 결과를 망치는 유형입니다. 실점 상황 직전의 선택을 다시 돌아봐야 합니다.`,
+    ]))
   }
 
   return lines.sort((left, right) => right.priority - left.priority).map(({ text }) => text)
@@ -2274,7 +2320,7 @@ function MatchRecordCard({
   const isMyPlayer = selectedPlayer.ouid === teams.me.ouid
   const selectedSideLabel = isMyPlayer ? (teams.isDraw ? '참가자' : '내팀') : '상대팀'
   const selectedRatingValue = formatMetricNumber(selectedMetrics.rating, 2)
-  const matchInsight = buildMatchInsight(teams, selectedPlayer)
+  const matchInsight = buildMatchInsight(match.matchId, teams, selectedPlayer)
   const selectedCardSummary = formatPlayerCardSummary(selectedPlayer)
 
   useEffect(() => {
@@ -2541,7 +2587,7 @@ function OfficialMatchRecordCard({
     result === '패' ? '#ef6b76' : result === '무' ? '#7a8793' : '#5e8fe8'
   const meMetrics = getOfficialPlayerMetrics(teams.me)
   const opponentMetrics = getOfficialPlayerMetrics(teams.opponent)
-  const matchInsight = buildOfficialMatchInsight(teams)
+  const matchInsight = buildOfficialMatchInsight(match.matchId, teams)
 
   useEffect(() => {
     if (shouldExpand) {
