@@ -9,6 +9,7 @@ import {
   Keyboard,
   Platform,
   Linking,
+  Alert,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
@@ -184,6 +185,40 @@ export default function PostDetailScreen() {
     } catch {}
   }
 
+  const handleDeletePost = () => {
+    if (!post) return
+    Alert.alert('글 삭제', '이 글을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: async () => {
+        try {
+          await apiFetch('/api/community/posts', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId: post.id }),
+          })
+          router.back()
+        } catch {}
+      }},
+    ])
+  }
+
+  const handleDeleteComment = (commentId: string) => {
+    Alert.alert('댓글 삭제', '이 댓글을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: async () => {
+        try {
+          await apiFetch('/api/community/comments', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commentId }),
+          })
+          setCommentCount((n) => n - 1)
+          await loadComments()
+        } catch {}
+      }},
+    ])
+  }
+
   const handleSubmitComment = async () => {
     if (!post || !commentDraft.trim() || submitBusy) return
     setSubmitBusy(true)
@@ -278,16 +313,23 @@ export default function PostDetailScreen() {
           {/* 본문 */}
           <LinkifiedText text={post.content} style={[s.postContent, { color: colors.bodyText }]} />
 
-          {/* 댓글 수 + 하트 */}
-          <View style={s.postActions}>
-            <View style={s.likeBtn}>
-              <Feather name="message-circle" size={18} color={colors.mutedText} />
-              <Text style={[s.likeCount, { color: colors.mutedText }]}>{commentCount}</Text>
+          {/* 댓글 수 + 하트 + 삭제 */}
+          <View style={[s.postActions, { justifyContent: 'space-between' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View style={s.likeBtn}>
+                <Feather name="message-circle" size={18} color={colors.mutedText} />
+                <Text style={[s.likeCount, { color: colors.mutedText }]}>{commentCount}</Text>
+              </View>
+              <TouchableOpacity style={s.likeBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
+                <Text style={[s.likeCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={s.likeBtn} onPress={handleLike} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <FontAwesome name={isLiked ? 'heart' : 'heart-o'} size={18} color={isLiked ? '#e03131' : colors.mutedText} />
-              <Text style={[s.likeCount, { color: isLiked ? '#e03131' : colors.mutedText }]}>{likeCount}</Text>
-            </TouchableOpacity>
+            {post.canDelete && (
+              <TouchableOpacity onPress={handleDeletePost} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Feather name="trash-2" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* 섹션 구분 */}
@@ -315,11 +357,18 @@ export default function PostDetailScreen() {
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <View style={s.authorMeta}>
-                      <LevelBadge level={comment.level} />
-                      <Text style={[s.authorName, { color: colors.bodyText }]}>{comment.nickname}</Text>
-                      <Text style={[s.dot, { color: colors.mutedText }]}>·</Text>
-                      <Text style={[s.timeText, { color: colors.mutedText }]}>{comment.createdAtLabel}</Text>
+                    <View style={[s.authorMeta, { justifyContent: 'space-between' }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                        <LevelBadge level={comment.level} />
+                        <Text style={[s.authorName, { color: colors.bodyText }]}>{comment.nickname}</Text>
+                        <Text style={[s.dot, { color: colors.mutedText }]}>·</Text>
+                        <Text style={[s.timeText, { color: colors.mutedText }]}>{comment.createdAtLabel}</Text>
+                      </View>
+                      {comment.canDelete && (
+                        <TouchableOpacity onPress={() => handleDeleteComment(comment.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <Feather name="trash-2" size={14} color={colors.mutedText} />
+                        </TouchableOpacity>
+                      )}
                     </View>
                     <Text style={[s.commentContent, { color: colors.title }]}>{comment.content}</Text>
                   </View>
