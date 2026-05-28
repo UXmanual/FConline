@@ -21,9 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const supabase = createSupabaseAdminClient()
 
-    const userPromise = hasSupabaseAuthCookie(request)
-      ? createSupabaseSsrClient().then((s) => s.auth.getUser())
-      : Promise.resolve({ data: { user: null } })
+    const userPromise = getAuthUserFromRequest(request).then((user) => ({ data: { user } }))
 
     const postPromise = supabase
       .from('community_posts')

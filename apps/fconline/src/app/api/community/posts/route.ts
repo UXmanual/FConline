@@ -170,9 +170,7 @@ export async function GET(request: NextRequest) {
     const page = resolvedPage?.page ?? rawPage
     const from = resolvedPage?.from ?? rawFrom
     const to = resolvedPage?.to ?? rawTo
-    const userPromise = hasSupabaseAuthCookie(request)
-      ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
-      : Promise.resolve({ data: { user: null } })
+    const userPromise = getAuthUserFromRequest(request).then((user) => ({ data: { user } }))
     const postsPromise = fetchPostsPage(supabase, from, to, includeTotalCount, true, true, category)
     const t1 = Date.now()
     const [{ data: { user } }, { data: posts, error: postsError, count }] = await Promise.all([

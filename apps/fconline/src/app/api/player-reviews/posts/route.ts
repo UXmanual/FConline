@@ -173,9 +173,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createSupabaseAdminClient()
-    const userPromise = hasSupabaseAuthCookie(request)
-      ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
-      : Promise.resolve({ data: { user: null } })
+    const userPromise = getAuthUserFromRequest(request).then((user) => ({ data: { user } }))
     const requestedFrom = (requestedPage - 1) * pageSize
     const requestedTo = requestedPage * pageSize - 1
     const initialPostsPromise = fetchPostsPage(supabase, playerId, requestedFrom, requestedTo)
