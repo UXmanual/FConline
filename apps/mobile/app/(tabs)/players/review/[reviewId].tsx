@@ -80,6 +80,7 @@ export default function PlayerReviewDetailScreen() {
   })
 
   const [currentUser, setCurrentUser] = useState<{ id: string; avatarUrl?: string | null } | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [commentDraft, setCommentDraft] = useState('')
@@ -108,7 +109,7 @@ export default function PlayerReviewDetailScreen() {
   useEffect(() => {
     apiFetch('/api/mypage/profile').then(r => r.json()).then(data => {
       if (data?.id) setCurrentUser({ id: data.id, avatarUrl: data.avatarUrl ?? null })
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setProfileLoading(false))
   }, [])
 
   const loadComments = useCallback(async () => {
@@ -286,12 +287,14 @@ export default function PlayerReviewDetailScreen() {
         {/* 댓글 입력 */}
         <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: tabBarHeight + 14 }]}>
           <View style={[s.inputAvatar, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
-            {currentUser?.avatarUrl ? (
-              <Image source={{ uri: currentUser.avatarUrl }} style={{ width: 46, height: 46 }} />
-            ) : currentUser ? (
-              <Text style={{ fontSize: 20 }}>{pickDefaultAvatar(currentUser.id)}</Text>
-            ) : (
-              <Text style={{ fontSize: 20 }}>{guestEmoji}</Text>
+            {!profileLoading && (
+              currentUser?.avatarUrl ? (
+                <Image source={{ uri: currentUser.avatarUrl }} style={{ width: 46, height: 46 }} />
+              ) : currentUser ? (
+                <Text style={{ fontSize: 20 }}>{pickDefaultAvatar(currentUser.id)}</Text>
+              ) : (
+                <Text style={{ fontSize: 20 }}>{guestEmoji}</Text>
+              )
             )}
           </View>
           <TextInput

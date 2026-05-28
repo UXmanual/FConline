@@ -8,6 +8,7 @@ import {
   type CommunityCommentItem,
 } from '@/lib/community'
 import { canDeleteCommunityPost, hashPassword } from '@/lib/communityAuth'
+import { getAuthUserFromRequest } from '@/lib/supabase/getAuthUser'
 import { hasSupabaseAuthCookie } from '@/lib/supabase/authCookie'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { createSupabaseSsrClient } from '@/lib/supabase/ssr'
@@ -138,10 +139,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
+    const user = await getAuthUserFromRequest(request)
 
     if (!user) {
       return Response.json({ message: '로그인한 사용자만 선수평가 댓글을 작성할 수 있습니다.' }, { status: 401 })
@@ -255,10 +253,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authSupabase = await createSupabaseSsrClient()
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser()
+    const user = await getAuthUserFromRequest(request)
 
     if (!user) {
       return Response.json({ message: '로그인한 사용자만 선수평가 댓글을 삭제할 수 있습니다.' }, { status: 401 })
