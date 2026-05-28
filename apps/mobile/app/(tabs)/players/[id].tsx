@@ -24,6 +24,7 @@ import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
 import { reviewLikeStore } from '@/lib/reviewLikeStore'
+import { reviewCommentCountStore } from '@/lib/reviewCommentCountStore'
 import { PlayerImage } from '@/components/PlayerImage'
 
 const STRONG_LEVELS = Array.from({ length: 13 }, (_, i) => i + 1)
@@ -558,8 +559,10 @@ export default function PlayerDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       setReviewItems((prev) => prev.map((r) => {
-        const cached = reviewLikeStore.get(r.id)
-        return cached ? { ...r, ...cached } : r
+        const cachedLike = reviewLikeStore.get(r.id)
+        const cachedCommentCount = reviewCommentCountStore.get(r.id)
+        const merged = cachedLike ? { ...r, ...cachedLike } : r
+        return cachedCommentCount !== undefined ? { ...merged, commentCount: cachedCommentCount } : merged
       }))
       void fetchReviewPage(1)
     }, [fetchReviewPage]),

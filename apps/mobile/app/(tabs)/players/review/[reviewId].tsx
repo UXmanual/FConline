@@ -18,6 +18,7 @@ import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
 import { reviewLikeStore } from '@/lib/reviewLikeStore'
+import { reviewCommentCountStore } from '@/lib/reviewCommentCountStore'
 import { pickDefaultAvatar, randomDefaultAvatar } from '@/lib/avatar'
 
 type ReviewPost = {
@@ -149,8 +150,10 @@ export default function PlayerReviewDetailScreen() {
         body: JSON.stringify({ postId: post.id, content: commentDraft.trim() }),
       })
       if (res.ok) {
+        const newCount = commentCount + 1
         setCommentDraft('')
-        setCommentCount((n) => n + 1)
+        setCommentCount(newCount)
+        reviewCommentCountStore.set(post.id, newCount)
         Keyboard.dismiss()
         await loadComments()
       }
