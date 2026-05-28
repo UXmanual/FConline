@@ -19,6 +19,7 @@ import { API_BASE } from '@/constants/api'
 import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
 import { likeStore } from '@/lib/communityLikeStore'
+import { communityCommentCountStore } from '@/lib/communityCommentCountStore'
 import { pickDefaultAvatar, randomDefaultAvatar } from '@/lib/avatar'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
@@ -193,8 +194,10 @@ export default function PostDetailScreen() {
         body: JSON.stringify({ postId: post.id, content: commentDraft.trim() }),
       })
       if (res.ok) {
+        const newCount = commentCount + 1
         setCommentDraft('')
-        setCommentCount((n) => n + 1)
+        setCommentCount(newCount)
+        communityCommentCountStore.set(post.id, newCount)
         Keyboard.dismiss()
         await loadComments()
       }

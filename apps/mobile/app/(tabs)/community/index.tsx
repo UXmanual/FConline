@@ -18,6 +18,7 @@ import { Text } from '@/components/Themed'
 import { consumeCommunityRefresh } from '@/lib/communityRefresh'
 import { SkeletonPostCard } from '@/components/Skeleton'
 import { likeStore } from '@/lib/communityLikeStore'
+import { communityCommentCountStore } from '@/lib/communityCommentCountStore'
 import { pickDefaultAvatar } from '@/lib/avatar'
 
 const POSTS_PER_PAGE = 5
@@ -129,8 +130,10 @@ export default function CommunityScreen() {
     useCallback(() => {
       reset()
       setPosts((prev) => prev.map((p) => {
-        const cached = likeStore.get(p.id)
-        return cached ? { ...p, ...cached } : p
+        const cachedLike = likeStore.get(p.id)
+        const cachedCommentCount = communityCommentCountStore.get(p.id)
+        const merged = cachedLike ? { ...p, ...cachedLike } : p
+        return cachedCommentCount !== undefined ? { ...merged, commentCount: cachedCommentCount } : merged
       }))
       if (consumeCommunityRefresh()) {
         setCurrentPage(1)
