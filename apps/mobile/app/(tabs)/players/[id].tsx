@@ -530,7 +530,7 @@ export default function PlayerDetailScreen() {
     setReviewPage(1)
   }, [id, initialTab])
 
-  const fetchReviewPage = async (page: number) => {
+  const fetchReviewPage = useCallback(async (page: number) => {
     if (!id) return
     setReviewLoading(true)
     try {
@@ -553,7 +553,7 @@ export default function PlayerDetailScreen() {
     } finally {
       setReviewLoading(false)
     }
-  }
+  }, [id])
 
   useFocusEffect(
     useCallback(() => {
@@ -561,7 +561,8 @@ export default function PlayerDetailScreen() {
         const cached = reviewLikeStore.get(r.id)
         return cached ? { ...r, ...cached } : r
       }))
-    }, []),
+      void fetchReviewPage(1)
+    }, [fetchReviewPage]),
   )
 
   const handleReviewLike = async (item: PlayerReviewItem) => {
@@ -584,7 +585,7 @@ export default function PlayerDetailScreen() {
 
   useEffect(() => {
     void fetchReviewPage(1)
-  }, [id])
+  }, [fetchReviewPage])
 
   const currentPrice = detail?.prices[strongLevel]
     ? abbreviateKRW(detail.prices[strongLevel])
