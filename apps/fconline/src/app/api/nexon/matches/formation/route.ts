@@ -70,14 +70,14 @@ export async function GET(req: NextRequest) {
       const userTeam = parsed.matchInfo?.find((info) => info.ouid === ouid)
       if (!userTeam?.player?.length) continue
 
-      // GK(position=0) 제외, 아웃필드 포지션(1-27)만 추출
-      const outfield = userTeam.player.filter(
+      const allSquad = userTeam.player.filter(
         (p): p is RawPlayer & { spPosition: number } =>
-          typeof p.spPosition === 'number' && p.spPosition >= 1 && p.spPosition <= 27,
+          typeof p.spPosition === 'number' && p.spPosition >= 0 && p.spPosition <= 27,
       )
-      if (outfield.length >= 7) {
+      const outfieldCount = allSquad.filter((p) => p.spPosition >= 1).length
+      if (outfieldCount >= 7) {
         match = parsed
-        squad = outfield
+        squad = allSquad
         break
       }
     }
