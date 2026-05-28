@@ -3,7 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
-  '0.2.7': '2026-05-28T12:00:00+09:00',
+  '0.2.7': '2026-05-28T22:00:00+09:00',
   '0.2.6': '2026-05-27T12:00:00+09:00',
   '0.2.5': '2026-05-26T11:30:00+09:00',
   '0.2.4': '2026-05-26T10:00:00+09:00',
@@ -21,6 +21,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
   '0.2.7': [
     '구단주 상세의 주요 포메이션 표기 방식을 포메이션 상세와 동일한 5줄 형식(수비-DM-CM-AM-공격)으로 통일했습니다.',
+    '커뮤니티와 선수평가의 글·댓글 삭제 버튼이 표시되지 않던 문제와 삭제가 동작하지 않던 문제를 수정했습니다.',
+    '댓글 작성·삭제 후 리스트에서 댓글 수가 즉시 업데이트되지 않던 문제를 수정했습니다.',
+    '커뮤니티 글 삭제 후 리스트로 돌아갔을 때 삭제된 글이 그대로 표시되던 문제를 수정했습니다.',
   ],
   '0.2.6': [
     '마이페이지 하단에 비공식 앱 고지문과 데이터 출처를 추가했습니다.',
