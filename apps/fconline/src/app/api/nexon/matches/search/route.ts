@@ -471,20 +471,21 @@ function fetchRecentOfficialFormation(ouid: string | null | undefined) {
   return fetchRecentFormationByMatchType(ouid, 50)
 }
 
-function deriveFormation(positions: number[]) {
-  const defPositions = new Set([1, 2, 3, 4, 5, 6, 7, 8])
-  const midPositions = new Set([9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
-  const fwdPositions = new Set([20, 21, 22, 23, 24, 25, 26, 27])
+function deriveFormation(positions: number[]): string {
+  const defPos = new Set([1, 2, 3, 4, 5, 6, 7, 8])
+  const dmPos  = new Set([9, 10, 11])
+  const cmPos  = new Set([12, 13, 14, 15, 16])
+  const amPos  = new Set([17, 18, 19])
+  const fwPos  = new Set([20, 21, 22, 23, 24, 25, 26, 27])
 
-  const def = positions.filter((p) => defPositions.has(p)).length
-  const mid = positions.filter((p) => midPositions.has(p)).length
-  const fwd = positions.filter((p) => fwdPositions.has(p)).length
+  const def = positions.filter((p) => defPos.has(p)).length
+  const dm  = positions.filter((p) => dmPos.has(p)).length
+  const cm  = positions.filter((p) => cmPos.has(p)).length
+  const am  = positions.filter((p) => amPos.has(p)).length
+  const fw  = positions.filter((p) => fwPos.has(p)).length
 
-  if (def === 0 && mid === 0 && fwd === 0) {
-    return ''
-  }
-
-  return [def, mid, fwd].filter((count) => count > 0).join('-')
+  const parts = [def, dm, cm, am, fw].filter((n) => n > 0)
+  return parts.join('-')
 }
 
 function buildTeamEmblemMap(html: string) {
