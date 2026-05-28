@@ -119,6 +119,14 @@ set APP_VER=%APP_VER:"=%
 copy /Y android\app\build\outputs\bundle\release\app-release.aab fcoground-%APP_VER%.aab >nul
 if %errorlevel% neq 0 (echo AAB copy failed & exit /b 1)
 
+if exist android\app\build\outputs\mapping\release\mapping.txt (
+  copy /Y android\app\build\outputs\mapping\release\mapping.txt fcoground-%APP_VER%-mapping.txt >nul
+)
+
 echo.
 echo Build complete!
-echo AAB: fcoground-%APP_VER%.aab
+echo AAB:     fcoground-%APP_VER%.aab
+echo Mapping: fcoground-%APP_VER%-mapping.txt
+echo.
+echo [REQUIRED] Upload both AAB and Mapping file to Google Play Console.
+echo           After uploading AAB, attach fcoground-%APP_VER%-mapping.txt as deobfuscation file.
