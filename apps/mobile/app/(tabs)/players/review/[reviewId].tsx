@@ -172,7 +172,9 @@ export default function PlayerReviewDetailScreen() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ commentId }),
           })
-          setCommentCount((n) => n - 1)
+          const newCount = Math.max(0, commentCount - 1)
+          setCommentCount(newCount)
+          if (reviewId) reviewCommentCountStore.set(reviewId, newCount)
           await loadComments()
         } catch {}
       }},

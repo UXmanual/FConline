@@ -21,6 +21,7 @@ import { Text, TextInput } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
 import { likeStore } from '@/lib/communityLikeStore'
 import { communityCommentCountStore } from '@/lib/communityCommentCountStore'
+import { markCommunityRefresh } from '@/lib/communityRefresh'
 import { pickDefaultAvatar, randomDefaultAvatar } from '@/lib/avatar'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/g
@@ -196,6 +197,7 @@ export default function PostDetailScreen() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ postId: post.id }),
           })
+          markCommunityRefresh()
           router.back()
         } catch {}
       }},
@@ -212,7 +214,9 @@ export default function PostDetailScreen() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ commentId }),
           })
-          setCommentCount((n) => n - 1)
+          const newCount = Math.max(0, commentCount - 1)
+          setCommentCount(newCount)
+          if (post) communityCommentCountStore.set(post.id, newCount)
           await loadComments()
         } catch {}
       }},
