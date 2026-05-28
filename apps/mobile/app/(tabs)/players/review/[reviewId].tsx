@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import Feather from '@expo/vector-icons/Feather'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useTheme } from '@/hooks/useTheme'
@@ -74,6 +75,7 @@ function LevelBadge({ level }: { level?: number | null }) {
 export default function PlayerReviewDetailScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
+  const tabBarHeight = useBottomTabBarHeight()
   const [keyboardHeight, setKeyboardHeight] = useState(0)
   const { reviewId, postData, playerName } = useLocalSearchParams<{ reviewId: string; postData: string; playerName: string }>()
 
@@ -337,7 +339,7 @@ export default function PlayerReviewDetailScreen() {
         </ScrollView>
 
         {/* 댓글 입력 */}
-        <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: insets.bottom + 14 }]}>
+        <View style={[s.commentInputRow, { backgroundColor: colors.cardBg, borderTopColor: colors.divider, paddingBottom: keyboardHeight > 0 ? insets.bottom + 14 : tabBarHeight + 14 }]}>
           <View style={[s.inputAvatar, { backgroundColor: isDark ? '#3a3f52' : colors.surfaceSoft }]}>
             {!profileLoading && (
               currentUser?.avatarUrl ? (
