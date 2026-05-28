@@ -135,7 +135,7 @@ export default function PostDetailScreen() {
     if (!id) return
     let cancelled = false
     setPostLoading(true)
-    fetch(`${API_BASE}/api/community/posts/${id}`)
+    apiFetch(`/api/community/posts/${id}`)
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return
@@ -160,7 +160,7 @@ export default function PostDetailScreen() {
     if (!id) return
     setCommentsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/community/comments?postId=${id}&page=1&pageSize=50`)
+      const res = await apiFetch(`/api/community/comments?postId=${id}&page=1&pageSize=50`)
       const json = await res.json().catch(() => null)
       if (Array.isArray(json?.items)) setComments(json.items)
     } catch {}

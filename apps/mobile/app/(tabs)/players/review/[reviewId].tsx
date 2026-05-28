@@ -120,7 +120,7 @@ export default function PlayerReviewDetailScreen() {
     if (!reviewId) return
     setCommentsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/player-reviews/comments?postId=${reviewId}`)
+      const res = await apiFetch(`/api/player-reviews/comments?postId=${reviewId}`)
       const json = await res.json().catch(() => null)
       if (Array.isArray(json?.items)) setComments(json.items)
     } catch {}

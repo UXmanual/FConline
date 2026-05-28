@@ -124,9 +124,7 @@ export async function GET(request: NextRequest) {
       return Response.json({ message: 'postId가 필요합니다.' }, { status: 400 })
     }
 
-    const userPromise = hasSupabaseAuthCookie(request)
-      ? createSupabaseSsrClient().then((authSupabase) => authSupabase.auth.getUser())
-      : Promise.resolve({ data: { user: null } })
+    const userPromise = getAuthUserFromRequest(request).then((user) => ({ data: { user } }))
     const commentsPromise = fetchCommunityCommentsPage(postId, from, to)
     const [{ data: { user } }, { data, error }] = await Promise.all([userPromise, commentsPromise])
 
