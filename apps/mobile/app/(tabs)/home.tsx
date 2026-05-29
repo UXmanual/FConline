@@ -11,6 +11,7 @@ import {
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { useScrollToTop, useFocusEffect } from '@react-navigation/native'
 import Svg, { Path } from 'react-native-svg'
 import { useTheme } from '@/hooks/useTheme'
@@ -30,7 +31,7 @@ const BANNERS = [
   { id: '01', imageUrl: `${API_BASE}/banners/home-main-banner01@3x.png`, href: null },
   { id: '02', imageUrl: `${API_BASE}/banners/home-main-banner02@3x.png`, href: '/matches' },
   { id: '03', imageUrl: `${API_BASE}/banners/home-main-banner03@3x.png`, href: '/players' },
-  { id: '04', imageUrl: `${API_BASE}/banners/home-main-banner04@3x.png`, href: null },
+  { id: '04', imageUrl: `${API_BASE}/banners/home-main-banner04@3x.png`, href: 'https://fconline.nexon.com/news/notice/list' },
 ]
 
 // 무한 루프: [마지막 클론, ...원본, 첫번째 클론]
@@ -77,11 +78,6 @@ function getKstToday() {
   return new Date(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate())
 }
 
-function getKoreaDateLabel() {
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토']
-  const kst = getKstNow()
-  return `${kst.getUTCFullYear()}.${kst.getUTCMonth() + 1}.${kst.getUTCDate()} ${weekdays[kst.getUTCDay()] ?? ''}`
-}
 
 function addDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
@@ -206,8 +202,7 @@ export default function HomeScreen() {
   const router = useRouter()
   const { width: screenWidth } = useWindowDimensions()
   const { label, period, daysLeft } = getSeasonInfo(getKstToday())
-  const dateLabel = getKoreaDateLabel()
-  const s = useMemo(() => styles(colors), [colors])
+const s = useMemo(() => styles(colors), [colors])
   const bannerWidth = Math.floor(screenWidth - 40)
   const bannerHeight = Math.floor(bannerWidth / BANNER_ASPECT)
   const [controllerUsage, setControllerUsage] = useState<HomeControllerUsage | null>(null)
@@ -306,7 +301,6 @@ export default function HomeScreen() {
             <AppLogo isDark={isDark} />
           </View>
           <View style={s.headerRight}>
-            <Text style={s.dateLabel}>{dateLabel}</Text>
             <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications' as any)}>
               <NotificationIcon color={colors.navIcon} />
               {hasUnread && <View style={s.redDot} />}
@@ -393,7 +387,14 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={item._key}
                   style={{ width: bannerWidth, height: bannerHeight, backgroundColor: colors.surfaceSoft }}
-                  onPress={() => item.href && router.push(item.href as any)}
+                  onPress={() => {
+                    if (!item.href) return
+                    if (item.href.startsWith('http')) {
+                      void WebBrowser.openBrowserAsync(item.href)
+                    } else {
+                      router.push(item.href as any)
+                    }
+                  }}
                   activeOpacity={item.href ? 0.8 : 1}
                 >
                   <Image source={{ uri: item.imageUrl }} style={{ width: bannerWidth, height: bannerHeight }} resizeMode="cover" />
@@ -640,7 +641,6 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
     logoWrap: { height: 24, justifyContent: 'center' },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    dateLabel: { fontSize: 13, fontWeight: '500', color: c.bodyText },
     notifBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
     redDot: { position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: 4, backgroundColor: '#ef4444' },
     controlHeight: { height: 56 },
