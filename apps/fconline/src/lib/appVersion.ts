@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.8': '2026-05-29T22:00:00+09:00',
   '0.2.7': '2026-05-28T22:00:00+09:00',
   '0.2.6': '2026-05-27T12:00:00+09:00',
   '0.2.5': '2026-05-26T11:30:00+09:00',
@@ -19,6 +20,11 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.8': [
+    '홈 화면 배너에서 넥슨 FC 온라인 공지 페이지로 바로 이동할 수 있습니다.',
+    '로그인하지 않은 상태에서 글쓰기 버튼을 누르면 로그인 안내 팝업이 표시됩니다.',
+    '홈 헤더의 날짜 표시를 제거했습니다.',
+  ],
   '0.2.7': [
     '구단주 상세의 주요 포메이션 표기 방식을 포메이션 상세와 동일한 5줄 형식(수비-DM-CM-AM-공격)으로 통일했습니다.',
     '커뮤니티와 선수평가의 글·댓글 삭제 버튼이 표시되지 않던 문제와 삭제가 동작하지 않던 문제를 수정했습니다.',
