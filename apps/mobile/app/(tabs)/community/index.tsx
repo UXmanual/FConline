@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Alert,
 } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -20,6 +21,7 @@ import { SkeletonPostCard } from '@/components/Skeleton'
 import { likeStore } from '@/lib/communityLikeStore'
 import { communityCommentCountStore } from '@/lib/communityCommentCountStore'
 import { pickDefaultAvatar } from '@/lib/avatar'
+import { getSessionSafely } from '@/lib/supabase'
 
 const POSTS_PER_PAGE = 5
 
@@ -204,7 +206,14 @@ export default function CommunityScreen() {
                 )
               })}
             </View>
-            <TouchableOpacity style={s.writeBtn} onPress={() => navigate('/(tabs)/community/new/')} activeOpacity={0.85}>
+            <TouchableOpacity style={s.writeBtn} onPress={async () => {
+              const { session } = await getSessionSafely()
+              if (!session) {
+                Alert.alert('로그인 필요', '로그인 후 이용해주세요')
+                return
+              }
+              navigate('/(tabs)/community/new/')
+            }} activeOpacity={0.85}>
               <Text style={s.writeBtnText}>글쓰기</Text>
             </TouchableOpacity>
           </View>

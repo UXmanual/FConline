@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Modal,
   Animated,
+  Alert,
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -23,6 +24,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { API_BASE } from '@/constants/api'
 import { Text } from '@/components/Themed'
 import { apiFetch } from '@/lib/apiFetch'
+import { getSessionSafely } from '@/lib/supabase'
 import { reviewLikeStore } from '@/lib/reviewLikeStore'
 import { reviewCommentCountStore } from '@/lib/reviewCommentCountStore'
 import { PlayerImage } from '@/components/PlayerImage'
@@ -1018,10 +1020,17 @@ export default function PlayerDetailScreen() {
                   </View>
                   <TouchableOpacity
                     style={[s.reviewWriteBtn, { backgroundColor: '#457ae5' }]}
-                    onPress={() => router.push({
-                      pathname: '/(tabs)/players/review/new' as any,
-                      params: { playerId: id, playerName },
-                    })}
+                    onPress={async () => {
+                      const { session } = await getSessionSafely()
+                      if (!session) {
+                        Alert.alert('로그인 필요', '로그인 후 이용해주세요')
+                        return
+                      }
+                      router.push({
+                        pathname: '/(tabs)/players/review/new' as any,
+                        params: { playerId: id, playerName },
+                      })
+                    }}
                     activeOpacity={0.85}
                     delayPressIn={0}
                   >
@@ -1365,7 +1374,7 @@ const styles = (c: ReturnType<typeof useTheme>['colors']) =>
     reviewAiBody: { fontSize: 13, fontWeight: '400', lineHeight: 20, marginTop: 10 },
     reviewCardBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
     reviewCardBadgeText: { fontSize: 11, fontWeight: '700' },
-    reviewWriteBtn: { borderRadius: 999, height: 36, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+    reviewWriteBtn: { borderRadius: 12, height: 36, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
     reviewWriteBtnText: { fontSize: 13, fontWeight: '600', color: '#ffffff' },
     reviewStateWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 28, gap: 10 },
     reviewStateText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
