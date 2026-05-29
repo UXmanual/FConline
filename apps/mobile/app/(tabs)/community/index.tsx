@@ -209,7 +209,7 @@ export default function CommunityScreen() {
             <TouchableOpacity style={s.writeBtn} onPress={async () => {
               const { session } = await getSessionSafely()
               if (!session) {
-                Alert.alert('로그인 필요', '로그인 후 이용해주세요')
+                Alert.alert('로그인', '로그인 후 이용해주세요')
                 return
               }
               navigate('/(tabs)/community/new/')
