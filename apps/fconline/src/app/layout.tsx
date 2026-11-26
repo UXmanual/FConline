@@ -177,6 +177,13 @@ export default function RootLayout({
           html.app-dark-mode .startup-splash-logo-light { display: none;  }
           html.app-dark-mode .startup-splash-logo-dark  { display: block; }
 
+          html.splash-test-black:not(.app-dark-mode) #startup-splash {
+            background: #000000;
+          }
+
+          html.splash-test-black:not(.app-dark-mode) .startup-splash-logo-light { display: none; }
+          html.splash-test-black:not(.app-dark-mode) .startup-splash-logo-dark  { display: block; }
+
           #app-shell {
             visibility: hidden;
           }
@@ -210,7 +217,7 @@ export default function RootLayout({
         `}</style>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var root=document.documentElement;var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';var splashBackgroundColor=isDarkModeEnabled?'${HOME_SPLASH_BG_DARK}':'${HOME_SPLASH_BG_LIGHT}';var finalColorScheme=isDarkModeEnabled?'dark':'light';root.style.colorScheme=finalColorScheme;root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&!hasSeenHomeSplash){root.style.backgroundColor=splashBackgroundColor;root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;root.style.colorScheme=finalColorScheme;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.colorScheme='light';fallbackRoot.style.backgroundColor='${HOME_SPLASH_BG_LIGHT}';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
+            __html: `(function(){try{var root=document.documentElement;var testBlack=new URLSearchParams(window.location.search).get('splash')==='black';var isDarkModeEnabled=window.localStorage.getItem('app-dark-mode')==='true';var finalBackgroundColor=isDarkModeEnabled?'#121318':'#f0f3f5';var splashBackgroundColor=isDarkModeEnabled?'${HOME_SPLASH_BG_DARK}':(testBlack?'#000000':'${HOME_SPLASH_BG_LIGHT}');var finalColorScheme=isDarkModeEnabled?'dark':'light';root.style.colorScheme=finalColorScheme;root.style.backgroundColor=finalBackgroundColor;root.classList.toggle('app-dark-mode',isDarkModeEnabled);var themeColorMeta=document.querySelector('meta[name="theme-color"]');if(themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}var isHomePath=window.location.pathname==='/'||window.location.pathname==='/home';var hasSeenHomeSplash=window.sessionStorage.getItem('${HOME_SPLASH_SESSION_KEY}')==='1';if(isHomePath&&(!hasSeenHomeSplash||testBlack)){root.style.backgroundColor=splashBackgroundColor;if(testBlack&&!isDarkModeEnabled){root.classList.add('splash-test-black');if(themeColorMeta){themeColorMeta.setAttribute('content',splashBackgroundColor);}}root.classList.add('home-startup-splash-active');window.sessionStorage.setItem('${HOME_SPLASH_SESSION_KEY}','1');window.setTimeout(function(){root.classList.remove('home-startup-splash-active');root.classList.add('home-startup-splash-fading');if(testBlack&&themeColorMeta){themeColorMeta.setAttribute('content',finalBackgroundColor);}},${HOME_SPLASH_VISIBLE_MS});window.setTimeout(function(){root.classList.remove('home-startup-splash-fading');root.classList.add('home-startup-splash-hidden');root.style.backgroundColor=finalBackgroundColor;root.style.colorScheme=finalColorScheme;},${HOME_SPLASH_VISIBLE_MS + HOME_SPLASH_FADE_MS});}else{root.classList.add('home-startup-splash-ready');}}catch(_error){var fallbackRoot=document.documentElement;fallbackRoot.style.colorScheme='light';fallbackRoot.style.backgroundColor='${HOME_SPLASH_BG_LIGHT}';fallbackRoot.classList.add('home-startup-splash-ready');}})();`,
           }}
         />
       </head>

@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.2.9': '2026-05-30T12:00:00+09:00',
   '0.2.8': '2026-05-29T22:00:00+09:00',
   '0.2.7': '2026-05-28T22:00:00+09:00',
   '0.2.6': '2026-05-27T12:00:00+09:00',
@@ -20,6 +21,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.2.9': [
+    '스플래시 전환 시 상태바 색 동기화를 점검하기 위한 테스트 옵션을 추가했습니다.',
+  ],
   '0.2.8': [
     '홈 화면 배너에서 넥슨 FC 온라인 공지 페이지로 바로 이동할 수 있습니다.',
     '로그인하지 않은 상태에서 글쓰기 버튼을 누르면 로그인 안내 팝업이 표시됩니다.',
