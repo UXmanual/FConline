@@ -3,6 +3,7 @@ import pkg from '../../package.json'
 export const APP_VERSION = pkg.version
 
 export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
+  '0.3.0': '2026-11-26T12:00:00+09:00',
   '0.2.9': '2026-05-30T12:00:00+09:00',
   '0.2.8': '2026-05-29T22:00:00+09:00',
   '0.2.7': '2026-05-28T22:00:00+09:00',
@@ -21,6 +22,9 @@ export const RELEASE_PUBLISHED_AT_BY_VERSION: Record<string, string> = {
 }
 
 export const RELEASE_NOTES_BY_VERSION: Record<string, string[]> = {
+  '0.3.0': [
+    '앱 시작 스플래시 화면을 블랙 배경으로 변경했습니다. 라이트 모드에서도 블랙 스플래시가 표시된 뒤 라이트 모드 메인 화면으로 전환됩니다.',
+  ],
   '0.2.9': [
     '스플래시 전환 시 상태바 색 동기화를 점검하기 위한 테스트 옵션을 추가했습니다.',
   ],
